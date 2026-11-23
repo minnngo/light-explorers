@@ -28,6 +28,24 @@ export function saveLocal(state: AppState): void {
 export function clearLocal(): void {
   try {
     window.localStorage.removeItem(KEY);
+    window.localStorage.removeItem(TUTORIAL_KEY); // 다음 모둠은 튜토리얼을 다시 본다
+  } catch {}
+}
+
+// ───────────── 회로 만들기 튜토리얼을 이 기기에서 이미 봤는지 ─────────────
+const TUTORIAL_KEY = 'light-explorers:tutorial-done:v1';
+
+export function loadTutorialDone(): boolean {
+  try {
+    return window.localStorage.getItem(TUTORIAL_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function saveTutorialDone(): void {
+  try {
+    window.localStorage.setItem(TUTORIAL_KEY, '1');
   } catch {}
 }
 

@@ -52,3 +52,34 @@ export function revivedCount(state: AppState): number {
 export function allMissionsDone(state: AppState): boolean {
   return revivedCount(state) === MISSION_ORDER.length;
 }
+
+/**
+ * 미션 화면에서 지금 학생이 할 일이 있는 곳 (그곳만 밝게, 나머지는 어둡게).
+ *  - worksheet: 학습지 (예상 고르기, ○표·이유, 확인)
+ *  - boards: 회로판 (전선 잇기)
+ * dim은 할 일이 없는 쪽을 얼마나 어둡게 할지: strong(아직 볼 것 없음) / soft(보면서 해야 함)
+ */
+export type FocusTask = 'predict' | 'build' | 'buildReady' | 'compare' | 'confirm' | 'challenge';
+export interface MissionFocus {
+  area: 'worksheet' | 'boards';
+  task: FocusTask;
+  dim: 'strong' | 'soft';
+}
+
+export function missionFocus(record: MissionRecord, readyToCompare: boolean): MissionFocus | null {
+  if (record.status === 'done') return null; // 완료한 미션 다시 보기: 모두 그대로
+  switch (record.step) {
+    case 'predict':
+      return { area: 'worksheet', task: 'predict', dim: 'strong' };
+    case 'build':
+      return readyToCompare
+        ? { area: 'worksheet', task: 'buildReady', dim: 'soft' }
+        : { area: 'boards', task: 'build', dim: 'soft' };
+    case 'compare':
+      return { area: 'worksheet', task: 'compare', dim: 'soft' };
+    case 'confirm':
+      return record.challenge === 'active'
+        ? { area: 'boards', task: 'challenge', dim: 'soft' }
+        : { area: 'worksheet', task: 'confirm', dim: 'soft' };
+  }
+}

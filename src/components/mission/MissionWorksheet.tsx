@@ -2,7 +2,7 @@
 
 // 미션 화면 오른쪽 학습지 패널. 단계마다 다른 내용을 보여 준다.
 // POE 규칙: ④ 확인하기 전에는 실제 결과 문장, 정답 표시, 정리 문구를 절대 그리지 않는다.
-import { useEffect, useState } from 'react';
+import { type Ref, useEffect, useState } from 'react';
 import { MISSIONS } from '@/data/missions';
 import { CHALLENGE, CHARACTER, COMMON, MISSION_STRINGS } from '@/data/strings';
 import { canConfirm, canGoCompare, checklist, currentResults, MIN_EXPLANATION_LENGTH } from '@/lib/flow/missionFlow';
@@ -13,11 +13,11 @@ import { REVIVAL_ART } from '@/media/assets';
 import { playSuccess } from '@/media/sound';
 import { Button, Choice, Speech, TextArea } from '../ui';
 
-export default function MissionWorksheet({ className = '' }: { className?: string }) {
+export default function MissionWorksheet({ className = '', ref }: { className?: string; ref?: Ref<HTMLElement> }) {
   const { state } = useStore();
   const step = state.missions[state.currentMission!].step;
   return (
-    <aside className={`flex flex-col gap-4 rounded-2xl bg-white p-4 shadow ${className}`}>
+    <aside ref={ref} className={`flex scroll-mt-24 flex-col gap-4 rounded-2xl bg-white p-4 shadow ${className}`}>
       {step === 'predict' && <PredictPanel />}
       {step === 'build' && <BuildPanel />}
       {step === 'compare' && <ComparePanel />}
@@ -65,7 +65,8 @@ function BuildPanel() {
       </ul>
       <p className="text-base text-slate-600">{text.checklistHelp}</p>
       <p className="text-sm text-slate-500">{COMMON.wireHowTo}</p>
-      <Button disabled={!canGoCompare(state)} onClick={() => dispatch({ type: 'GO_COMPARE' })}>
+      <Button disabled={!canGoCompare(state)} className={canGoCompare(state) ? 'pulse-cta' : ''}
+        onClick={() => dispatch({ type: 'GO_COMPARE' })}>
         {text.goCompare}
       </Button>
     </>

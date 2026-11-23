@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { AppState, BoardId, Wire } from '@/lib/types';
+import { missionFocus } from '@/lib/flow/missionFlow';
 import { type Action, createInitialState, reducer } from './reducer';
 
 const play = (state: AppState, ...actions: Action[]) => actions.reduce(reducer, state);
@@ -158,6 +159,18 @@ describe('8-1 선택 보충: 같은 극끼리 이어 보기', () => {
     const s = { ...atMap(), currentMission: 'm2' as const };
     s.missions = { ...s.missions, m2: { ...s.missions.m2, step: 'confirm' } };
     expect(reducer(s, { type: 'START_CHALLENGE' }).missions.m2.challenge).toBe('none');
+  });
+});
+
+describe('지금 할 일이 있는 곳만 밝히기', () => {
+  it('① 예상: 학습지 / ② 만들기: 회로판 → 다 만들면 학습지 / ③·④: 학습지', () => {
+    const m = createInitialState().missions.m1;
+    expect(missionFocus(m, false)).toMatchObject({ area: 'worksheet', task: 'predict', dim: 'strong' });
+    expect(missionFocus({ ...m, step: 'build' }, false)).toMatchObject({ area: 'boards', task: 'build' });
+    expect(missionFocus({ ...m, step: 'build' }, true)).toMatchObject({ area: 'worksheet', task: 'buildReady' });
+    expect(missionFocus({ ...m, step: 'compare' }, true)).toMatchObject({ area: 'worksheet', task: 'compare' });
+    expect(missionFocus({ ...m, step: 'confirm', challenge: 'active' }, true)).toMatchObject({ area: 'boards', task: 'challenge' });
+    expect(missionFocus({ ...m, step: 'confirm', status: 'done' }, true)).toBeNull();
   });
 });
 

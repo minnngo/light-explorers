@@ -15,6 +15,7 @@ import {
 } from '@/data/boards';
 import { PART_NAMES } from '@/data/strings';
 import type { BoardId, BoardState, JudgeResult, PartKind, TerminalId } from '@/lib/types';
+import type { CoachMark } from '@/lib/tutorial/tutorial';
 import { playChime, playLightOn } from '@/media/sound';
 
 interface Props {
@@ -28,7 +29,13 @@ interface Props {
   onAddWire: (from: TerminalId, to: TerminalId) => void;
   onRemoveWire: (wireId: string) => void;
   onToggleSwitch: () => void;
+  /** 튜토리얼: 반짝이며 가리킬 것 */
+  coach?: CoachMark;
 }
+
+/** 두 단자를 잇는 전선 곡선 (전선과 튜토리얼 시범이 같은 모양을 쓴다) */
+const wirePath = (a: { x: number; y: number }, b: { x: number; y: number }) =>
+  `M ${a.x} ${a.y} Q ${(a.x + b.x) / 2} ${(a.y + b.y) / 2 - 50} ${b.x} ${b.y}`;
 
 // 버저의 빨간/검은 선과 헷갈리지 않도록 전선 색에는 빨강·검정을 쓰지 않는다
 const WIRE_COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#ca8a04'];
@@ -106,10 +113,13 @@ export default function CircuitBoard(props: Props) {
         const a = terminals.get(w.from);
         const b = terminals.get(w.to);
         if (!a || !b) return null;
-        const d = `M ${a.x} ${a.y} Q ${(a.x + b.x) / 2} ${(a.y + b.y) / 2 - 50} ${b.x} ${b.y}`;
+        const d = wirePath(a, b);
         const color = WIRE_COLORS[i % WIRE_COLORS.length];
         return (
           <g key={w.id}>
+            {props.coach?.wires && (
+              <path d={d} stroke="#fbbf24" strokeWidth={18} fill="none" strokeLinecap="round" className="coach-glow" pointerEvents="none" />
+            )}
             <path d={d} stroke={color} strokeWidth={6} fill="none" strokeLinecap="round" />
             <path
               d={d}
@@ -156,7 +166,44 @@ export default function CircuitBoard(props: Props) {
           />
         </g>
       ))}
+
+      {props.coach && <Coach coach={props.coach} layout={layout} terminals={terminals} />}
     </svg>
+  );
+}
+
+/** 튜토리얼 표시: 반짝이는 고리와 시범 손가락. 누르기는 아래로 통과한다 */
+function Coach({ coach, layout, terminals }: {
+  coach: CoachMark;
+  layout: ComponentLayout[];
+  terminals: Map<string, { x: number; y: number }>;
+}) {
+  const ring = (x: number, y: number, r: number, key: string, delay = 0) => (
+    <circle key={key} cx={x} cy={y} r={r} fill="none" stroke="#f59e0b" strokeWidth={6} className="pulse-ring"
+      style={{ animationDelay: `${delay}s`, animationDuration: '1.6s' }} />
+  );
+  const [from, to] = coach.terminals?.map((t) => terminals.get(t)) ?? [];
+  const sw = layout.find((c) => c.component.type === 'switch');
+  return (
+    <g pointerEvents="none">
+      {from && to && (
+        <>
+          {ring(from.x, from.y, TERMINAL_RADIUS + 12, 'from')}
+          {ring(to.x, to.y, TERMINAL_RADIUS + 12, 'to', 0.8)}
+          <path d={wirePath(from, to)} stroke="#f59e0b" strokeWidth={5} strokeDasharray="10 10" fill="none" className="dash-flow" />
+          <g>
+            <animateMotion dur="2.4s" repeatCount="indefinite" path={wirePath(from, to)} keyPoints="0;0;1;1" keyTimes="0;0.2;0.8;1" calcMode="linear" />
+            <text x={-14} y={44} fontSize={40}>👆</text>
+          </g>
+        </>
+      )}
+      {coach.switch && sw && (
+        <>
+          {ring(sw.center.x - 4, sw.center.y, 50, 'sw')}
+          <text x={sw.center.x - 20} y={sw.center.y + 30} fontSize={40} className="bob">👆</text>
+        </>
+      )}
+    </g>
   );
 }
 
