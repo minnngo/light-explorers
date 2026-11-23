@@ -33,7 +33,8 @@ src/
     store/reducer.ts          ★ 모든 상태 변경은 여기서만 (결정적 reducer)
     store/actions.ts          시각·id가 들어가는 action 만들기
     sync/remoteSave.ts        2단계: 서버 저장
-    sync/realtime.ts          3단계: 실시간 공동 조작 (뼈대)
+    sync/roomSync.ts          3단계: 여러 기기 동기화 규칙 (순수 로직 + 테스트)
+    sync/realtime.ts          3단계: Supabase Realtime 통로 (broadcast + presence)
     teacher/summarize.ts      교사용 집계
   data/
     strings.ts                학생 화면 문구 전부 (명세서 12장: 문구 분리)
@@ -41,6 +42,7 @@ src/
     boards.ts                 회로판 A/B 부품 고정 위치·단자
   components/
     screens/S1~S5             화면
+    RoomBar.tsx               3단계: 방 코드·회로 담당·다른 친구의 조작 표시
     circuit/CircuitBoard.tsx  SVG 회로판 (전선 잇기·지우기·스위치)
     mission/MissionWorksheet  학습지 패널 (단계별)
   media/                      이모지 임시 그림·효과음 (그림 파일로 교체할 곳)
@@ -64,11 +66,23 @@ supabase/schema.sql           2단계 DB 스키마
 | S5 확인해요 | 맞는 답을 골라야 다음으로 | `screenFlow.ts` |
 | 3차시 떠올리기·오개념 점검 기록 | 처음 고른 답만 기록 | `reducer.ts` |
 | 주인공 이름 | `CHARACTER = '주인공'` 임시 | `data/strings.ts` |
+| 8-1 선택 보충 "같은 극끼리 이어 보기" | 미션 1 ④ 확인하기에 "도전!" 버튼(선택). B 회로만 다시 만질 수 있고, 같은 극끼리 이어 스위치를 닫으면 확인 문구. 힌트·시도 횟수에는 넣지 않음 | `MissionWorksheet.tsx`, `reducer.ts` |
+| 완료한 미션 다시 보기 | 지도에서 완료한 곳을 누르면 완료할 때의 회로판과 ④ 화면을 보기만 하고, 하단 "지도로 돌아가기"로 나간다 | `reducer.ts` `LEAVE_MISSION` |
+| 교사용 평가 기준(상·중·하) | 명세서 11-2로 만든 **임시 문장**. 지도서 문장으로 바꿔야 함 | `data/strings.ts` `TEACHER.rubric` |
+| 같은 기기를 다음 모둠이 쓸 때 | "수고했어요" 화면 아래 작은 "처음부터 다시 하기" (확인 창) | `S5Wrapup.tsx` |
+
+## 3단계: 여러 기기로 함께하기
+
+`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`가 있으면 S1에 "여러 기기로 함께하기"가 나타난다. (DB 테이블은 쓰지 않는다. Realtime의 broadcast·presence만 쓴다.)
+
+1. 한 친구가 "새 모둠으로 시작"에서 *여러 기기로 함께하기*를 켜고 이름·맡을 회로를 고른 뒤 시작한다. 화면 맨 위에 **방 코드**(4글자)가 나온다.
+2. 다른 친구는 "모둠 방에 들어가기"에서 방 코드·이름·맡을 회로를 넣는다. 먼저 시작한 기기의 화면 상태를 받아 같은 화면에서 이어 한다.
+3. 회로판은 **내가 맡은 회로만** 조작할 수 있다. 다른 친구가 한 조작은 이름과 함께 3초 동안 보인다. 학습지(예상·○표·이유)는 누구나 조작한다.
+4. 연결이 잠깐 끊겨도 방을 만든 기기가 15초마다 전체 상태를 보내 다시 맞춘다. 새로고침하면 같은 방에 다시 들어간다.
 
 ## 남은 일
 
 - [ ] 그림(14장 A1~A6)을 `media/assets.ts`에서 이모지 → 그림 파일로 교체
-- [ ] 8-1 선택 보충 "같은 극끼리 이어 보기" 도전 (넣을지 팀 결정)
-- [ ] 교사용 화면: 지도서 평가 문장(상·중·하) 참고 표시, 모둠 설명 글 펼쳐 보기
-- [ ] 3단계: 방 코드 입장 화면, presence로 A/B 담당 표시, `realtime.ts` 연결
+- [ ] 교사용 평가 기준(상·중·하)을 지도서 문장으로 교체, 주인공 이름 확정
+- [ ] 3단계를 실제 Supabase 프로젝트와 태블릿 2대로 시연해 보기
 - [ ] 태블릿 실기기에서 글자·버튼 크기와 S5 7분 안에 끝나는지 확인

@@ -28,7 +28,7 @@ import type {
 
 export type Action =
   // S1
-  | { type: 'START_EXPEDITION'; groupId: string; groupName: string; safetyAgreed: boolean }
+  | { type: 'START_EXPEDITION'; groupId: string; groupName: string; safetyAgreed: boolean; roomCode?: string | null }
   // S2
   | { type: 'ANSWER_RECALL'; correct: boolean }
   | { type: 'ANSWER_FAN_REASON'; value: NonNullable<IntroRecord['fanReason']> }
@@ -36,6 +36,7 @@ export type Action =
   | { type: 'NEXT_INTRO_CUT' }
   // S3
   | { type: 'OPEN_MISSION'; mission: MissionId; at: number }
+  | { type: 'LEAVE_MISSION' }
   | { type: 'GO_TO_WRAPUP' }
   // S4
   | { type: 'SET_PREDICTION'; choice: PredictionChoice }
@@ -49,6 +50,7 @@ export type Action =
   | { type: 'CONFIRM' }
   | { type: 'COMPLETE_MISSION'; at: string }
   | { type: 'HINT_SHOWN' }
+  | { type: 'START_CHALLENGE' }
   // S5
   | { type: 'UPDATE_FINAL'; patch: Partial<Pick<FinalRecord, 'groupThought' | 'revisitFan' | 'check' | 'selfEval' | 'toCharacter'>> }
   | { type: 'ANSWER_EXPLAIN'; part: PartKind; choice: ExplainChoice }
@@ -71,12 +73,14 @@ const emptyMission = (status: MissionRecord['status']): MissionRecord => ({
   hintCount: 0,
   attempts: 0,
   completedAt: null,
+  challenge: 'none',
 });
 
 export function createInitialState(): AppState {
   return {
     groupId: null,
     groupName: '',
+    roomCode: null,
     currentScreen: 'S1',
     introCut: 0,
     intro: { recall: null, fanReason: null, fanPredict: null },
@@ -103,7 +107,13 @@ export function reducer(state: AppState, action: Action): AppState {
     case 'START_EXPEDITION': {
       if (state.currentScreen !== 'S1') return state;
       if (!action.safetyAgreed || action.groupName.trim().length === 0) return state;
-      return { ...state, groupId: action.groupId, groupName: action.groupName.trim(), currentScreen: 'S2' };
+      return {
+        ...state,
+        groupId: action.groupId,
+        groupName: action.groupName.trim(),
+        roomCode: action.roomCode ?? null,
+        currentScreen: 'S2',
+      };
     }
 
     // ───── S2 ─────
@@ -124,13 +134,29 @@ export function reducer(state: AppState, action: Action): AppState {
 
     // ───── S3 ─────
     case 'OPEN_MISSION': {
-      if (state.missions[action.mission].status !== 'open') return state;
+      const m = state.missions[action.mission];
+      if (m.status === 'locked') return state;
+      if (m.status === 'done') {
+        // 완료한 미션은 다시 열어 결과만 볼 수 있다 (④ 확인 단계, 회로판 조작 불가)
+        return {
+          ...state,
+          currentScreen: 'S4',
+          currentMission: action.mission,
+          boards: m.finalBoards ?? { A: emptyBoard(action.at), B: emptyBoard(action.at) },
+        };
+      }
       return {
         ...state,
         currentScreen: 'S4',
         currentMission: action.mission,
         boards: { A: emptyBoard(action.at), B: emptyBoard(action.at) },
       };
+    }
+    case 'LEAVE_MISSION': {
+      // "지도로 돌아가기"는 완료한 미션에서만 (명세서 7-1 하단)
+      const id = state.currentMission;
+      if (!id || state.missions[id].status !== 'done') return state;
+      return { ...state, currentMission: null, currentScreen: 'S3' };
     }
     case 'GO_TO_WRAPUP':
       return MISSION_ORDER.every((id) => state.missions[id].status === 'done') ? goTo(state, 'S5') : state;
@@ -142,11 +168,11 @@ export function reducer(state: AppState, action: Action): AppState {
 
     case 'ADD_WIRE': {
       const { board, wire } = action;
-      if (!isEditable(state) || !isValidWire(state, board, wire)) return state;
+      if (!isEditable(state, board) || !isValidWire(state, board, wire)) return state;
       return applyBoardChange(state, board, action.at, (b) => ({ ...b, wires: [...b.wires, wire] }), true);
     }
     case 'REMOVE_WIRE': {
-      if (!isEditable(state)) return state;
+      if (!isEditable(state, action.board)) return state;
       if (!state.boards[action.board].wires.some((w) => w.id === action.wireId)) return state;
       return applyBoardChange(
         state,
@@ -157,7 +183,7 @@ export function reducer(state: AppState, action: Action): AppState {
       );
     }
     case 'TOGGLE_SWITCH':
-      if (!isEditable(state)) return state;
+      if (!isEditable(state, action.board)) return state;
       return applyBoardChange(state, action.board, action.at, (b) => ({ ...b, switchClosed: !b.switchClosed }), false);
 
     case 'GO_COMPARE':
@@ -174,8 +200,11 @@ export function reducer(state: AppState, action: Action): AppState {
 
     case 'COMPLETE_MISSION': {
       const id = state.currentMission;
-      if (!id || state.missions[id].step !== 'confirm') return state;
-      const missions = { ...state.missions, [id]: { ...state.missions[id], status: 'done' as const, completedAt: action.at } };
+      if (!id || state.missions[id].step !== 'confirm' || state.missions[id].status === 'done') return state;
+      const missions = {
+        ...state.missions,
+        [id]: { ...state.missions[id], status: 'done' as const, completedAt: action.at, finalBoards: state.boards },
+      };
       const next = nextMission(id);
       if (next && missions[next].status === 'locked') missions[next] = { ...missions[next], status: 'open' };
       return { ...state, missions, currentMission: null, currentScreen: 'S3' };
@@ -185,6 +214,14 @@ export function reducer(state: AppState, action: Action): AppState {
       if (!id) return state;
       const m = state.missions[id];
       return { ...state, missions: { ...state.missions, [id]: { ...m, hintCount: m.hintCount + 1 } } };
+    }
+
+    case 'START_CHALLENGE': {
+      const id = state.currentMission;
+      if (!id || !MISSIONS[id].hasChallenge) return state;
+      const m = state.missions[id];
+      if (m.step !== 'confirm' || m.status === 'done' || (m.challenge ?? 'none') !== 'none') return state;
+      return { ...state, missions: { ...state.missions, [id]: { ...m, challenge: 'active' } } };
     }
 
     // ───── S5 ─────
@@ -232,10 +269,14 @@ function updateMission(
   return { ...state, missions: { ...state.missions, [id]: fn(state.missions[id]) } };
 }
 
-/** 회로판은 ② 만들기 단계에서만 조작할 수 있다 */
-function isEditable(state: AppState): boolean {
+/** 회로판은 ② 만들기 단계에서만 조작할 수 있다. 8-1 도전 중에는 B 회로만 다시 만질 수 있다 */
+export function isEditable(state: AppState, board: BoardId): boolean {
   const id = state.currentMission;
-  return id !== null && state.missions[id].step === 'build';
+  if (id === null) return false;
+  const m = state.missions[id];
+  if (m.status === 'done') return false;
+  if (m.step === 'build') return true;
+  return m.step === 'confirm' && m.challenge === 'active' && board === 'B';
 }
 
 function isValidWire(state: AppState, board: BoardId, wire: Wire): boolean {
@@ -260,11 +301,18 @@ function applyBoardChange(
   const nextBoard = { ...fn(state.boards[board]), lastChangedAt: at };
   const result = judgeBoard(MISSIONS[id].part, board, nextBoard);
   const m = state.missions[id];
-  const mission: MissionRecord = {
-    ...m,
-    attempts: m.attempts + (countsAsAttempt ? 1 : 0),
-    built: { ...m.built, [board]: m.built[board] || result.wiredLevel >= REQUIRED_LEVEL[board] },
-  };
+  let mission: MissionRecord;
+  if (m.step === 'build') {
+    mission = {
+      ...m,
+      attempts: m.attempts + (countsAsAttempt ? 1 : 0),
+      built: { ...m.built, [board]: m.built[board] || result.wiredLevel >= REQUIRED_LEVEL[board] },
+    };
+  } else {
+    // 8-1 도전: 같은 극끼리 이은 채 스위치를 닫아 전구가 꺼진 것을 보면 도전 완료
+    const sawSamePole = result.reason === 'SAME_POLE' && nextBoard.switchClosed;
+    mission = sawSamePole ? { ...m, challenge: 'done' } : m;
+  }
   return {
     ...state,
     boards: { ...state.boards, [board]: nextBoard },

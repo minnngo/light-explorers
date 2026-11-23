@@ -93,7 +93,13 @@ export interface MissionRecord {
   /** 전선을 잇거나 지운 횟수 */
   attempts: number;
   completedAt: string | null;
+  /** 완료할 때의 회로판. 완료한 미션을 다시 열어 볼 때 보여 준다 */
+  finalBoards?: Record<BoardId, BoardState>;
+  /** 8-1 선택 보충 "같은 극끼리 이어 보기" 도전 (미션 1만). 지도서에 없는 활동 */
+  challenge?: ChallengeState;
 }
+
+export type ChallengeState = 'none' | 'active' | 'done';
 
 export type OX = 'O' | 'X';
 export type MisconceptionKey = 'q1' | 'q2' | 'q3';
@@ -113,6 +119,8 @@ export interface AppState {
   /** 저장·동기화용 모둠 id (탐험 시작 시 생성) */
   groupId: string | null;
   groupName: string;
+  /** 3단계: 여러 기기로 함께할 때의 방 코드. 한 기기로 하면 null */
+  roomCode?: string | null;
   currentScreen: ScreenId;
   introCut: number;
   intro: IntroRecord;

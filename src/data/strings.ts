@@ -30,6 +30,61 @@ export const COMMON = {
   minChars: (now: number, min: number) => `${Math.min(now, min)}/${min}글자 이상`,
   loading: '불빛 탐험대를 준비하고 있어요…',
   optional: '(선택)',
+  reviewing: '완료한 곳이에요. 결과를 다시 볼 수 있어요.',
+};
+
+/** 3단계: 여러 기기로 함께하기 */
+export const ROOM = {
+  togetherToggle: '여러 기기로 함께하기 (A 회로·B 회로를 기기마다 나누어 맡아요)',
+  modeNew: '새 모둠으로 시작',
+  modeJoin: '모둠 방에 들어가기',
+  myName: '내 이름 (모둠 친구들에게 보여요)',
+  myNamePlaceholder: '예) 민수',
+  myRole: '내가 맡을 회로',
+  roleName: { A: 'A 회로 (전지 1개)', B: 'B 회로 (전지 2개)' } as Record<'A' | 'B', string>,
+  codeLabel: '방 코드 (먼저 시작한 친구 화면 위쪽에 있어요)',
+  codePlaceholder: '예) K7P2',
+  codeInvalid: '방 코드는 4글자예요.',
+  join: '방에 들어가기',
+  waiting: '모둠 화면을 불러오고 있어요…',
+  notFound: '아직 방을 찾지 못했어요. 방 코드가 맞는지, 먼저 시작한 친구가 탐험을 시작했는지 확인해 보세요.',
+  cancel: '그만두기',
+  bar: (code: string) => `함께하기 방 코드 ${code}`,
+  connecting: '연결하는 중…',
+  offline: '연결이 끊겼어요. 다시 연결하는 중…',
+  me: '(나)',
+  nobody: '아직 없음',
+  roleOwner: (role: 'A' | 'B', names: string) => `${role} 회로 담당: ${names}`,
+  notMyBoard: (role: 'A' | 'B') => `${role} 회로 담당 기기에서 조작해요`,
+  did: (name: string, what: string) => `${name}: ${what}`,
+  actions: {
+    ADD_WIRE: '전선을 이었어요',
+    REMOVE_WIRE: '전선을 지웠어요',
+    TOGGLE_SWITCH: '스위치를 눌렀어요',
+    SET_PREDICTION: '예상을 정했어요',
+    GO_COMPARE: '비교하러 갔어요',
+    BACK_TO_BUILD: '다시 해 보기를 눌렀어요',
+    SET_COMPARE: '○표를 골랐어요',
+    CONFIRM: '확인하기를 눌렀어요',
+    COMPLETE_MISSION: '지도로 돌아갔어요',
+    OPEN_MISSION: '미션을 열었어요',
+    START_CHALLENGE: '도전을 시작했어요',
+    NEXT_INTRO_CUT: '다음으로 넘겼어요',
+    NEXT_WRAPUP_STEP: '다음으로 넘겼어요',
+  } as Partial<Record<string, string>>,
+};
+
+export const RESTART = {
+  button: '처음부터 다시 하기 (다음 모둠)',
+  confirm: '이 기기의 기록을 지우고 처음 화면으로 돌아갈까요? (선생님 화면에 저장된 기록은 남아요)',
+};
+
+/** 8-1 선택 보충 (지도서에 없는 활동. 미션 1 ④ 확인하기에서만) */
+export const CHALLENGE = {
+  button: '도전! 더 해 보기 (선택)',
+  prompt: '도전! B 회로의 전지 두 개를 같은 극끼리 이어 보세요. 어떻게 되나요?',
+  howTo: 'B 회로의 전선을 지우고 다시 이은 뒤 스위치를 닫아 보세요.',
+  done: '전지를 늘리기만 해서는 안 되고, 서로 다른 극끼리 한 줄로 이어야 해요.',
 };
 
 export const PART_NAMES: Record<PartKind | 'battery' | 'switch', string> = {
@@ -336,5 +391,85 @@ export const S5 = {
     toCharacter: `${CHARACTER}에게 알려 주고 싶은 것을 한 줄로 써 보세요.`,
     button: '탐험 마치기',
     done: '수고했어요, 탐험대! (끝)',
+  },
+};
+
+// ───────────── 교사용 화면 (학생에게는 보이지 않는다) ─────────────
+
+/**
+ * 명세서 11-2 지도서 평가 요소. 교사가 판단할 때 참고로만 보여 준다 (자동 판정하지 않는다).
+ * criteria(상·중·하)는 명세서 11-2의 "보는 내용"으로 만든 임시 문장이다.
+ * TODO: 지도서 4차시 평가 문장 그대로 바꿔 넣기 (팀 확인 필요)
+ */
+export const TEACHER = {
+  title: '교사용 화면',
+  pinPlaceholder: '교사 비밀번호',
+  enter: '들어가기',
+  refreshNote: '10초마다 새로 불러와요. 점수나 상·중·하는 자동으로 매기지 않아요. 판단은 선생님이 해요.',
+  mostMissedTitle: '많이 틀린 오개념 문항',
+  noMissed: '아직 틀린 문항이 없어요.',
+  noGroups: '오늘(최근 12시간) 기록된 모둠이 없어요.',
+  columns: { group: '모둠', where: '지금 위치', revived: '되살린 곳', hints: '힌트/시도', selfEval: '스스로 평가', wrote: '쓴 글' },
+  details: '자세히 보기',
+  rubricTitle: '지도서 평가 요소 (참고)',
+  rubric: [
+    {
+      element: '전지 1개 회로와 전지 2개 직렬 회로에서 전구의 밝기 비교하기 (과정·기능)',
+      look: '두 회로를 직접 구성하고 밝기를 비교했는가',
+      evidence: '미션 1의 회로 만들기 결과(A, B 정상 연결), 시도 횟수, 도움 횟수, ○표 비교 결과',
+      criteria: {
+        상: '두 회로를 스스로 구성하고 밝기 차이를 정확히 비교한다.',
+        중: '도움을 받아 두 회로를 구성하고 밝기를 비교한다.',
+        하: '두 회로를 구성하거나 밝기를 비교하는 데 어려움이 있다.',
+      },
+    },
+    {
+      element: '전지의 개수에 따른 전구의 밝기 차이 말하기 (지식·이해)',
+      look: '전지 개수에 따른 특징을 설명했는가 (전기 에너지의 공급과 관련지어 설명하면 높은 수준)',
+      evidence: '미션의 모둠 설명, 함께 생각 나누기 문장, 설명하기 답, 확인해요 답, 오개념 점검 결과',
+      criteria: {
+        상: '전지 2개를 직렬연결하면 전기 에너지가 더 많이 공급되어 전구가 더 밝다고 설명한다.',
+        중: '전지 2개를 직렬연결한 회로의 전구가 더 밝다고 말한다.',
+        하: '전지 개수에 따른 밝기 차이를 말하는 데 어려움이 있다.',
+      },
+    },
+    {
+      element: '전지의 개수에 따른 회로의 특징을 비교하는 활동에 적극적으로 참여하기 (가치·태도)',
+      look: '활동에 흥미를 느끼고 참여했는가',
+      evidence: '완료한 미션 수, 입력한 글의 유무, 스스로 평가',
+      criteria: {
+        상: '모든 활동에 적극적으로 참여하고 모둠의 생각을 글로 나타낸다.',
+        중: '대부분의 활동에 참여한다.',
+        하: '활동 참여에 도움이 필요하다.',
+      },
+    },
+  ],
+  labels: {
+    intro: '도입',
+    recall: '3차시 떠올리기',
+    fanReason: '전지 개수가 다른 까닭',
+    fanPredict: '손 선풍기 예상',
+    prediction: '예상',
+    built: '정상 연결',
+    compare: '○표 비교',
+    explanation: '모둠 이유',
+    challenge: '도전(같은 극끼리)',
+    groupThought: '함께 생각 나누기',
+    explain: '설명하기 답',
+    revisitFan: '처음 예상 다시 보기',
+    check: '확인해요',
+    misconception: '오개념 점검',
+    toCharacter: '이야기 인물에게',
+    finished: '탐험 마침',
+  },
+  values: {
+    correct: '맞음',
+    wrong: '틀림',
+    empty: '-',
+    yes: '예',
+    no: '아니요',
+    challenge: { none: '안 함', active: '하는 중', done: '해 봄' },
+    explain: { more: '더 ~했어요', less: '덜 ~했어요', same: '같았어요' },
+    check: { brighter: '밝습니다', darker: '어둡습니다' },
   },
 };

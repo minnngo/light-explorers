@@ -111,6 +111,56 @@ describe('미션 단계 진행 (명세서 7-2)', () => {
   });
 });
 
+const FINISH_M1: Action[] = [
+  { type: 'OPEN_MISSION', mission: 'm1', at: 0 },
+  { type: 'SET_PREDICTION', choice: 'a' },
+  ...BUILD_BOTH,
+  { type: 'GO_COMPARE' },
+  { type: 'SET_COMPARE', choice: 'more' },
+  { type: 'SET_EXPLANATION', text: '전지가 2개라서 전구가 더 밝았어요' },
+  { type: 'CONFIRM' },
+];
+
+describe('완료한 미션 다시 보기 (명세서 7-1 하단 "지도로 돌아가기")', () => {
+  it('완료한 미션을 다시 열면 완료할 때의 회로판이 보이고 조작은 막힌다', () => {
+    const done = play(atMap(), ...FINISH_M1, { type: 'COMPLETE_MISSION', at: 't1' });
+    const s = play(done, { type: 'OPEN_MISSION', mission: 'm1', at: 99 }, wire('A', 'bat1.plus', 'sw.a'));
+    expect(s.currentScreen).toBe('S4');
+    expect(s.boards.A.wires).toHaveLength(3);
+    expect(play(s, { type: 'COMPLETE_MISSION', at: 't2' }).missions.m1.completedAt).toBe('t1');
+    expect(play(s, { type: 'LEAVE_MISSION' }).currentScreen).toBe('S3');
+  });
+
+  it('진행 중인 미션에서는 지도로 돌아갈 수 없다', () => {
+    const s = play(atMap(), { type: 'OPEN_MISSION', mission: 'm1', at: 0 }, { type: 'LEAVE_MISSION' });
+    expect(s.currentScreen).toBe('S4');
+  });
+});
+
+describe('8-1 선택 보충: 같은 극끼리 이어 보기', () => {
+  it('④ 확인하기에서 도전을 시작하면 B 회로만 다시 만질 수 있고, 같은 극끼리 이어 불이 꺼지면 완료', () => {
+    let s = play(atMap(), ...FINISH_M1, { type: 'START_CHALLENGE' });
+    expect(s.missions.m1.challenge).toBe('active');
+    const attempts = s.missions.m1.attempts;
+
+    s = play(s, { type: 'TOGGLE_SWITCH', board: 'A', at: 30 });
+    expect(s.boards.A.switchClosed).toBe(true); // A는 그대로
+
+    const [first] = s.boards.B.wires; // bat1.plus - bat2.minus
+    s = play(s, { type: 'REMOVE_WIRE', board: 'B', wireId: first.id, at: 31 });
+    s = play(s, { type: 'REMOVE_WIRE', board: 'B', wireId: s.boards.B.wires[0].id, at: 32 }); // bat2.plus - load.a
+    s = play(s, wire('B', 'bat1.plus', 'bat2.plus'), wire('B', 'bat2.minus', 'load.a'));
+    expect(s.missions.m1.challenge).toBe('done');
+    expect(s.missions.m1.attempts).toBe(attempts); // 도전 조작은 시도 횟수에 넣지 않는다
+  });
+
+  it('미션 2에는 도전이 없다', () => {
+    const s = { ...atMap(), currentMission: 'm2' as const };
+    s.missions = { ...s.missions, m2: { ...s.missions.m2, step: 'confirm' } };
+    expect(reducer(s, { type: 'START_CHALLENGE' }).missions.m2.challenge).toBe('none');
+  });
+});
+
 describe('S5 마무리', () => {
   it('오개념 점검은 처음 고른 답만 기록한다', () => {
     const s = play(

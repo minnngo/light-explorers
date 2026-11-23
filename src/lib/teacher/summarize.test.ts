@@ -19,4 +19,17 @@ describe('summarize (교사용 집계)', () => {
     expect(summary.mostMissed).toEqual(['q2', 'q1']);
     expect(summary.groups.map((g) => g.groupName)).toEqual(['가', '나', '다']);
   });
+
+  it('미션별 근거와 글을 쓴 칸 수를 모은다', () => {
+    const s = createInitialState();
+    const state: AppState = {
+      ...s,
+      groupId: 'g',
+      missions: { ...s.missions, m1: { ...s.missions.m1, explanation: '전지가 2개라서 더 밝아요', hintCount: 2 } },
+    };
+    const [g] = summarize([{ state, updatedAt: '' }]).groups;
+    expect(g.missions.m1).toMatchObject({ hintCount: 2, challenge: 'none', built: { A: false, B: false } });
+    expect(g.wroteCount).toBe(1);
+    expect(g.writableCount).toBe(4);
+  });
 });

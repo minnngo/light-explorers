@@ -15,7 +15,7 @@ import {
 } from '@/data/boards';
 import { PART_NAMES } from '@/data/strings';
 import type { BoardId, BoardState, JudgeResult, PartKind, TerminalId } from '@/lib/types';
-import { playChime } from '@/media/sound';
+import { playChime, playLightOn } from '@/media/sound';
 
 interface Props {
   boardId: BoardId;
@@ -44,6 +44,8 @@ export default function CircuitBoard(props: Props) {
   // 안내 종 소리 (소리 끄기면 글자와 물결만)
   useEffect(() => {
     if (part === 'buzzer' && result.level > 0 && !muted) playChime(result.level as 1 | 2);
+    // 불이 켜지는 소리 (명세서 14장 S1)
+    if (part === 'bulb' && result.level > 0 && !muted) playLightOn(result.level as 1 | 2);
   }, [part, result.level, muted]);
 
   const toSvg = (e: { clientX: number; clientY: number }) => {

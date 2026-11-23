@@ -34,6 +34,11 @@ export function playChime(level: 1 | 2) {
   }
 }
 
+/** 불이 켜지는 소리. 밝을수록 높고 크게 */
+export function playLightOn(level: 1 | 2) {
+  tone(level === 2 ? 1320 : 990, level === 2 ? 0.15 : 0.05, 0, 0.18);
+}
+
 export function playSuccess() {
   tone(523, 0.2, 0, 0.25);
   tone(659, 0.2, 0.12, 0.25);

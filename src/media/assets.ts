@@ -14,3 +14,10 @@ export const INTRO_CUT_ART = ['🏠💡', '🌃🏮🔔🌬️', '🔋💡🔌',
 export const CHARACTER_ART = '🧒'; // A3 이야기 인물
 export const GLOVE_ART = '🧤'; // A5 절연 장갑 (S1에서만)
 export const VILLAGE_ART = { dark: '🌑🏘️', bright: '🌕🏘️✨' }; // A1 마을 배경
+
+/** 되살아남 연출 (명세서 8장). 차례로 하나씩 나타난다 */
+export const REVIVAL_ART: Record<MissionId, string[]> = {
+  m1: ['💡', '💡', '💡', '💡', '💡'], // 가로등 불이 하나씩 차례로 켜진다
+  m2: ['🔔', '🧑', '👩', '👴', '👧'], // 안내 종이 울리고 사람들이 광장으로 모인다
+  m3: ['🌬️', '🏠', '🏡', '🏘️', '✨'], // 풍차가 돌며 마을 전체에 불이 켜진다
+};

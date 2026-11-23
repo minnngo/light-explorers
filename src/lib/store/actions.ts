@@ -4,11 +4,12 @@ import type { BoardId, MissionId, TerminalId } from '@/lib/types';
 import type { Action } from './reducer';
 
 export const actions = {
-  startExpedition: (groupName: string, safetyAgreed: boolean): Action => ({
+  startExpedition: (groupName: string, safetyAgreed: boolean, roomCode: string | null = null): Action => ({
     type: 'START_EXPEDITION',
     groupId: crypto.randomUUID(),
     groupName,
     safetyAgreed,
+    roomCode,
   }),
   openMission: (mission: MissionId): Action => ({ type: 'OPEN_MISSION', mission, at: Date.now() }),
   addWire: (board: BoardId, from: TerminalId, to: TerminalId): Action => ({

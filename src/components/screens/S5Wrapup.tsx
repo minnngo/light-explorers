@@ -1,7 +1,7 @@
 'use client';
 
 import { MISSION_ORDER } from '@/data/missions';
-import { CHARACTER, COMMON, MISSION_STRINGS, S2, S5 } from '@/data/strings';
+import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S2, S5 } from '@/data/strings';
 import { canAdvanceWrapup, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
 import { useStore } from '@/lib/store/StoreContext';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
@@ -10,13 +10,18 @@ import { Button, Choice, Speech, TextArea } from '../ui';
 
 /** S5. 마무리 7단계 (지도서 마무리 7분). 한 화면에 한 단계씩 */
 export default function S5Wrapup() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, restart } = useStore();
 
   if (state.finished) {
     return (
       <main className="m-auto flex flex-col items-center gap-4 p-6 text-center">
         <span className="text-8xl" aria-hidden>{VILLAGE_ART.bright}</span>
         <p className="text-3xl font-black">{S5.finish.done}</p>
+        {/* 같은 기기를 다음 모둠이 쓸 수 있게 (선생님용, 눈에 덜 띄게) */}
+        <button type="button" className="mt-10 min-h-11 text-base text-slate-400 underline"
+          onClick={() => window.confirm(RESTART.confirm) && restart()}>
+          {RESTART.button}
+        </button>
       </main>
     );
   }

@@ -20,7 +20,7 @@ export default function S3Map() {
   const onPick = (id: MissionId) => {
     const status = state.missions[id].status;
     if (status === 'locked') setLockedMessage(true);
-    if (status === 'open') dispatch(actions.openMission(id));
+    else dispatch(actions.openMission(id)); // 완료한 곳은 결과를 다시 볼 수 있다
   };
 
   return (

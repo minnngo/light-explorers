@@ -29,6 +29,7 @@ export async function PUT(request: NextRequest, ctx: RouteContext<'/api/groups/[
   const { error } = await supabase.from('group_sessions').upsert({
     id,
     group_name: state.groupName.slice(0, 40),
+    room_code: typeof state.roomCode === 'string' ? state.roomCode.slice(0, 8) : null,
     state,
     updated_at: new Date().toISOString(),
   });

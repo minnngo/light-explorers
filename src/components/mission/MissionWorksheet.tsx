@@ -4,12 +4,12 @@
 // POE 규칙: ④ 확인하기 전에는 실제 결과 문장, 정답 표시, 정리 문구를 절대 그리지 않는다.
 import { useEffect, useState } from 'react';
 import { MISSIONS } from '@/data/missions';
-import { CHARACTER, COMMON, MISSION_STRINGS } from '@/data/strings';
+import { CHALLENGE, CHARACTER, COMMON, MISSION_STRINGS } from '@/data/strings';
 import { canConfirm, canGoCompare, checklist, currentResults, MIN_EXPLANATION_LENGTH } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
 import type { CompareChoice, PredictionChoice } from '@/lib/types';
-import { PLACE_ICONS } from '@/media/assets';
+import { REVIVAL_ART } from '@/media/assets';
 import { playSuccess } from '@/media/sound';
 import { Button, Choice, Speech, TextArea } from '../ui';
 
@@ -130,10 +130,11 @@ function ConfirmPanel() {
   const record = state.missions[id];
   const text = MISSION_STRINGS[id];
   const right = record.prediction === MISSIONS[id].correctPrediction;
+  const reviewing = record.status === 'done';
 
   useEffect(() => {
-    if (!muted) playSuccess();
-  }, [muted]);
+    if (!muted && !reviewing) playSuccess();
+  }, [muted, reviewing]);
 
   return (
     <>
@@ -147,13 +148,44 @@ function ConfirmPanel() {
         {right ? text.predictionRight : text.predictionDifferent}
       </p>
       <p className="rounded-xl bg-amber-50 p-3">{text.summary}</p>
-      <div className="pop-in flex flex-col items-center gap-2 rounded-2xl bg-indigo-950 p-4 text-white">
-        <span className="text-6xl" aria-hidden>{PLACE_ICONS[id].on}</span>
+      <div className="flex flex-col items-center gap-3 rounded-2xl bg-indigo-950 p-4 text-white">
+        {/* 되살아남 연출: 하나씩 차례로 나타난다 */}
+        <div className="flex gap-2 text-5xl" aria-hidden>
+          {REVIVAL_ART[id].map((art, i) => (
+            <span key={i} className="light-up" style={{ animationDelay: `${i * 0.35}s` }}>{art}</span>
+          ))}
+        </div>
         <Speech speaker={CHARACTER}>
           <span className="text-slate-900">{text.revival}</span>
         </Speech>
       </div>
-      <Button onClick={() => dispatch(actions.completeMission())}>{COMMON.backToMap}</Button>
+      {MISSIONS[id].hasChallenge && !reviewing && <ChallengeBox />}
+      {reviewing ? (
+        <Button onClick={() => dispatch({ type: 'LEAVE_MISSION' })}>{COMMON.backToMap}</Button>
+      ) : (
+        <Button onClick={() => dispatch(actions.completeMission())}>{COMMON.backToMap}</Button>
+      )}
     </>
+  );
+}
+
+/** 8-1 선택 보충: B 회로의 전지를 같은 극끼리 이어 보는 도전 (지도서에 없는 활동) */
+function ChallengeBox() {
+  const { state, dispatch } = useStore();
+  const record = state.missions[state.currentMission!];
+  const challenge = record.challenge ?? 'none';
+  if (challenge === 'none') {
+    return (
+      <Button variant="secondary" onClick={() => dispatch({ type: 'START_CHALLENGE' })}>
+        {CHALLENGE.button}
+      </Button>
+    );
+  }
+  return (
+    <div className="flex flex-col gap-2 rounded-xl border-2 border-dashed border-sky-400 bg-sky-50 p-3">
+      <p className="font-bold">{CHALLENGE.prompt}</p>
+      {challenge === 'active' && <p className="text-base text-slate-600">{CHALLENGE.howTo}</p>}
+      {challenge === 'done' && <p className="pop-in font-bold text-sky-800">💡 {CHALLENGE.done}</p>}
+    </div>
   );
 }

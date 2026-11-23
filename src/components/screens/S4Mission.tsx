@@ -3,12 +3,14 @@
 import { useCallback, useState } from 'react';
 import { REQUIRED_LEVEL } from '@/data/boards';
 import { MISSIONS } from '@/data/missions';
-import { COMMON, HINTS, MISSION_STRINGS } from '@/data/strings';
+import { COMMON, HINTS, MISSION_STRINGS, ROOM } from '@/data/strings';
 import { currentResults, revivedCount } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
-import { useStore } from '@/lib/store/StoreContext';
+import { isEditable } from '@/lib/store/reducer';
+import { canOperateBoard, useStore } from '@/lib/store/StoreContext';
 import type { BoardId, JudgeResult, MissionStep } from '@/lib/types';
 import CircuitBoard from '../circuit/CircuitBoard';
+import { ownerNames, useRecentNote } from '../RoomBar';
 import { useHint } from '../circuit/useHint';
 import MissionWorksheet from '../mission/MissionWorksheet';
 
@@ -16,7 +18,7 @@ const STEPS: MissionStep[] = ['predict', 'build', 'compare', 'confirm'];
 
 /** S4. 미션 화면 (3곳 공통 틀. 미션마다 다른 것은 data/missions.ts, data/strings.ts에서 온다) */
 export default function S4Mission() {
-  const { state, muted, setMuted } = useStore();
+  const { state, dispatch, muted, setMuted } = useStore();
   const id = state.currentMission!;
   const config = MISSIONS[id];
   const text = MISSION_STRINGS[id];
@@ -49,6 +51,11 @@ export default function S4Mission() {
         )}
       </header>
 
+      {record.status === 'done' && (
+        <p className="mx-4 mt-2 self-start rounded-full bg-emerald-100 px-3 py-1 text-base font-bold text-emerald-800">
+          ✔ {COMMON.reviewing}
+        </p>
+      )}
       {config.part === 'bulb' && (
         <p className="mx-4 mt-2 self-start rounded-full bg-yellow-100 px-3 py-1 text-sm font-bold">💡💡 {COMMON.sameBulbs}</p>
       )}
@@ -67,21 +74,34 @@ export default function S4Mission() {
         <button type="button" className="min-h-11 rounded-xl border-2 border-slate-300 px-3" onClick={() => setMuted(!muted)}>
           {muted ? COMMON.muteOn : COMMON.muteOff}
         </button>
+        {record.status === 'done' && (
+          <button type="button" className="min-h-11 rounded-xl border-2 border-amber-400 px-3 font-bold"
+            onClick={() => dispatch({ type: 'LEAVE_MISSION' })}>
+            {COMMON.backToMap}
+          </button>
+        )}
       </footer>
     </div>
   );
 }
 
 function BoardPanel({ boardId, result, dark }: { boardId: BoardId; result: JudgeResult; dark: boolean }) {
-  const { state, dispatch, muted } = useStore();
+  const { state, dispatch, muted, room, members } = useStore();
   const id = state.currentMission!;
   const record = state.missions[id];
   const board = state.boards[boardId];
   const text = MISSION_STRINGS[id];
-  const editable = record.step === 'build';
+  // 3단계: 함께하기에서는 내가 맡은 회로판만 조작한다 (다른 회로판은 보기만)
+  const mine = canOperateBoard(room, boardId);
+  const editable = isEditable(state, boardId) && mine;
+  const note = useRecentNote(boardId);
 
-  const onHintShown = useCallback(() => dispatch({ type: 'HINT_SHOWN' }), [dispatch]);
-  const hint = useHint(board, result, editable, onHintShown);
+  // 힌트 횟수는 그 회로판을 맡은 기기에서만 센다 (같은 힌트를 두 기기가 두 번 세지 않게)
+  const onHintShown = useCallback(() => {
+    if (mine) dispatch({ type: 'HINT_SHOWN' });
+  }, [dispatch, mine]);
+  // 힌트는 ② 만들기에서만 (8-1 도전 중에는 일부러 같은 극끼리 잇기 때문에 힌트를 주지 않는다)
+  const hint = useHint(board, result, record.step === 'build', onHintShown);
 
   let observation: string | null = null;
   if (record.step !== 'predict') {
@@ -92,14 +112,22 @@ function BoardPanel({ boardId, result, dark }: { boardId: BoardId; result: Judge
 
   return (
     <section className="flex flex-col gap-2">
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {/* 1단계(한 기기): 모둠원이 두 회로를 나누어 만들도록 이름표를 단다 (명세서 7-1) */}
         <span className="rounded-full bg-sky-100 px-3 py-1 text-sm font-bold text-sky-800">
-          {boardId === 'A' ? COMMON.roleA : COMMON.roleB}
+          {room ? ROOM.roleOwner(boardId, ownerNames(members, boardId, room.me)) : boardId === 'A' ? COMMON.roleA : COMMON.roleB}
         </span>
         <h2 className="text-xl font-bold">{boardId === 'A' ? COMMON.boardA : COMMON.boardB}</h2>
+        {room && !mine && isEditable(state, boardId) && (
+          <span className="text-sm text-slate-500">· {ROOM.notMyBoard(boardId)}</span>
+        )}
       </div>
-      <div className={editable ? '' : 'opacity-90'}>
+      <div className={`relative ${editable ? '' : 'opacity-90'}`}>
+          {note && (
+            <p role="status" className="pop-in absolute left-2 top-2 z-10 rounded-full bg-sky-900 px-3 py-1 text-sm text-white">
+              {ROOM.did(note.by.name, ROOM.actions[note.type] ?? '')}
+            </p>
+          )}
           <CircuitBoard
             boardId={boardId}
             part={MISSIONS[id].part}
