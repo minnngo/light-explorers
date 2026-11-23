@@ -265,7 +265,7 @@ function TutorialCard({ step, board, onNext, onSkip }: {
           </button>
         )}
         {last && (
-          <button type="button" className="min-h-11 rounded-2xl bg-amber-700 px-8 text-xl font-bold text-white" onClick={onSkip} autoFocus>
+          <button type="button" className="min-h-11 rounded-2xl bg-amber-700 px-8 text-xl font-bold text-white outline-none" onClick={onSkip} autoFocus>
             {TUTORIAL.start}
           </button>
         )}

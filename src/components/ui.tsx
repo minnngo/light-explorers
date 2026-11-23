@@ -10,7 +10,7 @@ export function Button({
   ...props
 }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: 'primary' | 'secondary' }) {
   const base =
-    'min-h-11 rounded-2xl px-5 py-2 font-bold transition disabled:cursor-not-allowed disabled:opacity-40';
+    'min-h-11 rounded-2xl px-5 py-2 font-bold transition outline-none disabled:cursor-not-allowed disabled:opacity-40';
   const look =
     variant === 'primary'
       ? 'border-2 border-amber-700 bg-amber-700 text-white hover:border-amber-800 hover:bg-amber-800'

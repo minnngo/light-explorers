@@ -15,7 +15,6 @@ import { useStore } from '@/lib/store/StoreContext';
 import type { MissionId, StoryKey } from '@/lib/types';
 import { WORLD as WORLD_SIZE } from '@/data/world';
 import { nextTarget } from '@/lib/world/movement';
-import { JoystickIcon } from '../village/Characters';
 import { Button, Speech } from '../ui';
 import SituationScene from '../village/SituationScene';
 import VillageWorld, { type WorldView } from '../village/VillageWorld';
@@ -136,13 +135,16 @@ export default function S3Map() {
       </div>
       </div>
 
-      <footer className="flex flex-wrap items-center justify-between gap-3">
-        <p className="flex items-center gap-1.5 text-sm text-slate-600"><JoystickIcon />{WORLD.howToMove}</p>
-        {done && !story && (
-          <Button className="px-10 text-2xl" onClick={() => dispatch({ type: 'GO_TO_WRAPUP' })}>
-            {S3.toWrapup}
-          </Button>
-        )}
+      <footer className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        <span aria-hidden />
+        <p className="text-center text-sm text-slate-600">{WORLD.howToMove}</p>
+        <div className="justify-self-end">
+          {done && !story && (
+            <Button className="px-10 text-2xl" onClick={() => dispatch({ type: 'GO_TO_WRAPUP' })}>
+              {S3.toWrapup}
+            </Button>
+          )}
+        </div>
       </footer>
     </main>
   );
@@ -165,7 +167,7 @@ function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
   return (
     <div className={overlay} role="dialog" aria-label={CHARACTER}>
       <Speech speaker={CHARACTER}>{text}</Speech>
-      {storyKey === 'arrive' && <p className="flex items-center gap-1.5 text-sm text-slate-600"><JoystickIcon />{WORLD.howToMove}</p>}
+      {storyKey === 'arrive' && <p className="text-center text-sm text-slate-600">{WORLD.howToMove}</p>}
       {showWrapup ? (
         <Button onClick={onWrapup}>{S3.toWrapup}</Button>
       ) : (
@@ -182,7 +184,7 @@ function ViewToggle({ view, onChange }: { view: WorldView; onChange: (v: WorldVi
     <div className="flex justify-self-end rounded-2xl border-2 border-slate-300 bg-white p-1" role="group" aria-label="보기">
       {options.map(([v, label]) => (
         <button key={v} type="button" aria-pressed={view === v} onClick={() => onChange(v)}
-          className={`min-h-9 rounded-xl px-3 text-sm font-bold transition ${
+          className={`min-h-9 rounded-xl px-3 text-sm font-bold outline-none transition ${
             view === v ? 'bg-amber-700 text-white' : 'text-slate-600 hover:bg-slate-100'
           }`}>
           {label}
@@ -204,7 +206,7 @@ interface SituationProps {
 function SituationPanel({ id, done, onStart, onRetry, onClose }: SituationProps) {
   const text = SITUATION[id];
   return (
-    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-3xl bg-slate-950/50 p-3">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
       <div className="pop-in relative flex max-h-full w-full max-w-2xl flex-col overflow-auto rounded-3xl bg-white shadow-2xl"
         role="dialog" aria-label={S3.places[id]}>
         <button type="button" onClick={onClose} aria-label={WORLD.close}

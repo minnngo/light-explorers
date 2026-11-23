@@ -185,29 +185,30 @@ body {
 }
 
 /* 마을 인물: 탐험대 걷기, 반디 날갯짓 */
-.walker .limb {
+/* 동글이 걷기: 몸을 좌우로 뒤뚱, 발은 번갈아 콩콩 */
+.walker .foot,
+.walker .blob-body {
   transform-box: fill-box;
-  transform-origin: 50% 0;
+  transform-origin: 50% 100%;
 }
-.walking .leg-a,
-.walking .arm-b {
-  animation: limb-swing 0.4s ease-in-out infinite alternate;
+.walking .blob-body {
+  animation: waddle 0.36s ease-in-out infinite alternate;
 }
-.walking .leg-b,
-.walking .arm-a {
-  animation: limb-swing 0.4s ease-in-out infinite alternate-reverse;
+@keyframes waddle {
+  from { transform: rotate(-7deg) translateY(0); }
+  to { transform: rotate(7deg) translateY(-3px); }
 }
-@keyframes limb-swing {
-  from { transform: rotate(30deg); }
-  to { transform: rotate(-30deg); }
+.walking .foot-a {
+  animation: step 0.36s ease-in-out infinite alternate;
 }
-.walking .w-bob {
-  animation: step-bob 0.2s ease-in-out infinite alternate;
+.walking .foot-b {
+  animation: step 0.36s ease-in-out infinite alternate-reverse;
 }
-@keyframes step-bob {
-  to { transform: translateY(-4px); }
+@keyframes step {
+  from { transform: translateY(0); }
+  to { transform: translateY(-6px); }
 }
-.walker:not(.walking) .w-bob {
+.walker:not(.walking) .blob-body {
   animation: breathe 2.4s ease-in-out infinite;
 }
 @keyframes breathe {
@@ -217,8 +218,8 @@ body {
   transform-box: fill-box;
   animation: flap 0.22s ease-in-out infinite alternate;
 }
-.fairy .wing-l { transform-origin: 100% 50%; }
-.fairy .wing-r { transform-origin: 0% 50%; }
+.fairy .wing-l { transform-origin: 80% 100%; }
+.fairy .wing-r { transform-origin: 20% 100%; }
 @keyframes flap {
   to { transform: scaleX(0.45); }
 }
@@ -258,15 +259,6 @@ body {
 @keyframes bell-swing {
   0%, 100% { transform: rotate(-14deg); }
   50% { transform: rotate(14deg); }
-}
-.hammer-hit {
-  transform-box: fill-box;
-  transform-origin: 100% 100%;
-  animation: hammer-hit 1.6s ease-in-out infinite;
-}
-@keyframes hammer-hit {
-  0%, 40%, 100% { transform: rotate(0deg); }
-  48% { transform: rotate(-35deg); }
 }
 .faint-wave {
   transform-box: fill-box;
@@ -335,7 +327,6 @@ body {
   .villager-idle,
   .bubble-pop,
   .bell-swing,
-  .hammer-hit,
   .faint-wave,
   .blade-twitch,
   .walk-across,

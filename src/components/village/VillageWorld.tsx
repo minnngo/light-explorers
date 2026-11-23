@@ -24,7 +24,7 @@ import VillageScene, { type PlaceLook } from './VillageScene';
 export type WorldView = 'near' | 'map';
 
 /** 가까이 보기 배율, 그때 탐험대 크기와 걷는 빠르기 (지도 보기는 1배, 크기 1, 빠르기 340) */
-const NEAR = { zoom: 2.6, scale: 0.42, speed: 190 } as const;
+const NEAR = { zoom: 5, scale: 0.22, speed: 90 } as const;
 const MAP = { zoom: 1, scale: 1, speed: 340 } as const;
 const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
@@ -196,13 +196,16 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
       {/* 탐험대·화살표는 위에 겹친 그림 (누르기는 아래 지도로 통과) */}
       <svg viewBox={viewBox} className="pointer-events-none absolute inset-0 h-full w-full">
         {target && !paused && (
-          <DownArrow x={PLACES[target].x} y={PLACES[target].y - lerp(130, 100, t)} scale={lerp(1, 0.55, t)} />
+          <DownArrow x={PLACES[target].x} y={PLACES[target].y - lerp(130, 100, t)} scale={lerp(1, 0.3, t)} />
         )}
 
         {/* 탐험대와 뒤따라 나는 반디 */}
         <g transform={`translate(${pos.x} ${pos.y}) scale(${size})`}>
-          <ellipse cx={0} cy={20} rx={24} ry={7} fill="#000" opacity={0.25} />
-          <g transform={`translate(${facingLeft ? 40 : -40} -62)`}>
+          {/* 내 발밑의 빛 고리: 마을 동물들과 구별 */}
+          <ellipse cx={0} cy={0} rx={36} ry={10} fill="#fde047" opacity={0.22} />
+          <ellipse cx={0} cy={0} rx={36} ry={10} fill="none" stroke="#fde047" strokeWidth={3} opacity={0.8} />
+
+          <g transform={`translate(${facingLeft ? 46 : -46} -74)`}>
             <g className="bob" style={{ animationDuration: '1.6s' }}>
               <Fairy />
             </g>

@@ -41,7 +41,7 @@ export default function IntroScene({ cut }: { cut: number }) {
           <>
             <DownArrow x={PLACES.m1.x} y={PLACES.m1.y - 130} />
             <g transform={`translate(${SPAWN.x} ${SPAWN.y})`}>
-              <g transform="translate(-40 -62)">
+              <g transform="translate(-46 -74)">
                 <g className="bob" style={{ animationDuration: '1.6s' }}><Fairy /></g>
               </g>
               <Explorer />

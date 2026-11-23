@@ -56,7 +56,7 @@ export default function TeacherPage() {
         <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); setActivePin(pin); }}>
           <input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder={TEACHER.pinPlaceholder}
             className="min-h-11 rounded-xl border-2 px-3" />
-          <button type="submit" className="min-h-11 rounded-xl bg-amber-700 font-bold text-white">
+          <button type="submit" className="min-h-11 rounded-xl bg-amber-700 font-bold text-white outline-none">
             {TEACHER.enter}
           </button>
         </form>

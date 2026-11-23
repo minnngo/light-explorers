@@ -18,8 +18,16 @@ import {
   TownDetails,
   Tree,
 } from './VillageDetails';
+import { CuteBellTower, CuteLamp, CuteSign, CuteTree, CuteWindmill, PropDefs, type RoofColor } from './Props';
 
 export type PlaceLook = 'dim' | 'on';
+
+/**
+ * 가까이 보기에서는 집·나무(NEAR_PROP)와 미션 장소(NEAR_PLACE)를 작게 그린다.
+ * 그래야 크게 확대해도 장소가 한 화면에 들어오고, 장소와 장소 사이 길이 멀게 느껴진다.
+ */
+export const NEAR_PROP = 0.6;
+export const NEAR_PLACE = 0.5;
 
 export interface VillageSceneProps {
   /** 장소마다 고장(dim) / 되살아남(on) */
@@ -43,13 +51,13 @@ export interface VillageSceneProps {
   className?: string;
 }
 
-const HOUSES: readonly (Vec & { color: string })[] = [
-  { x: 190, y: 360, color: '#9f1239' },
-  { x: 560, y: 520, color: '#b45309' },
-  { x: 900, y: 460, color: '#7c3aed' },
-  { x: 1090, y: 570, color: '#1d4ed8' },
-  { x: 460, y: 190, color: '#0f766e' },
-  { x: 150, y: 190, color: '#b45309' },
+const HOUSES: readonly (Vec & { roof: RoofColor })[] = [
+  { x: 190, y: 360, roof: 'rose' },
+  { x: 560, y: 520, roof: 'peach' },
+  { x: 900, y: 460, roof: 'lilac' },
+  { x: 1090, y: 570, roof: 'sky' },
+  { x: 460, y: 190, roof: 'mint' },
+  { x: 150, y: 190, roof: 'peach' },
 ];
 const TREES: readonly Vec[] = [{ x: 300, y: 250 }, { x: 760, y: 590 }, { x: 760, y: 160 }, { x: 1150, y: 300 }];
 const LANTERN_COLORS = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#c084fc', '#f472b6', '#fbbf24'];
@@ -81,39 +89,38 @@ function VillageScene(props: VillageSceneProps) {
           <stop offset="100%" stopColor="#fde047" stopOpacity="0" />
         </radialGradient>
         {near && <DetailDefs />}
+        <PropDefs />
       </defs>
 
       {/* 땅, 언덕, 길 */}
-      <rect width={WORLD.width} height={WORLD.height} fill="#6f9a52" />
-      <ellipse cx={PLACES.m3.x} cy={PLACES.m3.y + 30} rx={230} ry={140} fill="#86b15f" />
+      <rect width={WORLD.width} height={WORLD.height} fill="#86ba6e" />
+      <ellipse cx={PLACES.m3.x} cy={PLACES.m3.y + 30} rx={230} ry={140} fill="#9fcc80" />
       {near && <GroundDetails />}
       {near && (
         <>
-          <path d={ROAD_PATH} stroke="#a88d5c" strokeWidth={54} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-          {BRANCHES.map((d) => <path key={d} d={d} stroke="#a88d5c" strokeWidth={42} strokeLinecap="round" />)}
+          <path d={ROAD_PATH} stroke="#d9bf8f" strokeWidth={54} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          {BRANCHES.map((d) => <path key={d} d={d} stroke="#d9bf8f" strokeWidth={42} strokeLinecap="round" />)}
         </>
       )}
-      <path d={ROAD_PATH} stroke="#d8c294" strokeWidth={46} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <path d={BRANCHES[0]} stroke="#d8c294" strokeWidth={34} strokeLinecap="round" />
-      <path d={BRANCHES[1]} stroke="#d8c294" strokeWidth={30} strokeLinecap="round" />
-      <ellipse cx={PLACES.m2.x} cy={PLACES.m2.y + 25} rx={130} ry={78} fill="#e7dcc0" stroke="#c9b68a" strokeWidth={4} />
+      <path d={ROAD_PATH} stroke="#efdcb4" strokeWidth={46} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={BRANCHES[0]} stroke="#efdcb4" strokeWidth={34} strokeLinecap="round" />
+      <path d={BRANCHES[1]} stroke="#efdcb4" strokeWidth={30} strokeLinecap="round" />
+      <ellipse cx={PLACES.m2.x} cy={PLACES.m2.y + 25} rx={130} ry={78} fill="#f3e8cf" stroke="#e0cfa8" strokeWidth={4} />
       {near && <RoadDetails />}
 
       {near
-        ? TREES.map((t, i) => <Tree key={i} {...t} />)
-        : TREES.map((t, i) => <circle key={i} cx={t.x} cy={t.y} r={26} fill="#4f7f3f" />)}
+        ? TREES.map((t, i) => <Tree key={i} {...t} size={NEAR_PROP} />)
+        : TREES.map((t, i) => (
+            <g key={i} transform={`translate(${t.x} ${t.y + 26})`}><CuteTree /></g>
+          ))}
       {near && <TownDetails litHouses={litHouses} lampsOn={looks.m1 === 'on'} />}
       {HOUSES.map((h, i) => (
-        <House key={i} {...h} lit={i < litHouses} />
+        <House key={i} {...h} lit={i < litHouses} size={near ? NEAR_PROP : 1} />
       ))}
 
       {/* 마을 입구 표지판 */}
-      <g pointerEvents="none">
-        <rect x={SPAWN.x + 116} y={SPAWN.y + 10} width={8} height={44} fill="#78350f" />
-        <rect x={SPAWN.x + 72} y={SPAWN.y - 20} width={96} height={34} rx={6} fill="#fef3c7" stroke="#78350f" strokeWidth={3} />
-        <text x={SPAWN.x + 120} y={SPAWN.y + 4} textAnchor="middle" fontSize={20} fontWeight={800} fill="#78350f">
-          {WORLD_TEXT.villageSign}
-        </text>
+      <g transform={`translate(${SPAWN.x + 120} ${SPAWN.y + 54}) scale(${near ? 0.45 : 1})`}>
+        <CuteSign text={WORLD_TEXT.villageSign} />
       </g>
 
       {/* 밤의 어두움. 되살린 곳이 늘수록 옅어진다 */}
@@ -150,7 +157,7 @@ function VillageScene(props: VillageSceneProps) {
           >
             {/* 누르기 쉬운 넓은 영역 */}
             <circle cx={PLACES[id].x} cy={PLACES[id].y} r={80} fill="transparent" />
-            <Place look={revive ? 'on' : look} revive={revive} />
+            <Place look={revive ? 'on' : look} revive={revive} k={near ? NEAR_PLACE : 1} />
             {highlight?.includes(id) && (
               <circle cx={PLACES[id].x} cy={PLACES[id].y - 20} r={90} fill="none" stroke="#fde047" strokeWidth={6}
                 className="pulse-ring" style={{ animationDelay: `${highlight.indexOf(id) * 0.9}s` }} />
@@ -193,25 +200,15 @@ function Lanterns({ on }: { on: boolean }) {
   );
 }
 
-/** 가로등 3개. 고장: 꺼짐 / 되살아남: 환한 빛 */
-function StreetLights({ look, revive }: { look: PlaceLook; revive: boolean }) {
+/** 가로등 3개. 고장: 꺼짐 / 되살아남: 환한 빛. k는 그림 크기 */
+function StreetLights({ look, revive, k }: { look: PlaceLook; revive: boolean; k: number }) {
   const { x, y } = PLACES.m1;
   const posts = [{ x: x - 70, y: y + 30 }, { x, y: y - 5 }, { x: x + 70, y: y + 30 }];
   return (
     <g pointerEvents="none">
       {posts.map((p, i) => (
-        <g key={i}>
-          {look === 'on' && (
-            <g className={revive ? 'revive-in' : ''} style={{ animationDelay: `${0.4 + i * 0.45}s` }}>
-              <ellipse cx={p.x} cy={p.y + 8} rx={50} ry={18} fill="#fde68a" opacity={0.45} />
-              <circle cx={p.x} cy={p.y - 66} r={56} fill="url(#glow)" />
-            </g>
-          )}
-          <line x1={p.x} y1={p.y} x2={p.x} y2={p.y - 60} stroke="#334155" strokeWidth={6} />
-          <circle cx={p.x} cy={p.y - 66} r={11}
-            fill={look === 'on' ? '#fffbe0' : '#64748b'}
-            className={look === 'on' && revive ? 'revive-in' : ''}
-            style={{ animationDelay: `${0.4 + i * 0.45}s` }} />
+        <g key={i} transform={`translate(${p.x} ${p.y}) scale(${k})`}>
+          <CuteLamp on={look === 'on'} h={56} className={revive ? 'revive-in' : undefined} delay={`${0.4 + i * 0.45}s`} />
         </g>
       ))}
     </g>
@@ -219,43 +216,33 @@ function StreetLights({ look, revive }: { look: PlaceLook; revive: boolean }) {
 }
 
 /** 광장의 안내 종. 고장: 조용함 / 되살아남: 울려 퍼지는 물결 */
-function BellTower({ look, revive }: { look: PlaceLook; revive: boolean }) {
+function BellTower({ look, revive, k }: { look: PlaceLook; revive: boolean; k: number }) {
   const { x, y } = PLACES.m2;
   const on = look === 'on';
+  const bellY = y + 20 - 52 * k;
   return (
     <g pointerEvents="none">
-      {on && <circle cx={x} cy={y - 30} r={70} fill="url(#glow)" className={revive ? 'revive-in' : ''} />}
+      {on && <circle cx={x} cy={bellY} r={70 * k} fill="url(#glow)" className={revive ? 'revive-in' : ''} />}
       {on && [0, 1, 2].map((i) => (
-        <circle key={i} cx={x} cy={y - 34} r={50 + i * 26} fill="none" stroke="#fbbf24"
-          strokeWidth={5} className="sound-wave" style={{ animationDelay: `${i * 0.35}s` }} />
+        <circle key={i} cx={x} cy={bellY} r={(50 + i * 26) * k} fill="none" stroke="#ffd45e"
+          strokeWidth={5 * k} className="sound-wave" style={{ animationDelay: `${i * 0.35}s` }} />
       ))}
-      <rect x={x - 22} y={y - 50} width={44} height={70} fill="#a16207" stroke="#713f12" strokeWidth={3} />
-      <polygon points={`${x - 32},${y - 50} ${x},${y - 84} ${x + 32},${y - 50}`} fill="#713f12" />
-      {/* 종 */}
-      <path d={`M ${x - 14} ${y - 8} Q ${x - 14} ${y - 38} ${x} ${y - 40} Q ${x + 14} ${y - 38} ${x + 14} ${y - 8} L ${x + 17} ${y - 3} L ${x - 17} ${y - 3} Z`}
-        fill={on ? '#fcd34d' : '#ca8a04'} stroke="#713f12" strokeWidth={2.5} strokeLinejoin="round" />
-      <circle cx={x} cy={y} r={4} fill="#713f12" />
+      <g transform={`translate(${x} ${y + 20}) scale(${0.8 * k})`}>
+        <CuteBellTower on={on} />
+      </g>
     </g>
   );
 }
 
 /** 언덕의 풍차. 고장: 멈춤 / 되살아남: 씽씽 */
-function Windmill({ look, revive }: { look: PlaceLook; revive: boolean }) {
+function Windmill({ look, revive, k }: { look: PlaceLook; revive: boolean; k: number }) {
   const { x, y } = PLACES.m3;
   const on = look === 'on';
-  const hub = { x, y: y - 40 };
   return (
     <g pointerEvents="none">
-      {on && <circle cx={hub.x} cy={hub.y} r={90} fill="url(#glow)" className={revive ? 'revive-in' : ''} />}
-      <polygon points={`${x - 26},${y + 40} ${x + 26},${y + 40} ${x + 14},${y - 40} ${x - 14},${y - 40}`} fill="#f5f5f4" stroke="#78716c" strokeWidth={3} />
-      <rect x={x - 8} y={y + 16} width={16} height={24} fill="#78350f" />
-      <g className={on ? 'fan fan-fast' : 'fan'}>
-        <circle cx={hub.x} cy={hub.y} r={72} fill="none" />
-        {[0, 90, 180, 270].map((deg) => (
-          <rect key={deg} x={hub.x - 9} y={hub.y - 70} width={18} height={62} rx={3} fill="#e0f2fe" stroke="#0369a1" strokeWidth={2}
-            transform={`rotate(${deg} ${hub.x} ${hub.y})`} />
-        ))}
-        <circle cx={hub.x} cy={hub.y} r={8} fill="#1e293b" />
+      {on && <circle cx={x} cy={y + 40 - 78 * k} r={90 * k} fill="url(#glow)" className={revive ? 'revive-in' : ''} />}
+      <g transform={`translate(${x} ${y + 40}) scale(${0.78 * k})`}>
+        <CuteWindmill on={on} motion={on ? 'spin' : 'still'} />
       </g>
     </g>
   );
@@ -265,8 +252,8 @@ function PlaceLabel({ id, status, small }: { id: MissionId; status?: MissionStat
   const { x, y } = PLACES[id];
   const mark = status === 'locked' ? '🔒 ' : status === 'done' ? '⭐ ' : '';
   return (
-    <text x={x} y={y + (id === 'm2' ? (small ? 92 : 100) : small ? 62 : 70)} textAnchor="middle" fontSize={small ? 13 : 22}
-      fontWeight={800} fill="#fff" stroke="#1e1b4b" strokeWidth={small ? 3.5 : 5} paintOrder="stroke" pointerEvents="none">
+    <text x={x} y={y + (id === 'm2' ? (small ? 46 : 100) : small ? 52 : 70)} textAnchor="middle" fontSize={small ? 6.5 : 22}
+      fontWeight={800} fill="#fff" stroke="#1e1b4b" strokeWidth={small ? 2 : 5} paintOrder="stroke" pointerEvents="none">
       {mark}{S3.places[id]}
     </text>
   );
