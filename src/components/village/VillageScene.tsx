@@ -31,21 +31,14 @@ export interface VillageSceneProps {
 }
 
 const HOUSES: readonly (Vec & { color: string })[] = [
-  { x: 70, y: 470, color: '#b45309' },
   { x: 190, y: 360, color: '#9f1239' },
-  { x: 480, y: 560, color: '#1d4ed8' },
-  { x: 590, y: 500, color: '#b45309' },
-  { x: 830, y: 470, color: '#7c3aed' },
-  { x: 950, y: 420, color: '#9f1239' },
-  { x: 1090, y: 560, color: '#1d4ed8' },
-  { x: 500, y: 200, color: '#0f766e' },
-  { x: 150, y: 200, color: '#7c3aed' },
-  { x: 760, y: 150, color: '#b45309' },
+  { x: 560, y: 520, color: '#b45309' },
+  { x: 900, y: 460, color: '#7c3aed' },
+  { x: 1090, y: 570, color: '#1d4ed8' },
+  { x: 460, y: 190, color: '#0f766e' },
+  { x: 150, y: 190, color: '#b45309' },
 ];
-const TREES: readonly Vec[] = [
-  { x: 60, y: 300 }, { x: 290, y: 260 }, { x: 380, y: 600 }, { x: 700, y: 580 }, { x: 620, y: 160 },
-  { x: 1120, y: 380 }, { x: 870, y: 590 }, { x: 260, y: 150 }, { x: 410, y: 140 }, { x: 980, y: 640 },
-];
+const TREES: readonly Vec[] = [{ x: 300, y: 250 }, { x: 760, y: 590 }, { x: 760, y: 160 }, { x: 1150, y: 300 }];
 const LANTERN_COLORS = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#c084fc', '#f472b6', '#fbbf24'];
 
 function VillageScene(props: VillageSceneProps) {
@@ -79,17 +72,14 @@ function VillageScene(props: VillageSceneProps) {
       {/* 땅, 언덕, 길 */}
       <rect width={WORLD.width} height={WORLD.height} fill="#6f9a52" />
       <ellipse cx={PLACES.m3.x} cy={PLACES.m3.y + 30} rx={230} ry={140} fill="#86b15f" />
-      <ellipse cx={PLACES.m3.x} cy={PLACES.m3.y + 20} rx={150} ry={90} fill="#97c06c" />
       <path d={roadPath} stroke="#d8c294" strokeWidth={46} fill="none" strokeLinecap="round" strokeLinejoin="round" />
       <path d={`M ${ROAD[2].x} ${ROAD[2].y} L ${PLACES.m1.x} ${PLACES.m1.y + 20}`} stroke="#d8c294" strokeWidth={34} strokeLinecap="round" />
       <path d={`M ${ROAD[7].x} ${ROAD[7].y} L ${PLACES.m3.x} ${PLACES.m3.y + 40}`} stroke="#d8c294" strokeWidth={30} strokeLinecap="round" />
       <ellipse cx={PLACES.m2.x} cy={PLACES.m2.y + 25} rx={130} ry={78} fill="#e7dcc0" stroke="#c9b68a" strokeWidth={4} />
-      <path d={roadPath} stroke="#efe4c6" strokeWidth={3} strokeDasharray="14 12" fill="none" />
 
       {TREES.map((t, i) => (
         <g key={i}>
-          <circle cx={t.x} cy={t.y} r={26} fill="#3f6b35" />
-          <circle cx={t.x - 8} cy={t.y - 8} r={12} fill="#4f8a43" />
+          <circle cx={t.x} cy={t.y} r={26} fill="#4f7f3f" />
         </g>
       ))}
       {HOUSES.map((h, i) => (
@@ -115,8 +105,8 @@ function VillageScene(props: VillageSceneProps) {
         pointerEvents="none"
       />
 
-      {/* 축제 등불 줄 (광장 위) */}
-      <Lanterns on={!!festival} />
+      {/* 축제 등불 줄 (광장 위). 마무리 화면에서만 보인다 */}
+      {festival && <Lanterns on />}
 
       {/* 미션 장소 */}
       {MISSION_ORDER.map((id) => {
@@ -190,7 +180,7 @@ function Lanterns({ on }: { on: boolean }) {
   );
 }
 
-/** 가로등 3개. 고장: 희미하게 깜빡임 / 되살아남: 환한 빛 */
+/** 가로등 3개. 고장: 꺼짐 / 되살아남: 환한 빛 */
 function StreetLights({ look, revive }: { look: PlaceLook; revive: boolean }) {
   const { x, y } = PLACES.m1;
   const posts = [{ x: x - 70, y: y + 30 }, { x, y: y - 5 }, { x: x + 70, y: y + 30 }];
@@ -198,51 +188,45 @@ function StreetLights({ look, revive }: { look: PlaceLook; revive: boolean }) {
     <g pointerEvents="none">
       {posts.map((p, i) => (
         <g key={i}>
-          {look === 'on' ? (
+          {look === 'on' && (
             <g className={revive ? 'revive-in' : ''} style={{ animationDelay: `${0.4 + i * 0.45}s` }}>
               <ellipse cx={p.x} cy={p.y + 8} rx={50} ry={18} fill="#fde68a" opacity={0.45} />
               <circle cx={p.x} cy={p.y - 66} r={56} fill="url(#glow)" />
             </g>
-          ) : (
-            <circle cx={p.x} cy={p.y - 66} r={26} fill="url(#glow)" className="flicker" style={{ animationDelay: `${i * 0.37}s` }} />
           )}
           <line x1={p.x} y1={p.y} x2={p.x} y2={p.y - 60} stroke="#334155" strokeWidth={6} />
           <circle cx={p.x} cy={p.y - 66} r={11}
-            fill={look === 'on' ? '#fffbe0' : '#a8a07a'}
-            className={look === 'on' ? (revive ? 'revive-in' : '') : 'flicker'}
-            style={{ animationDelay: look === 'on' ? `${0.4 + i * 0.45}s` : `${i * 0.37}s` }} />
+            fill={look === 'on' ? '#fffbe0' : '#64748b'}
+            className={look === 'on' && revive ? 'revive-in' : ''}
+            style={{ animationDelay: `${0.4 + i * 0.45}s` }} />
         </g>
       ))}
     </g>
   );
 }
 
-/** 광장의 안내 종. 고장: 작은 물결 / 되살아남: 큰 물결과 모여든 사람들 */
+/** 광장의 안내 종. 고장: 조용함 / 되살아남: 울려 퍼지는 물결 */
 function BellTower({ look, revive }: { look: PlaceLook; revive: boolean }) {
   const { x, y } = PLACES.m2;
   const on = look === 'on';
   return (
     <g pointerEvents="none">
       {on && <circle cx={x} cy={y - 30} r={70} fill="url(#glow)" className={revive ? 'revive-in' : ''} />}
-      {Array.from({ length: on ? 3 : 1 }, (_, i) => (
-        <circle key={i} cx={x} cy={y - 34} r={on ? 50 + i * 26 : 34} fill="none" stroke="#fbbf24"
-          strokeWidth={on ? 5 : 2} className="sound-wave" style={{ animationDelay: `${i * 0.35}s`, opacity: on ? 1 : 0.6 }} />
+      {on && [0, 1, 2].map((i) => (
+        <circle key={i} cx={x} cy={y - 34} r={50 + i * 26} fill="none" stroke="#fbbf24"
+          strokeWidth={5} className="sound-wave" style={{ animationDelay: `${i * 0.35}s` }} />
       ))}
       <rect x={x - 22} y={y - 50} width={44} height={70} fill="#a16207" stroke="#713f12" strokeWidth={3} />
       <polygon points={`${x - 32},${y - 50} ${x},${y - 84} ${x + 32},${y - 50}`} fill="#713f12" />
-      <text x={x} y={y - 16} textAnchor="middle" fontSize={on ? 36 : 28}>🔔</text>
-      {on && (
-        <g className={revive ? 'revive-in' : ''} style={{ animationDelay: '0.8s' }}>
-          {['🧑', '👩', '👴', '👧', '👦'].map((p, i) => (
-            <text key={i} x={x - 100 + i * 50} y={y + 62 - (i % 2) * 10} textAnchor="middle" fontSize={26}>{p}</text>
-          ))}
-        </g>
-      )}
+      {/* 종 */}
+      <path d={`M ${x - 14} ${y - 8} Q ${x - 14} ${y - 38} ${x} ${y - 40} Q ${x + 14} ${y - 38} ${x + 14} ${y - 8} L ${x + 17} ${y - 3} L ${x - 17} ${y - 3} Z`}
+        fill={on ? '#fcd34d' : '#ca8a04'} stroke="#713f12" strokeWidth={2.5} strokeLinejoin="round" />
+      <circle cx={x} cy={y} r={4} fill="#713f12" />
     </g>
   );
 }
 
-/** 언덕의 풍차. 고장: 느릿느릿 / 되살아남: 씽씽 */
+/** 언덕의 풍차. 고장: 멈춤 / 되살아남: 씽씽 */
 function Windmill({ look, revive }: { look: PlaceLook; revive: boolean }) {
   const { x, y } = PLACES.m3;
   const on = look === 'on';
@@ -252,7 +236,7 @@ function Windmill({ look, revive }: { look: PlaceLook; revive: boolean }) {
       {on && <circle cx={hub.x} cy={hub.y} r={90} fill="url(#glow)" className={revive ? 'revive-in' : ''} />}
       <polygon points={`${x - 26},${y + 40} ${x + 26},${y + 40} ${x + 14},${y - 40} ${x - 14},${y - 40}`} fill="#f5f5f4" stroke="#78716c" strokeWidth={3} />
       <rect x={x - 8} y={y + 16} width={16} height={24} fill="#78350f" />
-      <g className={`fan ${on ? 'fan-fast' : 'fan-slow'}`}>
+      <g className={on ? 'fan fan-fast' : 'fan'}>
         <circle cx={hub.x} cy={hub.y} r={72} fill="none" />
         {[0, 90, 180, 270].map((deg) => (
           <rect key={deg} x={hub.x - 9} y={hub.y - 70} width={18} height={62} rx={3} fill="#e0f2fe" stroke="#0369a1" strokeWidth={2}

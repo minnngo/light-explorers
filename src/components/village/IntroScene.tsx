@@ -6,10 +6,9 @@
 //  컷 3: 불이 켜지는 회로 (끊기지 않고 이어진 고리)
 //  컷 4: 전지가 1개·2개 들어가는 제품들
 //  컷 5: 마을 입구에서 가로등으로 가는 길 안내
-import { WORLD as WORLD_TEXT } from '@/data/strings';
 import { PLACES, SPAWN, WORLD } from '@/data/world';
 import { guidePath } from '@/lib/world/movement';
-import { CHARACTER_ART, TEAM_ART } from '@/media/assets';
+import { DownArrow, Explorer, Fairy } from './Characters';
 import VillageScene from './VillageScene';
 
 const ALL_DIM = { m1: 'dim', m2: 'dim', m3: 'dim' } as const;
@@ -31,17 +30,25 @@ export default function IntroScene({ cut }: { cut: number }) {
       />
       <svg viewBox={`0 0 ${WORLD.width} ${WORLD.height}`} className="pointer-events-none absolute inset-0 h-full w-full">
         {cut === 1 && (
-          <text x={PLACES.m2.x + 170} y={PLACES.m2.y - 60} fontSize={64} className="fly-in">{CHARACTER_ART}</text>
+          <g transform={`translate(${PLACES.m2.x + 190} ${PLACES.m2.y - 80})`}>
+            <g className="fly-in">
+              <g transform="scale(2.4)" className="bob" style={{ animationDuration: '1.6s' }}>
+                <Fairy />
+              </g>
+            </g>
+          </g>
         )}
         {cut === 4 && (
           <>
             <path d={path.map((p, i) => `${i ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ')} fill="none" stroke="#fbbf24"
               strokeWidth={10} strokeLinecap="round" strokeDasharray="22 38" className="dash-flow" />
-            <text x={PLACES.m1.x} y={PLACES.m1.y - 120} textAnchor="middle" fontSize={48} className="bob">⬇️</text>
-            <text x={SPAWN.x} y={SPAWN.y + 16} textAnchor="middle" fontSize={54} className="bob">{TEAM_ART}</text>
-            <text x={SPAWN.x + 40} y={SPAWN.y - 40} textAnchor="middle" fontSize={30}>{CHARACTER_ART}</text>
-            <text x={SPAWN.x} y={SPAWN.y - 50} textAnchor="middle" fontSize={20} fontWeight={800} fill="#fff"
-              stroke="#1e1b4b" strokeWidth={4} paintOrder="stroke">{WORLD_TEXT.you}</text>
+            <DownArrow x={PLACES.m1.x} y={PLACES.m1.y - 130} />
+            <g transform={`translate(${SPAWN.x} ${SPAWN.y})`}>
+              <g transform="translate(-40 -62)">
+                <g className="bob" style={{ animationDuration: '1.6s' }}><Fairy /></g>
+              </g>
+              <Explorer />
+            </g>
           </>
         )}
       </svg>

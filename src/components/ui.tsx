@@ -2,7 +2,7 @@
 
 // 화면 공통 작은 부품. 버튼은 손가락으로 누르기 쉽게 최소 높이 44px(min-h-11).
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
-import { CHARACTER_ART } from '@/media/assets';
+import { FairyIcon } from '@/components/village/Characters';
 
 export function Button({
   variant = 'primary',
@@ -45,7 +45,7 @@ export function Choice({
 export function Speech({ speaker, children }: { speaker: string | null; children: ReactNode }) {
   return (
     <div className="flex items-start gap-3">
-      {speaker && <span className="text-4xl" aria-hidden>{CHARACTER_ART}</span>}
+      {speaker && <FairyIcon className="size-12 shrink-0" />}
       <div className={`rounded-2xl px-4 py-3 ${speaker ? 'bg-white shadow' : 'bg-slate-100 italic'}`}>
         {speaker && <p className="text-sm font-bold text-amber-700">{speaker}</p>}
         <p>{children}</p>

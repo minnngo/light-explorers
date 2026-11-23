@@ -4,8 +4,7 @@ import type { MissionId } from '@/lib/types';
 
 /** A1 마을 배경·A4 도입 컷: components/village/VillageScene.tsx, IntroScene.tsx 에 도형으로 그려 두었다 */
 
-export const CHARACTER_ART = '🧚'; // A3 안내 인물: 빛 요정 반디
-export const TEAM_ART = '🧒'; // 마을을 돌아다니는 탐험대 (주인공: 학생 모둠)
+// A3 안내 인물(빛 요정 반디)과 탐험대: components/village/Characters.tsx 에 도형으로 그려 두었다
 export const GLOVE_ART = '🧤'; // A5 절연 장갑 (S1에서만)
 export const VILLAGE_ART = { dark: '🌑🏘️', bright: '🌕🏘️✨' }; // A1 마을 배경
 

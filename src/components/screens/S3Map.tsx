@@ -90,7 +90,6 @@ export default function S3Map() {
           paused={story !== null || arrived !== null}
           reviving={reviving}
           darkness={darkness}
-          festival={done && (!reviving || revealed)}
           onArrive={onArrive}
         />
 

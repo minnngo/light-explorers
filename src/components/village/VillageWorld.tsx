@@ -4,7 +4,6 @@
 // 조작: 방향키/WASD, 가고 싶은 곳 누르기(마우스·터치), 화면 조이스틱.
 // 위치는 이 기기 화면에만 있다 (함께하기에서도 각자 돌아다니고, 미션을 열면 모두 함께 들어간다).
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { WORLD as WORLD_TEXT } from '@/data/strings';
 import { PLACES, SPAWN, type Vec, WORLD } from '@/data/world';
 import type { MissionId, MissionStatus } from '@/lib/types';
 import {
@@ -18,7 +17,7 @@ import {
   walkToward,
   ZERO,
 } from '@/lib/world/movement';
-import { CHARACTER_ART, TEAM_ART } from '@/media/assets';
+import { DownArrow, Explorer, Fairy } from './Characters';
 import VillageScene, { type PlaceLook } from './VillageScene';
 
 const MOVE_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D']);
@@ -32,12 +31,11 @@ interface Props {
   /** 되살아나는 장면 중인 장소 */
   reviving: MissionId | null;
   darkness: number;
-  festival: boolean;
   /** 장소에 도착함 (또는 그 장소 안에서 Enter·장소 누르기) */
   onArrive: (id: MissionId) => void;
 }
 
-export default function VillageWorld({ status, target, paused, reviving, darkness, festival, onArrive }: Props) {
+export default function VillageWorld({ status, target, paused, reviving, darkness, onArrive }: Props) {
   const start = useMemo(() => startPosition(status, SPAWN), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [pos, setPos] = useState<Vec>(start);
   const [moving, setMoving] = useState(false);
@@ -153,7 +151,6 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
         looks={looks}
         reviving={reviving}
         darkness={darkness}
-        festival={festival}
         markers={markers}
         onGroundClick={onGroundClick}
         onPlaceClick={onPlaceClick}
@@ -171,30 +168,24 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
           <path d={pathD} fill="none" stroke="#fbbf24" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round"
             strokeDasharray="22 38" className="dash-flow" markerEnd="url(#arrowhead)" opacity={0.95} />
         )}
-        {target && !paused && (
-          <text x={PLACES[target].x} y={PLACES[target].y - 120} textAnchor="middle" fontSize={44} className="bob">⬇️</text>
-        )}
+        {target && !paused && <DownArrow x={PLACES[target].x} y={PLACES[target].y - 130} />}
 
-        {/* 탐험대와 따라다니는 반디 */}
+        {/* 탐험대와 뒤따라 나는 반디 */}
         <g transform={`translate(${pos.x} ${pos.y})`}>
-          <ellipse cx={0} cy={22} rx={26} ry={8} fill="#000" opacity={0.25} />
+          <ellipse cx={0} cy={20} rx={24} ry={7} fill="#000" opacity={0.25} />
           {target && !nearTarget && !paused && (
             <g transform={`rotate(${pointer})`}>
               <path d="M 40 -10 L 62 0 L 40 10 z" fill="#fbbf24" stroke="#78350f" strokeWidth={2} />
             </g>
           )}
-          <g className={moving ? 'bob' : ''}>
-            <text y={18} textAnchor="middle" fontSize={46} transform={facingLeft ? 'scale(-1 1)' : undefined}>
-              {TEAM_ART}
-            </text>
+          <g transform={`translate(${facingLeft ? 40 : -40} -62)`}>
+            <g className="bob" style={{ animationDuration: '1.6s' }}>
+              <Fairy />
+            </g>
           </g>
-          <text x={44} y={-6} textAnchor="middle" fontSize={34} className="bob" style={{ animationDuration: '1.6s' }}>
-            {CHARACTER_ART}
-          </text>
-          <text y={-40} textAnchor="middle" fontSize={18} fontWeight={800} fill="#fff" stroke="#1e1b4b" strokeWidth={4}
-            paintOrder="stroke">
-            {WORLD_TEXT.you}
-          </text>
+          <g transform={facingLeft ? 'scale(-1 1)' : undefined}>
+            <Explorer walking={moving} />
+          </g>
         </g>
       </svg>
 
