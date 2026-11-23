@@ -93,7 +93,10 @@ export interface MissionRecord {
   /** 전선을 잇거나 지운 횟수 */
   attempts: number;
   completedAt: string | null;
-  /** 완료할 때의 회로판. 완료한 미션을 다시 열어 볼 때 보여 준다 */
+  /**
+   * 마지막 회로판. 하던 중에 지도로 나갔다 오면 이어서 하고,
+   * 완료한 미션을 다시 열면 완료할 때의 회로판을 보여 준다.
+   */
   finalBoards?: Record<BoardId, BoardState>;
   /** 8-1 선택 보충 "같은 극끼리 이어 보기" 도전 (미션 1만). 지도서에 없는 활동 */
   challenge?: ChallengeState;

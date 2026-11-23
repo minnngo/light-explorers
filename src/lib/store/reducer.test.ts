@@ -132,9 +132,22 @@ describe('완료한 미션 다시 보기 (명세서 7-1 하단 "지도로 돌아
     expect(play(s, { type: 'LEAVE_MISSION' }).currentScreen).toBe('S3');
   });
 
-  it('진행 중인 미션에서는 지도로 돌아갈 수 없다', () => {
-    const s = play(atMap(), { type: 'OPEN_MISSION', mission: 'm1', at: 0 }, { type: 'LEAVE_MISSION' });
-    expect(s.currentScreen).toBe('S4');
+  it('하던 중에 지도로 나갔다가 다시 들어오면 예상·회로판을 그대로 이어서 한다', () => {
+    const s = play(
+      atMap(),
+      { type: 'OPEN_MISSION', mission: 'm1', at: 0 },
+      { type: 'SET_PREDICTION', choice: 'a' },
+      ...BUILD_BOTH.slice(0, 4), // A 회로만 완성
+      { type: 'LEAVE_MISSION' },
+    );
+    expect(s.currentScreen).toBe('S3');
+    expect(s.missions.m1.status).toBe('open');
+    const back = reducer(s, { type: 'OPEN_MISSION', mission: 'm1', at: 100 });
+    expect(back.missions.m1).toMatchObject({ step: 'build', prediction: 'a' });
+    expect(back.boards.A.wires).toHaveLength(3);
+    expect(back.boards.A.switchClosed).toBe(true);
+    expect(back.boards.A.lastChangedAt).toBe(100);
+    expect(back.boards.B.wires).toHaveLength(0);
   });
 });
 

@@ -54,7 +54,7 @@ export function allMissionsDone(state: AppState): boolean {
 }
 
 /**
- * 미션 화면에서 지금 학생이 할 일이 있는 곳 (그곳만 밝게, 나머지는 어둡게).
+ * 미션 화면에서 지금 학생이 할 일이 있는 곳 (화면 전체를 어둡게 덮고 그곳만 밝게 드러낸다).
  *  - worksheet: 학습지 (예상 고르기, ○표·이유, 확인)
  *  - boards: 회로판 (전선 잇기)
  * dim은 할 일이 없는 쪽을 얼마나 어둡게 할지: strong(아직 볼 것 없음) / soft(보면서 해야 함)

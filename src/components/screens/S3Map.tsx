@@ -5,22 +5,46 @@
 //  - 장소에 도착: 상황 발견 창 → "미션 시작!"
 //  - 잠긴 곳: "앞의 미션을 먼저 해결해야 열려요!"
 //  - 세 곳 모두 되살리면 "마무리로 가기"
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
 import { CHARACTER, COMMON, S3, WORLD } from '@/data/strings';
 import { allMissionsDone, revivedCount } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
 import type { MissionId, StoryKey } from '@/lib/types';
+import { WORLD as WORLD_SIZE } from '@/data/world';
 import { nextTarget } from '@/lib/world/movement';
 import { Button, Speech } from '../ui';
 import VillageWorld from '../village/VillageWorld';
+
+/**
+ * 지도는 제목·안내를 놓고 남은 공간에 꽉 차게(비율 유지) 맞춘다.
+ * 남은 공간의 크기를 직접 재서 폭 = min(남은 폭, 남은 높이 × 1200/700).
+ */
+function useFitWidth() {
+  const ref = useRef<HTMLDivElement>(null);
+  const [width, setWidth] = useState<number | null>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    // 관찰을 시작하면 처음 한 번 바로 알려 주고, 이후 크기가 바뀔 때마다 다시 잰다
+    const observer = new ResizeObserver(() =>
+      setWidth(Math.min(el.clientWidth, (el.clientHeight * WORLD_SIZE.width) / WORLD_SIZE.height)),
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+  return [ref, width] as const;
+}
+/** 함께하기 중에는 화면 맨 위에 방 코드 띠(RoomBar)가 있다 */
+const ROOM_BAR_HEIGHT = 36;
 
 /** 되살린 곳 수에 따른 마을의 어두움 */
 export const darknessFor = (revived: number) => [0.6, 0.42, 0.25, 0.06][revived] ?? 0.06;
 
 export default function S3Map() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, room } = useStore();
+  const [fitRef, fitWidth] = useFitWidth();
   const revived = revivedCount(state);
   const done = allMissionsDone(state);
   const [s1, s2, s3] = [state.missions.m1.status, state.missions.m2.status, state.missions.m3.status];
@@ -49,14 +73,17 @@ export default function S3Map() {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-3 p-4">
+    <main className="mx-auto flex w-full max-w-[1800px] flex-col gap-2 px-4 py-3"
+      style={{ height: room ? `calc(100dvh - ${ROOM_BAR_HEIGHT}px)` : '100dvh' }}>
       <header className="flex flex-wrap items-center justify-between gap-2">
         <p className="text-lg font-bold">🧭 {state.groupName}</p>
         <h1 className="text-2xl font-black">{S3.guide}</h1>
         <p className="rounded-full bg-amber-100 px-4 py-1 font-bold">{COMMON.revived(revived)}</p>
       </header>
 
-      <div className="relative">
+      {/* 지도는 남은 공간에 꽉 차게, 가로·세로 중 좁은 쪽에 맞춘다 (위 제목·아래 안내까지 한 화면에) */}
+      <div ref={fitRef} className="min-h-0 w-full flex-1">
+        <div className="relative mx-auto" style={{ width: fitWidth ?? '100%', visibility: fitWidth ? 'visible' : 'hidden' }}>
         <VillageWorld
           status={status}
           target={story ? null : nextTarget(status)}
@@ -90,6 +117,7 @@ export default function S3Map() {
             🔒 {S3.locked}
           </p>
         )}
+      </div>
       </div>
 
       <footer className="flex flex-wrap items-center justify-between gap-3">

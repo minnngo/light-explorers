@@ -148,11 +148,15 @@ export function reducer(state: AppState, action: Action): AppState {
           boards: m.finalBoards ?? { A: emptyBoard(action.at), B: emptyBoard(action.at) },
         };
       }
+      // 하던 중에 나갔던 미션이면 회로판을 그대로 되살린다 (힌트 타이머는 지금부터 다시)
+      const saved = m.finalBoards;
       return {
         ...state,
         currentScreen: 'S4',
         currentMission: action.mission,
-        boards: { A: emptyBoard(action.at), B: emptyBoard(action.at) },
+        boards: saved
+          ? { A: { ...saved.A, lastChangedAt: action.at }, B: { ...saved.B, lastChangedAt: action.at } }
+          : { A: emptyBoard(action.at), B: emptyBoard(action.at) },
       };
     }
     case 'SEE_STORY': {
@@ -160,10 +164,13 @@ export function reducer(state: AppState, action: Action): AppState {
       return seen.includes(action.key) ? state : { ...state, storySeen: [...seen, action.key] };
     }
     case 'LEAVE_MISSION': {
-      // "지도로 돌아가기"는 완료한 미션에서만 (명세서 7-1 하단)
+      // 언제든 지도로 나갈 수 있다. 하던 미션은 예상·회로판·이유를 그대로 두었다가 다시 들어오면 이어서 한다.
+      // (명세서 7-1은 "완료한 미션에서만"이었지만, 팀 요청으로 진행 중에도 나갈 수 있게 바꿈)
       const id = state.currentMission;
-      if (!id || state.missions[id].status !== 'done') return state;
-      return { ...state, currentMission: null, currentScreen: 'S3' };
+      if (!id || state.currentScreen !== 'S4') return state;
+      const m = state.missions[id];
+      const missions = m.status === 'done' ? state.missions : { ...state.missions, [id]: { ...m, finalBoards: state.boards } };
+      return { ...state, missions, currentMission: null, currentScreen: 'S3' };
     }
     case 'GO_TO_WRAPUP':
       return MISSION_ORDER.every((id) => state.missions[id].status === 'done') ? goTo(state, 'S5') : state;
