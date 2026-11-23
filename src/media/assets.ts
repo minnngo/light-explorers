@@ -2,16 +2,10 @@
 // 예: place.m1.on: '/images/streetlight-on.png' 로 바꾸고 화면에서 <img>로 그리기
 import type { MissionId } from '@/lib/types';
 
-export const PLACE_ICONS: Record<MissionId, { off: string; on: string }> = {
-  m1: { off: '🏮', on: '💡' }, // A2 가로등
-  m2: { off: '🔕', on: '🔔' }, // A2 안내 종
-  m3: { off: '🌫️', on: '🌬️' }, // A2 풍차
-};
+/** A1 마을 배경·A4 도입 컷: components/village/VillageScene.tsx, IntroScene.tsx 에 도형으로 그려 두었다 */
 
-/** A4 도입 컷 5장 */
-export const INTRO_CUT_ART = ['🏠💡', '🌃🏮🔔🌬️', '🔋💡🔌', '🌀🔦📺', '🗺️✨'];
-
-export const CHARACTER_ART = '🧒'; // A3 이야기 인물
+export const CHARACTER_ART = '🧚'; // A3 안내 인물: 빛 요정 반디
+export const TEAM_ART = '🧒'; // 마을을 돌아다니는 탐험대 (주인공: 학생 모둠)
 export const GLOVE_ART = '🧤'; // A5 절연 장갑 (S1에서만)
 export const VILLAGE_ART = { dark: '🌑🏘️', bright: '🌕🏘️✨' }; // A1 마을 배경
 

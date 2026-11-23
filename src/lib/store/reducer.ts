@@ -23,6 +23,7 @@ import type {
   PartKind,
   PredictionChoice,
   ScreenId,
+  StoryKey,
   Wire,
 } from '@/lib/types';
 
@@ -38,6 +39,7 @@ export type Action =
   | { type: 'OPEN_MISSION'; mission: MissionId; at: number }
   | { type: 'LEAVE_MISSION' }
   | { type: 'GO_TO_WRAPUP' }
+  | { type: 'SEE_STORY'; key: StoryKey }
   // S4
   | { type: 'SET_PREDICTION'; choice: PredictionChoice }
   | { type: 'ADD_WIRE'; board: BoardId; wire: Wire; at: number }
@@ -83,6 +85,7 @@ export function createInitialState(): AppState {
     roomCode: null,
     currentScreen: 'S1',
     introCut: 0,
+    storySeen: [],
     intro: { recall: null, fanReason: null, fanPredict: null },
     currentMission: null,
     missions: { m1: emptyMission('open'), m2: emptyMission('locked'), m3: emptyMission('locked') },
@@ -151,6 +154,10 @@ export function reducer(state: AppState, action: Action): AppState {
         currentMission: action.mission,
         boards: { A: emptyBoard(action.at), B: emptyBoard(action.at) },
       };
+    }
+    case 'SEE_STORY': {
+      const seen = state.storySeen ?? [];
+      return seen.includes(action.key) ? state : { ...state, storySeen: [...seen, action.key] };
     }
     case 'LEAVE_MISSION': {
       // "지도로 돌아가기"는 완료한 미션에서만 (명세서 7-1 하단)

@@ -161,6 +161,13 @@ describe('8-1 선택 보충: 같은 극끼리 이어 보기', () => {
   });
 });
 
+describe('마을 이야기 장면', () => {
+  it('본 장면은 한 번만 기록한다', () => {
+    const s = play(atMap(), { type: 'SEE_STORY', key: 'arrive' }, { type: 'SEE_STORY', key: 'arrive' });
+    expect(s.storySeen).toEqual(['arrive']);
+  });
+});
+
 describe('S5 마무리', () => {
   it('오개념 점검은 처음 고른 답만 기록한다', () => {
     const s = play(

@@ -101,6 +101,9 @@ export interface MissionRecord {
 
 export type ChallengeState = 'none' | 'active' | 'done';
 
+/** 마을 이야기 장면: 처음 도착 / 미션을 마치고 돌아왔을 때 */
+export type StoryKey = 'arrive' | `after-${MissionId}`;
+
 export type OX = 'O' | 'X';
 export type MisconceptionKey = 'q1' | 'q2' | 'q3';
 
@@ -123,6 +126,8 @@ export interface AppState {
   roomCode?: string | null;
   currentScreen: ScreenId;
   introCut: number;
+  /** 마을(S3)에서 이미 본 이야기 장면: 'arrive', 'after-m1', 'after-m2', 'after-m3' */
+  storySeen?: StoryKey[];
   intro: IntroRecord;
   currentMission: MissionId | null;
   missions: Record<MissionId, MissionRecord>;

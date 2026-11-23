@@ -36,13 +36,18 @@ src/
     sync/roomSync.ts          3단계: 여러 기기 동기화 규칙 (순수 로직 + 테스트)
     sync/realtime.ts          3단계: Supabase Realtime 통로 (broadcast + presence)
     teacher/summarize.ts      교사용 집계
+    world/movement.ts         마을 돌아다니기 계산 (걷기·조이스틱·길 안내 화살표, 테스트 있음)
   data/
     strings.ts                학생 화면 문구 전부 (명세서 12장: 문구 분리)
     missions.ts               미션 3개 설정·내부 정답
     boards.ts                 회로판 A/B 부품 고정 위치·단자
+    world.ts                  반짝마을 지도 배치 (장소·길·걷는 빠르기)
   components/
     screens/S1~S5             화면
     RoomBar.tsx               3단계: 방 코드·회로 담당·다른 친구의 조작 표시
+    village/VillageScene.tsx  반짝마을 그림 (도입·지도·마무리에서 같이 씀)
+    village/VillageWorld.tsx  S3 마을 돌아다니기 (키보드·누르기·조이스틱, 화살표 안내)
+    village/IntroScene.tsx    S2 도입 컷 애니메이션
     circuit/CircuitBoard.tsx  SVG 회로판 (전선 잇기·지우기·스위치)
     mission/MissionWorksheet  학습지 패널 (단계별)
   media/                      이모지 임시 그림·효과음 (그림 파일로 교체할 곳)
@@ -64,8 +69,10 @@ supabase/schema.sql           2단계 DB 스키마
 | 스위치를 빼고 고리를 만듦 | 레벨 0 + "스위치도 고리 안에" 힌트 | `judge.ts` `SWITCH_MISSING` |
 | B 회로에 전지 1개만 넣고 고리 | 레벨 1 (체크리스트 2번은 레벨 2일 때만 체크) | `missionFlow.ts` |
 | S5 확인해요 | 맞는 답을 골라야 다음으로 | `screenFlow.ts` |
-| 3차시 떠올리기·오개념 점검 기록 | 처음 고른 답만 기록 | `reducer.ts` |
-| 주인공 이름 | `CHARACTER = '주인공'` 임시 | `data/strings.ts` |
+| 회로 조건 떠올리기·오개념 점검 기록 | 처음 고른 답만 기록 | `reducer.ts` |
+| S3 마을 지도 | 버튼 대신 탐험대를 움직여 돌아다닌다. 방향키/WASD, 가고 싶은 곳 누르기, 화면 조이스틱. 다음 장소까지 길 위 화살표로 안내하고, 도착하면 상황을 발견한 뒤 "미션 시작!". 미션을 마치고 돌아오면 그곳이 되살아나는 장면과 반디의 다음 안내가 나온다. 되살린 곳이 늘수록 마을이 밝아진다 | `S3Map.tsx`, `village/` |
+| 함께하기에서 마을 돌아다니기 | 탐험대 위치는 기기마다 따로 (동기화하지 않음). 이야기 장면 넘기기와 미션 열기는 모든 기기가 함께 | `VillageWorld.tsx` |
+| 세계관 | 3차시 책 이야기와 잇지 않는다. 주인공은 학생 모둠(탐험대, 모둠 이름으로 부름), 무대는 불빛 축제 날의 "반짝마을", 안내 인물은 빛 요정 "반디" | `data/strings.ts` 맨 위 |
 | 8-1 선택 보충 "같은 극끼리 이어 보기" | 미션 1 ④ 확인하기에 "도전!" 버튼(선택). B 회로만 다시 만질 수 있고, 같은 극끼리 이어 스위치를 닫으면 확인 문구. 힌트·시도 횟수에는 넣지 않음 | `MissionWorksheet.tsx`, `reducer.ts` |
 | 완료한 미션 다시 보기 | 지도에서 완료한 곳을 누르면 완료할 때의 회로판과 ④ 화면을 보기만 하고, 하단 "지도로 돌아가기"로 나간다 | `reducer.ts` `LEAVE_MISSION` |
 | 교사용 평가 기준(상·중·하) | 명세서 11-2로 만든 **임시 문장**. 지도서 문장으로 바꿔야 함 | `data/strings.ts` `TEACHER.rubric` |
@@ -83,6 +90,6 @@ supabase/schema.sql           2단계 DB 스키마
 ## 남은 일
 
 - [ ] 그림(14장 A1~A6)을 `media/assets.ts`에서 이모지 → 그림 파일로 교체
-- [ ] 교사용 평가 기준(상·중·하)을 지도서 문장으로 교체, 주인공 이름 확정
+- [ ] 교사용 평가 기준(상·중·하)을 지도서 문장으로 교체
 - [ ] 3단계를 실제 Supabase 프로젝트와 태블릿 2대로 시연해 보기
 - [ ] 태블릿 실기기에서 글자·버튼 크기와 S5 7분 안에 끝나는지 확인

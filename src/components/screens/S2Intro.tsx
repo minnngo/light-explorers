@@ -5,24 +5,24 @@ import { COMMON, S2 } from '@/data/strings';
 import { canAdvanceIntro, INTRO_CUT_COUNT } from '@/lib/flow/screenFlow';
 import { useStore } from '@/lib/store/StoreContext';
 import type { IntroRecord } from '@/lib/types';
-import { INTRO_CUT_ART } from '@/media/assets';
 import { Button, Choice, Speech } from '../ui';
+import IntroScene from '../village/IntroScene';
 
 /** S2. 도입 장면 (컷 5장, 건너뛰기 없음) */
 export default function S2Intro() {
   const { state, dispatch } = useStore();
   const cut = S2.cuts[state.introCut];
+  // 주인공은 학생 모둠(탐험대). 컷 문구에 모둠 이름이 들어간다
+  const text = typeof cut.text === 'function' ? cut.text(state.groupName) : cut.text;
   const isLast = state.introCut === INTRO_CUT_COUNT - 1;
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-6 p-6">
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-4 p-4">
       <p className="text-right text-sm text-slate-500">
         {state.introCut + 1} / {INTRO_CUT_COUNT}
       </p>
-      <div className="flex h-40 items-center justify-center rounded-3xl bg-indigo-950 text-7xl" aria-hidden>
-        {INTRO_CUT_ART[state.introCut]}
-      </div>
-      <Speech speaker={cut.speaker}>{cut.text}</Speech>
+      <IntroScene cut={state.introCut} />
+      <Speech speaker={cut.speaker}>{text}</Speech>
 
       {state.introCut === 2 && <RecallQuestion />}
       {state.introCut === 3 && <FanQuestions />}
@@ -38,7 +38,7 @@ export default function S2Intro() {
   );
 }
 
-/** 컷 3: 3차시 떠올리기. 복습이므로 고르면 바로 맞고 틀림을 알려 준다 */
+/** 컷 3: 불이 켜지는 회로의 조건 떠올리기. 복습이므로 고르면 바로 맞고 틀림을 알려 준다 */
 function RecallQuestion() {
   const { dispatch } = useStore();
   const [picked, setPicked] = useState<'correct' | 'wrong' | null>(null);

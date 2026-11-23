@@ -101,7 +101,79 @@ body {
   animation: light-up 0.5s ease-out both;
 }
 
+/* ───── 반짝마을 (도입 애니메이션·마을 돌아다니기) ───── */
+
+/* 밝았다가 밤이 된다. to가 없으면 요소의 opacity 값까지 간다 */
+@keyframes nightfall {
+  from {
+    opacity: 0;
+  }
+}
+.nightfall {
+  animation: nightfall 3s ease-in 0.3s both;
+}
+
+@keyframes flicker {
+  0%, 100% { opacity: 0.55; }
+  20% { opacity: 0.15; }
+  25% { opacity: 0.6; }
+  60% { opacity: 0.25; }
+  65% { opacity: 0.5; }
+}
+.flicker {
+  animation: flicker 1.7s steps(1, end) infinite;
+}
+
+@keyframes pulse-ring {
+  0% { opacity: 0; transform: scale(0.6); }
+  25% { opacity: 1; transform: scale(1); }
+  60%, 100% { opacity: 0; transform: scale(1.25); }
+}
+.pulse-ring {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: pulse-ring 2.7s ease-out infinite both;
+}
+
+@keyframes revive-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+.revive-in {
+  animation: revive-in 1.2s ease-out both;
+}
+
+/* 길 안내 화살표가 목표 쪽으로 흘러간다 */
+@keyframes dash-flow {
+  to { stroke-dashoffset: -60; }
+}
+.dash-flow {
+  animation: dash-flow 1s linear infinite;
+}
+
+@keyframes bob {
+  50% { transform: translateY(-8px); }
+}
+.bob {
+  animation: bob 0.9s ease-in-out infinite;
+}
+
+@keyframes fly-in {
+  from { transform: translate(-420px, -260px) scale(0.4); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.fly-in {
+  animation: fly-in 1.6s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .nightfall,
+  .flicker,
+  .pulse-ring,
+  .revive-in,
+  .dash-flow,
+  .bob,
+  .fly-in,
   .light-up,
   .fan-slow,
   .fan-fast,

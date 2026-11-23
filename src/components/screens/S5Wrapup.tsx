@@ -7,6 +7,9 @@ import { useStore } from '@/lib/store/StoreContext';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
 import { VILLAGE_ART } from '@/media/assets';
 import { Button, Choice, Speech, TextArea } from '../ui';
+import VillageScene from '../village/VillageScene';
+
+const ALL_ON = { m1: 'on', m2: 'on', m3: 'on' } as const;
 
 /** S5. 마무리 7단계 (지도서 마무리 7분). 한 화면에 한 단계씩 */
 export default function S5Wrapup() {
@@ -206,7 +209,10 @@ function FinishStep() {
   const { state, dispatch } = useStore();
   return (
     <section className={`${card} items-center text-center`}>
-      <span className="pop-in text-8xl" aria-hidden>{VILLAGE_ART.bright}</span>
+      {/* 환하게 되살아난 마을 장면 */}
+      <div className="pop-in w-full overflow-hidden rounded-2xl" aria-hidden>
+        <VillageScene looks={ALL_ON} darkness={0.06} festival />
+      </div>
       <p className="text-3xl font-black">{S5.finish.title}</p>
       <p>{S5.finish.text}</p>
       <label className="flex w-full flex-col gap-2 text-left">
