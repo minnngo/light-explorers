@@ -38,6 +38,7 @@ export type Action =
   // S3
   | { type: 'OPEN_MISSION'; mission: MissionId; at: number }
   | { type: 'LEAVE_MISSION' }
+  | { type: 'RETRY_MISSION'; mission: MissionId; at: number }
   | { type: 'GO_TO_WRAPUP' }
   | { type: 'SEE_STORY'; key: StoryKey }
   // S4
@@ -157,6 +158,17 @@ export function reducer(state: AppState, action: Action): AppState {
         boards: saved
           ? { A: { ...saved.A, lastChangedAt: action.at }, B: { ...saved.B, lastChangedAt: action.at } }
           : { A: emptyBoard(action.at), B: emptyBoard(action.at) },
+      };
+    }
+    case 'RETRY_MISSION': {
+      // 완료한 미션을 처음(① 예상하기)부터 다시 한다. 다시 성공할 때까지 그 장소는 꺼진 모습으로 돌아간다
+      if (state.currentScreen !== 'S3' || state.missions[action.mission].status !== 'done') return state;
+      return {
+        ...state,
+        currentScreen: 'S4',
+        currentMission: action.mission,
+        missions: { ...state.missions, [action.mission]: emptyMission('open') },
+        boards: { A: emptyBoard(action.at), B: emptyBoard(action.at) },
       };
     }
     case 'SEE_STORY': {

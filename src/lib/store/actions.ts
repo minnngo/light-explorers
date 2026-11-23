@@ -12,6 +12,7 @@ export const actions = {
     roomCode,
   }),
   openMission: (mission: MissionId): Action => ({ type: 'OPEN_MISSION', mission, at: Date.now() }),
+  retryMission: (mission: MissionId): Action => ({ type: 'RETRY_MISSION', mission, at: Date.now() }),
   addWire: (board: BoardId, from: TerminalId, to: TerminalId): Action => ({
     type: 'ADD_WIRE',
     board,

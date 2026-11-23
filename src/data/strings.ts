@@ -16,7 +16,7 @@ export const VILLAGE = '반짝마을';
 export const COMMON = {
   appTitle: '불빛 탐험대: 꺼진 마을을 밝혀라',
   next: '다음',
-  revived: (n: number) => `되살아난 장소 ${n}/3`,
+  revived: (n: number) => `미션 ${n}/3 완료`,
   stepLabels: ['① 예상', '② 만들기', '③ 비교·이유', '④ 확인'] as const,
   safetyFooter:
     '전기 부품을 만질 때는 절연 장갑을 끼고, 젖은 손으로 만지지 않아요. 진짜 콘센트 전기로는 절대 실험하지 않아요!',
@@ -187,7 +187,6 @@ export const S2 = {
 };
 
 export const S3 = {
-  guide: '되살릴 곳을 골라 보세요.',
   locked: '앞의 미션을 먼저 해결해야 열려요!',
   firstBubble: '가로등부터 시작해 볼까요?',
   toWrapup: '마무리로 가기',
@@ -198,18 +197,19 @@ export const S3 = {
 export const WORLD = {
   villageSign: '반짝마을',
   festival: '불빛 축제',
-  howToMove: '방향키(또는 W A S D)나 조이스틱으로 움직여요. 가고 싶은 곳을 눌러도 돼요.',
+  howToMove: '방향키나 조이스틱으로 움직이거나, 가고 싶은 곳을 눌러요.',
   follow: '화살표를 따라가요',
   ok: '알겠어요!',
   startMission: '미션 시작!',
-  lookAround: '조금 더 둘러보기',
-  review: '결과 다시 보기',
-  alreadyDone: (place: string) => `${place}은(는) 이미 되살렸어요.`,
+  close: '닫기',
+  review: '결과 확인하기',
+  retry: '다시 하기',
+  alreadyDone: '이미 성공한 미션이에요.',
   /** 장소에 도착하면 발견하는 상황 */
   discover: {
-    m1: '가로등 거리에 도착했어요. 가로등이 모두 꺼져 있어요. 밤길이 어두워서 축제에 오는 사람들이 길을 잃을 것 같아요.',
-    m2: '광장에 도착했어요. 안내 종이 조용해요. 쳐 보아도 소리가 나지 않아요. 이래서는 축제가 시작된다는 것을 아무도 모를 거예요.',
-    m3: '언덕에 도착했어요. 풍차가 멈춰 있어요. 풍차가 힘차게 돌아야 축제 무대에 불을 켤 힘이 모여요.',
+    m1: '가로등이 모두 꺼져 있어요. 밤길이 너무 어두워요.',
+    m2: '안내 종이 울리지 않아요. 축제 시작을 알릴 수 없어요.',
+    m3: '풍차가 멈춰 있어요. 축제 무대에 불을 켤 수 없어요.',
   } as Record<MissionId, string>,
   /** 마을 이야기 장면 (반디의 말) */
   stories: {

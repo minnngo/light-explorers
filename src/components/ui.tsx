@@ -13,7 +13,7 @@ export function Button({
     'min-h-11 rounded-2xl px-5 py-2 font-bold transition disabled:cursor-not-allowed disabled:opacity-40';
   const look =
     variant === 'primary'
-      ? 'bg-amber-700 text-white shadow hover:bg-amber-800'
+      ? 'border-2 border-amber-700 bg-amber-700 text-white hover:border-amber-800 hover:bg-amber-800'
       : 'border-2 border-slate-300 bg-white text-slate-700 hover:bg-slate-50';
   return <button type="button" className={`${base} ${look} ${className}`} {...props} />;
 }

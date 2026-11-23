@@ -132,6 +132,19 @@ describe('완료한 미션 다시 보기 (명세서 7-1 하단 "지도로 돌아
     expect(play(s, { type: 'LEAVE_MISSION' }).currentScreen).toBe('S3');
   });
 
+  it('완료한 미션은 처음부터 다시 할 수 있고, 다시 성공하면 또 완료가 된다', () => {
+    const done = play(atMap(), ...FINISH_M1, { type: 'COMPLETE_MISSION', at: 't1' });
+    const retry = reducer(done, { type: 'RETRY_MISSION', mission: 'm1', at: 50 });
+    expect(retry.currentScreen).toBe('S4');
+    expect(retry.missions.m1).toMatchObject({ status: 'open', step: 'predict', prediction: null, explanation: '' });
+    expect(retry.boards.A.wires).toHaveLength(0);
+    expect(retry.missions.m2.status).toBe('open'); // 다음 미션은 그대로 열려 있다
+    const again = play(retry, ...FINISH_M1.slice(1), { type: 'COMPLETE_MISSION', at: 't2' });
+    expect(again.missions.m1).toMatchObject({ status: 'done', completedAt: 't2' });
+    // 하지 않은 미션은 "다시 하기"가 없다
+    expect(reducer(atMap(), { type: 'RETRY_MISSION', mission: 'm1', at: 0 }).currentScreen).toBe('S3');
+  });
+
   it('하던 중에 지도로 나갔다가 다시 들어오면 예상·회로판을 그대로 이어서 한다', () => {
     const s = play(
       atMap(),

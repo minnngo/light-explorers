@@ -8,7 +8,6 @@ import { PLACES, SPAWN, type Vec, WORLD } from '@/data/world';
 import type { MissionId, MissionStatus } from '@/lib/types';
 import {
   angleTo,
-  guidePath,
   joystickDirection,
   keysToDirection,
   placeAt,
@@ -17,7 +16,7 @@ import {
   walkToward,
   ZERO,
 } from '@/lib/world/movement';
-import { DownArrow, Explorer, Fairy } from './Characters';
+import { CompassArrow, DownArrow, Explorer, Fairy } from './Characters';
 import VillageScene, { type PlaceLook } from './VillageScene';
 
 const MOVE_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D']);
@@ -140,10 +139,10 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
   );
   const markers = useMemo(() => ({ ...status }), [status]);
 
-  const path = target ? guidePath(pos, target) : null;
-  const pathD = path?.map((p, i) => `${i ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ');
-  const nearTarget = target ? Math.hypot(pos.x - PLACES[target].x, pos.y - PLACES[target].y) < 160 : true;
-  const pointer = path && path.length > 1 ? angleTo(pos, path[Math.min(1, path.length - 1)]) : 0;
+  const nearTarget = target ? Math.hypot(pos.x - PLACES[target].x, pos.y - PLACES[target].y) < 100 : true;
+  // 나침반: 길과 상관없이 늘 다음 미션 장소 쪽을 곧장 가리킨다
+  const pointer = target ? angleTo(pos, PLACES[target]) : 0;
+  const showCompass = !!target && !nearTarget && !paused;
 
   return (
     <div className="relative">
@@ -159,25 +158,11 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
 
       {/* 탐험대·화살표는 위에 겹친 그림 (누르기는 아래 지도로 통과) */}
       <svg viewBox={`0 0 ${WORLD.width} ${WORLD.height}`} className="pointer-events-none absolute inset-0 h-full w-full">
-        <defs>
-          <marker id="arrowhead" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="4" markerHeight="4" orient="auto">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#fbbf24" />
-          </marker>
-        </defs>
-        {pathD && !paused && (
-          <path d={pathD} fill="none" stroke="#fbbf24" strokeWidth={9} strokeLinecap="round" strokeLinejoin="round"
-            strokeDasharray="22 38" className="dash-flow" markerEnd="url(#arrowhead)" opacity={0.95} />
-        )}
         {target && !paused && <DownArrow x={PLACES[target].x} y={PLACES[target].y - 130} />}
 
         {/* 탐험대와 뒤따라 나는 반디 */}
         <g transform={`translate(${pos.x} ${pos.y})`}>
           <ellipse cx={0} cy={20} rx={24} ry={7} fill="#000" opacity={0.25} />
-          {target && !nearTarget && !paused && (
-            <g transform={`rotate(${pointer})`}>
-              <path d="M 40 -10 L 62 0 L 40 10 z" fill="#fbbf24" stroke="#78350f" strokeWidth={2} />
-            </g>
-          )}
           <g transform={`translate(${facingLeft ? 40 : -40} -62)`}>
             <g className="bob" style={{ animationDuration: '1.6s' }}>
               <Fairy />
@@ -186,6 +171,7 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
           <g transform={facingLeft ? 'scale(-1 1)' : undefined}>
             <Explorer walking={moving} />
           </g>
+          {showCompass && <CompassArrow angle={pointer} />}
         </g>
       </svg>
 

@@ -119,3 +119,33 @@ export function DownArrow({ x, y }: { x: number; y: number }) {
     </g>
   );
 }
+
+/** 움직이는 방법 안내 옆의 조이스틱 그림 (탐험대와 같은 굵은 갈색 테두리) */
+export function JoystickIcon({ className = 'size-5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 32 32" className={className} aria-hidden>
+      <rect x={4} y={19} width={24} height={9} rx={4.5} fill="#f59e0b" stroke={OUTLINE} strokeWidth={2} />
+      <rect x={14.5} y={10} width={3} height={11} rx={1.5} fill={OUTLINE} />
+      <circle cx={16} cy={9} r={5.5} fill="#fbbf24" stroke={OUTLINE} strokeWidth={2} />
+      <circle cx={14.3} cy={7.3} r={1.6} fill="#fff7c2" />
+      <circle cx={23} cy={23.5} r={1.8} fill="#2563eb" />
+    </svg>
+  );
+}
+
+/** 나침반 바늘이 도는 원 (원 가운데가 탐험대 몸 가운데) */
+const COMPASS = { cy: -30, r: 70 };
+
+/** 나침반 바늘: 탐험대 둘레에서 가야 할 쪽을 가리키며 그쪽으로 톡톡 튀어 나간다 */
+export function CompassArrow({ angle }: { angle: number }) {
+  const rad = (angle * Math.PI) / 180;
+  const x = Math.cos(rad) * COMPASS.r;
+  const y = COMPASS.cy + Math.sin(rad) * COMPASS.r;
+  return (
+    <g transform={`translate(${x} ${y}) rotate(${angle})`}>
+      <g className="compass-nudge">
+        <path d="M 18 0 L -9 -16 L -2 0 L -9 16 Z" fill="#fbbf24" stroke="#78350f" strokeWidth={2.5} strokeLinejoin="round" />
+      </g>
+    </g>
+  );
+}

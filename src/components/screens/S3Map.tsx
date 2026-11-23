@@ -14,6 +14,7 @@ import { useStore } from '@/lib/store/StoreContext';
 import type { MissionId, StoryKey } from '@/lib/types';
 import { WORLD as WORLD_SIZE } from '@/data/world';
 import { nextTarget } from '@/lib/world/movement';
+import { JoystickIcon } from '../village/Characters';
 import { Button, Speech } from '../ui';
 import VillageWorld from '../village/VillageWorld';
 
@@ -76,9 +77,20 @@ export default function S3Map() {
     <main className="mx-auto flex w-full max-w-[1800px] flex-col gap-2 px-4 py-3"
       style={{ height: room ? `calc(100dvh - ${ROOM_BAR_HEIGHT}px)` : '100dvh' }}>
       <header className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-lg font-bold">🧭 {state.groupName}</p>
-        <h1 className="text-2xl font-black">{S3.guide}</h1>
-        <p className="rounded-full bg-amber-100 px-4 py-1 font-bold">{COMMON.revived(revived)}</p>
+        <p className="text-lg font-bold">{state.groupName}</p>
+        <h1 className="flex items-center gap-3 text-2xl font-black">
+          {COMMON.revived(revived)}
+          <span className="flex gap-1.5" aria-hidden>
+            {MISSION_ORDER.map((id) => (
+              <svg key={id} viewBox="0 0 24 24" className="size-7">
+                <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"
+                  strokeWidth={1.8} strokeLinejoin="round"
+                  className={status[id] === 'done' ? 'fill-amber-400 stroke-amber-500' : 'fill-white stroke-slate-300'} />
+              </svg>
+            ))}
+          </span>
+        </h1>
+        <span className="w-32" aria-hidden />
       </header>
 
       {/* 지도는 남은 공간에 꽉 차게, 가로·세로 중 좁은 쪽에 맞춘다 (위 제목·아래 안내까지 한 화면에) */}
@@ -107,6 +119,7 @@ export default function S3Map() {
             id={arrived}
             done={state.missions[arrived].status === 'done'}
             onStart={() => dispatch(actions.openMission(arrived))}
+            onRetry={() => dispatch(actions.retryMission(arrived))}
             onClose={() => setArrived(null)}
           />
         )}
@@ -120,7 +133,7 @@ export default function S3Map() {
       </div>
 
       <footer className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-base text-slate-600">🕹️ {WORLD.howToMove}</p>
+        <p className="flex items-center gap-1.5 text-sm text-slate-600"><JoystickIcon />{WORLD.howToMove}</p>
         {done && !story && (
           <Button className="px-10 text-2xl" onClick={() => dispatch({ type: 'GO_TO_WRAPUP' })}>
             {S3.toWrapup}
@@ -138,7 +151,7 @@ export function pendingStory(seen: readonly StoryKey[], status: Record<MissionId
   return id ? `after-${id}` : null;
 }
 
-const overlay = 'pop-in absolute inset-x-4 bottom-4 flex flex-col gap-3 rounded-2xl bg-white/95 p-4 shadow-xl md:inset-x-auto md:right-4 md:w-[30rem]';
+const overlay = 'pop-in absolute inset-x-4 bottom-4 flex flex-col gap-3 rounded-2xl bg-white/95 p-4 shadow-xl md:inset-x-auto md:right-4 md:w-[26rem]';
 
 function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
   storyKey: StoryKey; groupName: string; showWrapup: boolean; onDone: () => void; onWrapup: () => void;
@@ -148,27 +161,41 @@ function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
   return (
     <div className={overlay} role="dialog" aria-label={CHARACTER}>
       <Speech speaker={CHARACTER}>{text}</Speech>
-      {storyKey === 'arrive' && <p className="text-base text-slate-600">🕹️ {WORLD.howToMove}</p>}
+      {storyKey === 'arrive' && <p className="flex items-center gap-1.5 text-sm text-slate-600"><JoystickIcon />{WORLD.howToMove}</p>}
       {showWrapup ? (
-        <Button className="text-xl" onClick={onWrapup}>{S3.toWrapup}</Button>
+        <Button onClick={onWrapup}>{S3.toWrapup}</Button>
       ) : (
-        <Button className="text-xl" onClick={onDone} autoFocus>{WORLD.ok}</Button>
+        <Button onClick={onDone} autoFocus>{WORLD.ok}</Button>
       )}
     </div>
   );
 }
 
-function DiscoverPanel({ id, done, onStart, onClose }: { id: MissionId; done: boolean; onStart: () => void; onClose: () => void }) {
+interface DiscoverProps {
+  id: MissionId;
+  done: boolean;
+  onStart: () => void;
+  onRetry: () => void;
+  onClose: () => void;
+}
+
+function DiscoverPanel({ id, done, onStart, onRetry, onClose }: DiscoverProps) {
   return (
     <div className={overlay} role="dialog" aria-label={S3.places[id]}>
-      <h2 className="text-xl font-black">📍 {S3.places[id]}</h2>
-      <p>{done ? WORLD.alreadyDone(S3.places[id]) : WORLD.discover[id]}</p>
-      <div className="flex gap-2">
-        <Button variant="secondary" onClick={onClose}>{WORLD.lookAround}</Button>
-        <Button className="flex-1 text-xl" onClick={onStart} autoFocus>
-          {done ? WORLD.review : WORLD.startMission}
-        </Button>
-      </div>
+      <button type="button" onClick={onClose} aria-label={WORLD.close}
+        className="absolute right-2 top-2 flex size-10 items-center justify-center rounded-full text-xl text-slate-500 hover:bg-slate-100 hover:text-slate-800">
+        ✕
+      </button>
+      <h2 className="pr-10 text-lg font-black">{S3.places[id]}</h2>
+      <p className="text-base">{done ? WORLD.alreadyDone : WORLD.discover[id]}</p>
+      {done ? (
+        <div className="flex gap-2">
+          <Button variant="secondary" className="flex-1" onClick={onRetry}>{WORLD.retry}</Button>
+          <Button className="flex-1" onClick={onStart} autoFocus>{WORLD.review}</Button>
+        </div>
+      ) : (
+        <Button onClick={onStart} autoFocus>{WORLD.startMission}</Button>
+      )}
     </div>
   );
 }

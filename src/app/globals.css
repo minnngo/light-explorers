@@ -223,8 +223,17 @@ body {
   to { transform: scaleX(0.45); }
 }
 
+/* 지도 나침반 바늘: 가야 할 쪽으로 톡톡 */
+@keyframes compass-nudge {
+  50% { transform: translateX(7px); }
+}
+.compass-nudge {
+  animation: compass-nudge 0.9s ease-in-out infinite;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .walker *,
+  .compass-nudge,
   .fairy .wing,
   .pulse-cta,
   .coach-glow,

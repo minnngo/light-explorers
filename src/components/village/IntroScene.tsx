@@ -7,8 +7,8 @@
 //  컷 4: 전지가 1개·2개 들어가는 제품들
 //  컷 5: 마을 입구에서 가로등으로 가는 길 안내
 import { PLACES, SPAWN, WORLD } from '@/data/world';
-import { guidePath } from '@/lib/world/movement';
-import { DownArrow, Explorer, Fairy } from './Characters';
+import { angleTo } from '@/lib/world/movement';
+import { CompassArrow, DownArrow, Explorer, Fairy } from './Characters';
 import VillageScene from './VillageScene';
 
 const ALL_DIM = { m1: 'dim', m2: 'dim', m3: 'dim' } as const;
@@ -18,7 +18,6 @@ export default function IntroScene({ cut }: { cut: number }) {
   if (cut === 2) return <CircuitCut />;
   if (cut === 3) return <ProductsCut />;
 
-  const path = guidePath(SPAWN, 'm1');
   return (
     <div className="relative overflow-hidden rounded-3xl" aria-hidden>
       <VillageScene
@@ -40,14 +39,13 @@ export default function IntroScene({ cut }: { cut: number }) {
         )}
         {cut === 4 && (
           <>
-            <path d={path.map((p, i) => `${i ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ')} fill="none" stroke="#fbbf24"
-              strokeWidth={10} strokeLinecap="round" strokeDasharray="22 38" className="dash-flow" />
             <DownArrow x={PLACES.m1.x} y={PLACES.m1.y - 130} />
             <g transform={`translate(${SPAWN.x} ${SPAWN.y})`}>
               <g transform="translate(-40 -62)">
                 <g className="bob" style={{ animationDuration: '1.6s' }}><Fairy /></g>
               </g>
               <Explorer />
+              <CompassArrow angle={angleTo(SPAWN, PLACES.m1)} />
             </g>
           </>
         )}
