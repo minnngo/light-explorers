@@ -16,7 +16,7 @@ import {
 import { PART_NAMES } from '@/data/strings';
 import type { BoardId, BoardState, JudgeResult, PartKind, TerminalId } from '@/lib/types';
 import type { CoachMark } from '@/lib/tutorial/tutorial';
-import { playChime, playLightOn } from '@/media/sound';
+import { CHIME_OFFSET_MS, CHIME_PERIOD_MS, playChime, playLightOn } from '@/media/sound';
 
 interface Props {
   boardId: BoardId;
@@ -26,6 +26,8 @@ interface Props {
   editable: boolean;
   dark: boolean;
   muted: boolean;
+  /** 버저가 작동하는 동안 계속 울릴지 (② 만들기·8-1 도전에서만. ③에서 이유를 쓰는 동안은 조용히) */
+  keepRinging?: boolean;
   onAddWire: (from: TerminalId, to: TerminalId) => void;
   onRemoveWire: (wireId: string) => void;
   onToggleSwitch: () => void;
@@ -41,7 +43,7 @@ const wirePath = (a: { x: number; y: number }, b: { x: number; y: number }) =>
 const WIRE_COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#ca8a04'];
 
 export default function CircuitBoard(props: Props) {
-  const { boardId, part, board, result, editable, dark, muted } = props;
+  const { boardId, part, board, result, editable, dark, muted, keepRinging = false } = props;
   const layout = boardLayout(boardId, part);
   const terminals = new Map(layout.flatMap((c) => c.terminals).map((t) => [t.id, t]));
   const svgRef = useRef<SVGSVGElement>(null);
@@ -50,10 +52,29 @@ export default function CircuitBoard(props: Props) {
 
   // 안내 종 소리 (소리 끄기면 글자와 물결만)
   useEffect(() => {
-    if (part === 'buzzer' && result.level > 0 && !muted) playChime(result.level as 1 | 2);
     // 불이 켜지는 소리 (명세서 14장 S1)
     if (part === 'bulb' && result.level > 0 && !muted) playLightOn(result.level as 1 | 2);
   }, [part, result.level, muted]);
+
+  // 안내 종(버저): 작동하는 동안 계속 울린다. A와 B는 번갈아 울려서 소리 세기를 비교하기 쉽게 한다.
+  // 계속 울리지 않는 단계에서는 소리가 바뀌는 순간 한 번만 울린다.
+  useEffect(() => {
+    if (part !== 'buzzer' || result.level === 0 || muted) return;
+    const level = result.level as 1 | 2;
+    if (!keepRinging) {
+      playChime(level);
+      return;
+    }
+    let interval: ReturnType<typeof setInterval> | undefined;
+    const start = setTimeout(() => {
+      playChime(level);
+      interval = setInterval(() => playChime(level), CHIME_PERIOD_MS);
+    }, CHIME_OFFSET_MS[boardId]);
+    return () => {
+      clearTimeout(start);
+      clearInterval(interval);
+    };
+  }, [part, result.level, muted, keepRinging, boardId]);
 
   const toSvg = (e: { clientX: number; clientY: number }) => {
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(svgRef.current!.getScreenCTM()!.inverse());

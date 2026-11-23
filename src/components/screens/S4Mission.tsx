@@ -184,6 +184,7 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused }: {
             editable={editable}
             dark={dark}
             muted={muted}
+            keepRinging={record.status !== 'done' && (record.step === 'build' || record.challenge === 'active')}
             onAddWire={(from, to) => dispatch(actions.addWire(boardId, from, to))}
             onRemoveWire={(wireId) => dispatch(actions.removeWire(boardId, wireId))}
             onToggleSwitch={() => dispatch(actions.toggleSwitch(boardId))}
