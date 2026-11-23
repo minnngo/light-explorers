@@ -223,6 +223,102 @@ body {
   to { transform: scaleX(0.45); }
 }
 
+/* 마을 사람: 걱정하면 몸을 흔들고, 기뻐하면 콩콩 뛴다 */
+.villager-sway {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: villager-sway 2.2s ease-in-out infinite;
+}
+@keyframes villager-sway {
+  0%, 100% { transform: rotate(-3deg); }
+  50% { transform: rotate(3deg); }
+}
+.villager-cheer {
+  animation: villager-cheer 0.7s ease-in-out infinite;
+}
+@keyframes villager-cheer {
+  50% { transform: translateY(-6px); }
+}
+.villager-idle {
+  animation: breathe 2.6s ease-in-out infinite;
+}
+.bubble-pop {
+  animation: bubble-float 2.4s ease-in-out infinite;
+}
+@keyframes bubble-float {
+  50% { transform: translateY(-3px); }
+}
+
+/* 상황 장면 애니메이션 */
+.bell-swing {
+  transform-box: fill-box;
+  transform-origin: 50% 0;
+  animation: bell-swing 1.6s ease-in-out infinite;
+}
+@keyframes bell-swing {
+  0%, 100% { transform: rotate(-14deg); }
+  50% { transform: rotate(14deg); }
+}
+.hammer-hit {
+  transform-box: fill-box;
+  transform-origin: 100% 100%;
+  animation: hammer-hit 1.6s ease-in-out infinite;
+}
+@keyframes hammer-hit {
+  0%, 40%, 100% { transform: rotate(0deg); }
+  48% { transform: rotate(-35deg); }
+}
+.faint-wave {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: faint-wave 1.6s ease-out infinite;
+}
+@keyframes faint-wave {
+  0%, 45% { opacity: 0; transform: scale(0.8); }
+  55% { opacity: 0.5; }
+  75%, 100% { opacity: 0; transform: scale(1.15); }
+}
+.blade-twitch {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: blade-twitch 3s ease-in-out infinite;
+}
+@keyframes blade-twitch {
+  0%, 70%, 100% { transform: rotate(0deg); }
+  78% { transform: rotate(9deg); }
+  88% { transform: rotate(-2deg); }
+}
+.walk-across {
+  animation: walk-across 9s linear infinite;
+}
+@keyframes walk-across {
+  from { transform: translateX(-120px); }
+  to { transform: translateX(760px); }
+}
+.question-pop {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: question-pop 1.8s ease-in-out infinite;
+}
+@keyframes question-pop {
+  0%, 100% { opacity: 0; transform: translateY(4px) scale(0.6); }
+  25%, 75% { opacity: 1; transform: none; }
+}
+.twinkle {
+  animation: twinkle 2.4s ease-in-out infinite;
+}
+@keyframes twinkle {
+  50% { opacity: 0.25; }
+}
+.candle-flicker {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: candle-flicker 0.5s ease-in-out infinite alternate;
+}
+@keyframes candle-flicker {
+  to { transform: scale(0.8, 1.15); opacity: 0.8; }
+}
+
 /* 지도 나침반 바늘: 가야 할 쪽으로 톡톡 */
 @keyframes compass-nudge {
   50% { transform: translateX(7px); }
@@ -234,6 +330,18 @@ body {
 @media (prefers-reduced-motion: reduce) {
   .walker *,
   .compass-nudge,
+  .villager-sway,
+  .villager-cheer,
+  .villager-idle,
+  .bubble-pop,
+  .bell-swing,
+  .hammer-hit,
+  .faint-wave,
+  .blade-twitch,
+  .walk-across,
+  .question-pop,
+  .twinkle,
+  .candle-flicker,
   .fairy .wing,
   .pulse-cta,
   .coach-glow,

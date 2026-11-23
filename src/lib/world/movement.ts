@@ -1,5 +1,5 @@
 // 마을 돌아다니기 계산 (순수 함수). 화면(VillageWorld)은 이 함수들로 위치를 바꾸고 그리기만 한다.
-import { ARRIVE_RADIUS, BOUNDS, PLACES, ROAD, ROAD_STOP, type Vec, WALK_SPEED } from '@/data/world';
+import { ARRIVE_RADIUS, BOUNDS, PLACES, ROAD, ROAD_STOP, type Vec, WALK_SPEED, WORLD } from '@/data/world';
 import { MISSION_ORDER } from '@/data/missions';
 import type { MissionId } from '@/lib/types';
 
@@ -36,16 +36,16 @@ export function joystickDirection(dx: number, dy: number, radius: number, deadZo
 }
 
 /** 방향(길이 0~1)으로 dt초 걷기 */
-export function walk(pos: Vec, dir: Vec, dt: number): Vec {
+export function walk(pos: Vec, dir: Vec, dt: number, speed = WALK_SPEED): Vec {
   const d = clampLength(dir);
-  return clampToBounds({ x: pos.x + d.x * WALK_SPEED * dt, y: pos.y + d.y * WALK_SPEED * dt });
+  return clampToBounds({ x: pos.x + d.x * speed * dt, y: pos.y + d.y * speed * dt });
 }
 
 /** 목표 지점으로 dt초 걷기 (누른 곳으로 가기). 도착하면 arrived */
-export function walkToward(pos: Vec, target: Vec, dt: number): { pos: Vec; arrived: boolean } {
+export function walkToward(pos: Vec, target: Vec, dt: number, speed = WALK_SPEED): { pos: Vec; arrived: boolean } {
   const goal = clampToBounds(target);
   const gap = distance(pos, goal);
-  const stepLen = WALK_SPEED * dt;
+  const stepLen = speed * dt;
   if (gap <= stepLen) return { pos: goal, arrived: true };
   return { pos: { x: pos.x + ((goal.x - pos.x) / gap) * stepLen, y: pos.y + ((goal.y - pos.y) / gap) * stepLen }, arrived: false };
 }
@@ -94,4 +94,23 @@ export function startPosition(status: Record<MissionId, 'locked' | 'open' | 'don
 /** 화살표가 가리키는 각도(도). 오른쪽 0°, 아래 90° */
 export function angleTo(from: Vec, to: Vec): number {
   return (Math.atan2(to.y - from.y, to.x - from.x) * 180) / Math.PI;
+}
+
+/** 화면에 보이는 마을의 부분 (SVG viewBox) */
+export interface View {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+/**
+ * 카메라: zoom배로 가까이 볼 때 탐험대를 가운데 두는 viewBox.
+ * 지도 바깥이 보이지 않게 가장자리에서는 멈춘다. zoom 1이면 지도 전체.
+ */
+export function cameraView(pos: Vec, zoom: number): View {
+  const width = WORLD.width / zoom;
+  const height = WORLD.height / zoom;
+  const axis = (p: number, size: number, total: number) => Math.min(total - size, Math.max(0, p - size / 2));
+  return { x: axis(pos.x, width, WORLD.width), y: axis(pos.y, height, WORLD.height), width, height };
 }

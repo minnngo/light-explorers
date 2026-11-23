@@ -202,15 +202,13 @@ export const WORLD = {
   ok: '알겠어요!',
   startMission: '미션 시작!',
   close: '닫기',
+  viewNear: '가까이 보기',
+  viewMap: '지도 보기',
+  problem: '문제 상황',
+  todo: '우리가 할 일',
   review: '결과 확인하기',
   retry: '다시 하기',
   alreadyDone: '이미 성공한 미션이에요.',
-  /** 장소에 도착하면 발견하는 상황 */
-  discover: {
-    m1: '가로등이 모두 꺼져 있어요. 밤길이 너무 어두워요.',
-    m2: '안내 종이 울리지 않아요. 축제 시작을 알릴 수 없어요.',
-    m3: '풍차가 멈춰 있어요. 축제 무대에 불을 켤 수 없어요.',
-  } as Record<MissionId, string>,
   /** 마을 이야기 장면 (반디의 말) */
   stories: {
     arrive: (group: string) =>
@@ -540,5 +538,36 @@ export const TEACHER = {
     challenge: { none: '안 함', active: '하는 중', done: '해 봄' },
     explain: { more: '더 ~했어요', less: '덜 ~했어요', same: '같았어요' },
     check: { brighter: '밝습니다', darker: '어둡습니다' },
+  },
+};
+
+/** 미션 장소에 도착했을 때의 상황 장면 (S3). 말풍선은 장면 속 마을 사람의 말 */
+export const SITUATION: Record<MissionId, {
+  alt: string;
+  problem: string;
+  todo: string;
+  troubleLine: string;
+  fixedLine: string;
+}> = {
+  m1: {
+    alt: '가로등이 꺼져 깜깜한 거리에서 사람들이 길을 더듬어 걷고 있어요',
+    problem: '가로등이 모두 꺼져서 밤길이 깜깜해요. 축제에 오는 사람들이 길을 잃고 있어요.',
+    todo: '전지의 개수를 달리하면 전구의 밝기가 어떻게 달라지는지 알아보고, 가로등을 다시 밝혀요.',
+    troubleLine: '앞이 안 보여요',
+    fixedLine: '이제 환해요!',
+  },
+  m2: {
+    alt: '광장의 안내 종을 쳐도 소리가 나지 않아 사람들이 고개를 갸웃해요',
+    problem: '안내 종을 쳐도 소리가 들리지 않아요. 축제가 시작된다는 것을 아무도 알 수 없어요.',
+    todo: '전지의 개수를 달리하면 버저 소리가 어떻게 달라지는지 알아보고, 종소리를 되살려요.',
+    troubleLine: '소리가 안 들려요',
+    fixedLine: '종소리가 울려요!',
+  },
+  m3: {
+    alt: '언덕의 풍차가 멈춰 있고 축제 무대의 전등이 꺼져 있어요',
+    problem: '풍차가 멈춰 있어요. 풍차가 돌아야 축제 무대에 불을 켤 힘이 모여요.',
+    todo: '전지의 개수를 달리하면 전동기가 도는 빠르기가 어떻게 달라지는지 알아보고, 풍차를 다시 돌려요.',
+    troubleLine: '꼼짝도 안 해요',
+    fixedLine: '씽씽 돌아요!',
   },
 };

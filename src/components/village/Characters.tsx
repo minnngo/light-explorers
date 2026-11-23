@@ -109,9 +109,9 @@ export function FairyIcon({ className = 'size-11' }: { className?: string }) {
 }
 
 /** 목적지를 가리키는 아래 화살표 */
-export function DownArrow({ x, y }: { x: number; y: number }) {
+export function DownArrow({ x, y, scale = 1 }: { x: number; y: number; scale?: number }) {
   return (
-    <g transform={`translate(${x} ${y})`}>
+    <g transform={`translate(${x} ${y}) scale(${scale})`}>
       <g className="bob">
         <path d="M -12 -30 L 12 -30 L 12 -6 L 26 -6 L 0 20 L -26 -6 L -12 -6 Z" fill="#fbbf24" stroke="#78350f"
           strokeWidth={3} strokeLinejoin="round" />
@@ -134,7 +134,7 @@ export function JoystickIcon({ className = 'size-5' }: { className?: string }) {
 }
 
 /** 나침반 바늘이 도는 원 (원 가운데가 탐험대 몸 가운데) */
-const COMPASS = { cy: -30, r: 70 };
+const COMPASS = { cy: -30, r: 88 }; // 반디(몸 가운데에서 약 50, 빛 30)보다 바깥
 
 /** 나침반 바늘: 탐험대 둘레에서 가야 할 쪽을 가리키며 그쪽으로 톡톡 튀어 나간다 */
 export function CompassArrow({ angle }: { angle: number }) {
@@ -145,6 +145,106 @@ export function CompassArrow({ angle }: { angle: number }) {
     <g transform={`translate(${x} ${y}) rotate(${angle})`}>
       <g className="compass-nudge">
         <path d="M 18 0 L -9 -16 L -2 0 L -9 16 Z" fill="#fbbf24" stroke="#78350f" strokeWidth={2.5} strokeLinejoin="round" />
+      </g>
+    </g>
+  );
+}
+
+export type Mood = 'worried' | 'happy' | 'calm';
+
+export interface VillagerLook {
+  shirt: string;
+  pants?: string;
+  hair?: string;
+  /** 머리 모양: 짧은 머리 / 긴 머리 / 할아버지(흰머리) */
+  style?: 'short' | 'long' | 'old';
+  /** 아이는 조금 작게 */
+  child?: boolean;
+}
+
+/**
+ * 마을 사람: 탐험대와 같은 그림체(굵은 갈색 테두리, 둥근 머리). (0, 0)이 발밑, 오른쪽을 본다.
+ *  - worried: 처진 눈썹, 작은 입. 몸을 조금씩 흔든다
+ *  - happy: 웃는 입, 두 팔을 들고 콩콩 뛴다
+ */
+export function Villager({ look, mood = 'calm', bubble, flip = false }: {
+  look: VillagerLook;
+  mood?: Mood;
+  /** 머리 위 말풍선 */
+  bubble?: string;
+  /** 왼쪽을 본다 (말풍선 글자는 뒤집지 않는다) */
+  flip?: boolean;
+}) {
+  const { shirt, pants = '#475569', hair = HAIR, style = 'short', child = false } = look;
+  const k = child ? 0.78 : 1;
+  const happy = mood === 'happy';
+  return (
+    <g>
+      <g transform={`scale(${flip ? -k : k} ${k})`}>
+      <g className={happy ? 'villager-cheer' : mood === 'worried' ? 'villager-sway' : 'villager-idle'}>
+        {/* 다리 */}
+        <rect x={-8} y={-6} width={7} height={22} rx={3.5} fill={pants} stroke={OUTLINE} strokeWidth={1.5} />
+        <rect x={1} y={-6} width={7} height={22} rx={3.5} fill={pants} stroke={OUTLINE} strokeWidth={1.5} />
+        <ellipse cx={-4} cy={17} rx={6} ry={3.5} fill="#4a2e17" />
+        <ellipse cx={5} cy={17} rx={6} ry={3.5} fill="#4a2e17" />
+        {/* 팔 (기뻐하면 위로) */}
+        {happy ? (
+          <>
+            <rect x={-19} y={-58} width={7} height={22} rx={3.5} fill={shirt} stroke={OUTLINE} strokeWidth={1.5} transform="rotate(-20 -15 -36)" />
+            <rect x={12} y={-58} width={7} height={22} rx={3.5} fill={shirt} stroke={OUTLINE} strokeWidth={1.5} transform="rotate(20 15 -36)" />
+          </>
+        ) : (
+          <>
+            <rect x={-17} y={-32} width={7} height={22} rx={3.5} fill={shirt} stroke={OUTLINE} strokeWidth={1.5} />
+            <rect x={10} y={-32} width={7} height={22} rx={3.5} fill={shirt} stroke={OUTLINE} strokeWidth={1.5} />
+          </>
+        )}
+        {/* 몸 */}
+        <rect x={-12} y={-35} width={24} height={31} rx={9} fill={shirt} stroke={OUTLINE} strokeWidth={2} />
+        {/* 머리 */}
+        {style === 'long' && <rect x={-19} y={-62} width={38} height={30} rx={12} fill={hair} />}
+        <circle cx={0} cy={-52} r={18} fill={SKIN} stroke={OUTLINE} strokeWidth={2} />
+        {style === 'old' ? (
+          <path d="M -18 -54 Q -16 -70 0 -70 Q 16 -70 18 -54 Q 12 -62 0 -62 Q -12 -62 -18 -54 Z" fill="#e5e7eb" stroke={OUTLINE} strokeWidth={1.2} />
+        ) : (
+          <path d="M -18 -52 Q -19 -72 0 -72 Q 18 -72 18 -55 Q 8 -62 -2 -60 Q -12 -59 -18 -52 Z" fill={hair} />
+        )}
+        {/* 얼굴 */}
+        {mood === 'worried' ? (
+          <>
+            <path d="M 0 -58 L 7 -56 M 11 -56 L 18 -58" stroke="#1f1a17" strokeWidth={1.6} strokeLinecap="round" />
+            <circle cx={4} cy={-51} r={2.2} fill="#1f1a17" />
+            <circle cx={14} cy={-51} r={2.2} fill="#1f1a17" />
+            <ellipse cx={9} cy={-42} rx={2.4} ry={2} fill="#7c2d12" />
+          </>
+        ) : (
+          <>
+            <circle cx={4} cy={-51} r={2.3} fill="#1f1a17" />
+            <circle cx={14} cy={-51} r={2.3} fill="#1f1a17" />
+            <circle cx={1} cy={-44} r={3} fill="#fb7185" opacity={0.4} />
+            <path d={happy ? 'M 5 -44 Q 9 -38 13 -44 Z' : 'M 6 -43 Q 9 -40 12 -43'} fill={happy ? '#7c2d12' : 'none'}
+              stroke="#7c2d12" strokeWidth={1.6} strokeLinecap="round" />
+          </>
+        )}
+        {style === 'old' && <path d="M 2 -46 Q 9 -43 16 -46" fill="none" stroke="#9ca3af" strokeWidth={2} />}
+      </g>
+      </g>
+      {bubble && <SpeechBubble text={bubble} y={-80 * k - 6} size={16} />}
+    </g>
+  );
+}
+
+/** 사람 머리 위 말풍선 (짧은 말 한마디). (x, y)가 꼬리 끝 */
+export function SpeechBubble({ text, y, x = 0, size = 14 }: { text: string; y: number; x?: number; size?: number }) {
+  const w = Math.max(size * 2, text.length * size * 0.95 + size * 1.2);
+  const h = size * 1.8;
+  return (
+    <g transform={`translate(${x} ${y})`}>
+      <g className="bubble-pop">
+        <rect x={-w / 2} y={-h} width={w} height={h} rx={h / 2.4} fill="#fff" stroke={OUTLINE} strokeWidth={1.8} />
+        <path d="M -5 -1 L 0 8 L 5 -1 Z" fill="#fff" stroke={OUTLINE} strokeWidth={1.8} strokeLinejoin="round" />
+        <rect x={-6} y={-3} width={12} height={4} fill="#fff" />
+        <text x={0} y={-h / 2 + size * 0.36} textAnchor="middle" fontSize={size} fontWeight={800} fill="#1f1a17">{text}</text>
       </g>
     </g>
   );

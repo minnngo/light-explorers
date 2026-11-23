@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { BOUNDS, PLACES, ROAD, ROAD_STOP, SPAWN, WALK_SPEED } from '@/data/world';
 import {
+  cameraView,
   distance,
   guidePath,
   joystickDirection,
@@ -68,5 +69,25 @@ describe('마을 돌아다니기', () => {
     expect(placeAt(startPosition(status, SPAWN))).toBeNull(); // 장소 이름표를 가리지 않게 장소 밖에 선다
     expect(placeAt(startPosition({ m1: 'done', m2: 'done', m3: 'done' }, SPAWN))).toBeNull();
     expect(startPosition({ m1: 'open', m2: 'locked', m3: 'locked' }, SPAWN)).toEqual(SPAWN);
+  });
+});
+
+describe('가까이 보기 카메라', () => {
+  it('탐험대를 화면 가운데에 둔다', () => {
+    const v = cameraView({ x: 600, y: 350 }, 2);
+    expect(v).toEqual({ x: 300, y: 175, width: 600, height: 350 });
+  });
+
+  it('지도 가장자리에서는 바깥이 보이지 않게 멈춘다', () => {
+    expect(cameraView({ x: 0, y: 0 }, 2)).toMatchObject({ x: 0, y: 0 });
+    expect(cameraView({ x: 1200, y: 700 }, 2)).toMatchObject({ x: 600, y: 350 });
+  });
+
+  it('지도 보기(1배)는 늘 지도 전체', () => {
+    expect(cameraView({ x: 900, y: 100 }, 1)).toEqual({ x: 0, y: 0, width: 1200, height: 700 });
+  });
+
+  it('가까이 보기에서는 천천히 걸을 수 있다', () => {
+    expect(walk({ x: 600, y: 400 }, { x: 1, y: 0 }, 1, 100).x).toBe(700);
   });
 });

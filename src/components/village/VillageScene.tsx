@@ -5,8 +5,19 @@
 import { memo, type PointerEvent as ReactPointerEvent, useRef } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
 import { S3, WORLD as WORLD_TEXT } from '@/data/strings';
-import { PLACES, ROAD, SPAWN, type Vec, WORLD } from '@/data/world';
+import { PLACES, SPAWN, type Vec, WORLD } from '@/data/world';
 import type { MissionId, MissionStatus } from '@/lib/types';
+import {
+  BRANCHES,
+  DetailDefs,
+  GroundDetails,
+  House,
+  PlaceVillagers,
+  ROAD_PATH,
+  RoadDetails,
+  TownDetails,
+  Tree,
+} from './VillageDetails';
 
 export type PlaceLook = 'dim' | 'on';
 
@@ -25,6 +36,8 @@ export interface VillageSceneProps {
   markers?: Record<MissionId, MissionStatus>;
   /** 모든 곳이 되살아나 축제 등불이 켜짐 */
   festival?: boolean;
+  /** 가까이 보기: 큰 집·나무·마을 사람 같은 자세한 모습을 그린다 */
+  near?: boolean;
   onGroundClick?: (p: Vec) => void;
   onPlaceClick?: (id: MissionId) => void;
   className?: string;
@@ -42,9 +55,8 @@ const TREES: readonly Vec[] = [{ x: 300, y: 250 }, { x: 760, y: 590 }, { x: 760,
 const LANTERN_COLORS = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#c084fc', '#f472b6', '#fbbf24'];
 
 function VillageScene(props: VillageSceneProps) {
-  const { looks, reviving, darkness, nightfall, highlight, markers, festival, className = '' } = props;
+  const { looks, reviving, darkness, nightfall, highlight, markers, festival, near, className = '' } = props;
   const svgRef = useRef<SVGSVGElement>(null);
-  const roadPath = ROAD.map((p, i) => `${i ? 'L' : 'M'} ${p.x} ${p.y}`).join(' ');
   const litHouses = MISSION_ORDER.filter((id) => looks[id] === 'on').length * 3 + (festival ? 1 : 0);
 
   const onGround = (e: ReactPointerEvent<SVGSVGElement>) => {
@@ -56,6 +68,7 @@ function VillageScene(props: VillageSceneProps) {
   return (
     <svg
       ref={svgRef}
+      data-village=""
       viewBox={`0 0 ${WORLD.width} ${WORLD.height}`}
       className={`block h-auto w-full select-none ${className}`}
       onPointerDown={onGround}
@@ -67,21 +80,29 @@ function VillageScene(props: VillageSceneProps) {
           <stop offset="0%" stopColor="#fff7c2" stopOpacity="0.95" />
           <stop offset="100%" stopColor="#fde047" stopOpacity="0" />
         </radialGradient>
+        {near && <DetailDefs />}
       </defs>
 
       {/* 땅, 언덕, 길 */}
       <rect width={WORLD.width} height={WORLD.height} fill="#6f9a52" />
       <ellipse cx={PLACES.m3.x} cy={PLACES.m3.y + 30} rx={230} ry={140} fill="#86b15f" />
-      <path d={roadPath} stroke="#d8c294" strokeWidth={46} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-      <path d={`M ${ROAD[2].x} ${ROAD[2].y} L ${PLACES.m1.x} ${PLACES.m1.y + 20}`} stroke="#d8c294" strokeWidth={34} strokeLinecap="round" />
-      <path d={`M ${ROAD[7].x} ${ROAD[7].y} L ${PLACES.m3.x} ${PLACES.m3.y + 40}`} stroke="#d8c294" strokeWidth={30} strokeLinecap="round" />
+      {near && <GroundDetails />}
+      {near && (
+        <>
+          <path d={ROAD_PATH} stroke="#a88d5c" strokeWidth={54} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+          {BRANCHES.map((d) => <path key={d} d={d} stroke="#a88d5c" strokeWidth={42} strokeLinecap="round" />)}
+        </>
+      )}
+      <path d={ROAD_PATH} stroke="#d8c294" strokeWidth={46} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <path d={BRANCHES[0]} stroke="#d8c294" strokeWidth={34} strokeLinecap="round" />
+      <path d={BRANCHES[1]} stroke="#d8c294" strokeWidth={30} strokeLinecap="round" />
       <ellipse cx={PLACES.m2.x} cy={PLACES.m2.y + 25} rx={130} ry={78} fill="#e7dcc0" stroke="#c9b68a" strokeWidth={4} />
+      {near && <RoadDetails />}
 
-      {TREES.map((t, i) => (
-        <g key={i}>
-          <circle cx={t.x} cy={t.y} r={26} fill="#4f7f3f" />
-        </g>
-      ))}
+      {near
+        ? TREES.map((t, i) => <Tree key={i} {...t} />)
+        : TREES.map((t, i) => <circle key={i} cx={t.x} cy={t.y} r={26} fill="#4f7f3f" />)}
+      {near && <TownDetails litHouses={litHouses} lampsOn={looks.m1 === 'on'} />}
       {HOUSES.map((h, i) => (
         <House key={i} {...h} lit={i < litHouses} />
       ))}
@@ -104,6 +125,7 @@ function VillageScene(props: VillageSceneProps) {
         style={{ opacity: darkness, transition: 'opacity 1.6s ease' }}
         pointerEvents="none"
       />
+
 
       {/* 축제 등불 줄 (광장 위). 마무리 화면에서만 보인다 */}
       {festival && <Lanterns on />}
@@ -133,10 +155,13 @@ function VillageScene(props: VillageSceneProps) {
               <circle cx={PLACES[id].x} cy={PLACES[id].y - 20} r={90} fill="none" stroke="#fde047" strokeWidth={6}
                 className="pulse-ring" style={{ animationDelay: `${highlight.indexOf(id) * 0.9}s` }} />
             )}
-            <PlaceLabel id={id} status={markers?.[id]} />
+            <PlaceLabel id={id} status={markers?.[id]} small={near} />
           </g>
         );
       })}
+
+      {/* 마을 사람들은 밤에도 잘 보이게 어둠과 장소 그림 위에 */}
+      {near && <PlaceVillagers looks={looks} />}
     </svg>
   );
 }
@@ -144,18 +169,6 @@ function VillageScene(props: VillageSceneProps) {
 export default memo(VillageScene);
 
 const STATUS_NAME: Record<MissionStatus, string> = { locked: '잠김', open: '도전 가능', done: '완료' };
-
-function House({ x, y, color, lit }: Vec & { color: string; lit: boolean }) {
-  return (
-    <g pointerEvents="none">
-      <rect x={x - 32} y={y - 22} width={64} height={46} fill="#f5ead3" stroke="#7c6a4a" strokeWidth={2} />
-      <polygon points={`${x - 40},${y - 20} ${x},${y - 52} ${x + 40},${y - 20}`} fill={color} />
-      <rect x={x - 20} y={y - 10} width={14} height={14} fill={lit ? '#fde68a' : '#475569'} />
-      <rect x={x + 6} y={y - 10} width={14} height={14} fill={lit ? '#fde68a' : '#475569'} />
-      {lit && <circle cx={x} cy={y} r={46} fill="url(#glow)" opacity={0.35} />}
-    </g>
-  );
-}
 
 function Lanterns({ on }: { on: boolean }) {
   const { x, y } = PLACES.m2;
@@ -248,12 +261,12 @@ function Windmill({ look, revive }: { look: PlaceLook; revive: boolean }) {
   );
 }
 
-function PlaceLabel({ id, status }: { id: MissionId; status?: MissionStatus }) {
+function PlaceLabel({ id, status, small }: { id: MissionId; status?: MissionStatus; small?: boolean }) {
   const { x, y } = PLACES[id];
   const mark = status === 'locked' ? '🔒 ' : status === 'done' ? '⭐ ' : '';
   return (
-    <text x={x} y={y + (id === 'm2' ? 100 : 70)} textAnchor="middle" fontSize={22} fontWeight={800} fill="#fff"
-      stroke="#1e1b4b" strokeWidth={5} paintOrder="stroke" pointerEvents="none">
+    <text x={x} y={y + (id === 'm2' ? (small ? 92 : 100) : small ? 62 : 70)} textAnchor="middle" fontSize={small ? 13 : 22}
+      fontWeight={800} fill="#fff" stroke="#1e1b4b" strokeWidth={small ? 3.5 : 5} paintOrder="stroke" pointerEvents="none">
       {mark}{S3.places[id]}
     </text>
   );

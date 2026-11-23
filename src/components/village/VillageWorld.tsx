@@ -3,11 +3,12 @@
 // S3 마을 돌아다니기: 탐험대를 움직여 화살표를 따라가고, 장소에 도착하면 onArrive를 부른다.
 // 조작: 방향키/WASD, 가고 싶은 곳 누르기(마우스·터치), 화면 조이스틱.
 // 위치는 이 기기 화면에만 있다 (함께하기에서도 각자 돌아다니고, 미션을 열면 모두 함께 들어간다).
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { PLACES, SPAWN, type Vec, WORLD } from '@/data/world';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { PLACES, SPAWN, type Vec } from '@/data/world';
 import type { MissionId, MissionStatus } from '@/lib/types';
 import {
   angleTo,
+  cameraView,
   joystickDirection,
   keysToDirection,
   placeAt,
@@ -18,6 +19,14 @@ import {
 } from '@/lib/world/movement';
 import { CompassArrow, DownArrow, Explorer, Fairy } from './Characters';
 import VillageScene, { type PlaceLook } from './VillageScene';
+
+/** 보기 방법: 가까이(탐험대를 따라가며 크게) / 지도(마을 전체를 한눈에) */
+export type WorldView = 'near' | 'map';
+
+/** 가까이 보기 배율, 그때 탐험대 크기와 걷는 빠르기 (지도 보기는 1배, 크기 1, 빠르기 340) */
+const NEAR = { zoom: 2.6, scale: 0.42, speed: 190 } as const;
+const MAP = { zoom: 1, scale: 1, speed: 340 } as const;
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
 
 const MOVE_KEYS = new Set(['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D']);
 
@@ -30,11 +39,12 @@ interface Props {
   /** 되살아나는 장면 중인 장소 */
   reviving: MissionId | null;
   darkness: number;
+  view: WorldView;
   /** 장소에 도착함 (또는 그 장소 안에서 Enter·장소 누르기) */
   onArrive: (id: MissionId) => void;
 }
 
-export default function VillageWorld({ status, target, paused, reviving, darkness, onArrive }: Props) {
+export default function VillageWorld({ status, target, paused, reviving, darkness, view, onArrive }: Props) {
   const start = useMemo(() => startPosition(status, SPAWN), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [pos, setPos] = useState<Vec>(start);
   const [moving, setMoving] = useState(false);
@@ -46,6 +56,14 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
   const inside = useRef<MissionId | null>(placeAt(start)); // 처음 서 있는 곳에서는 바로 알리지 않는다
   const pausedRef = useRef(paused);
   const onArriveRef = useRef(onArrive);
+  const viewRef = useRef(view);
+  const [zoom, setZoom] = useState<number>(view === 'near' ? NEAR.zoom : MAP.zoom);
+  const zoomRef = useRef(zoom);
+  const boxRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    viewRef.current = view;
+  }, [view]);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -63,15 +81,24 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
     const tick = (now: number) => {
       const dt = Math.min(0.05, (now - last) / 1000);
       last = now;
+      // 보기를 바꾸면 부드럽게 가까워지거나 멀어진다
+      const goalZoom = viewRef.current === 'near' ? NEAR.zoom : MAP.zoom;
+      if (zoomRef.current !== goalZoom) {
+        const z = zoomRef.current + (goalZoom - zoomRef.current) * Math.min(1, dt * 6);
+        zoomRef.current = Math.abs(z - goalZoom) < 0.005 ? goalZoom : z;
+        setZoom(zoomRef.current);
+      }
+      const t = (zoomRef.current - MAP.zoom) / (NEAR.zoom - MAP.zoom);
+      const speed = lerp(MAP.speed, NEAR.speed, t);
       if (!pausedRef.current) {
         const keyDir = keysToDirection(keys.current);
         const dir = keyDir !== ZERO ? keyDir : joy.current;
         let next = posRef.current;
         if (dir !== ZERO) {
           goal.current = null; // 직접 움직이면 누른 곳으로 가기는 멈춘다
-          next = walk(next, dir, dt);
+          next = walk(next, dir, dt, speed);
         } else if (goal.current) {
-          const r = walkToward(next, goal.current, dt);
+          const r = walkToward(next, goal.current, dt, speed);
           next = r.pos;
           if (r.arrived) goal.current = null;
         }
@@ -144,24 +171,36 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
   const pointer = target ? angleTo(pos, PLACES[target]) : 0;
   const showCompass = !!target && !nearTarget && !paused;
 
+  // 카메라: 가까이 보기에서는 탐험대를 가운데 두고 크게, 탐험대는 마을보다 훨씬 작게
+  const t = (zoom - MAP.zoom) / (NEAR.zoom - MAP.zoom);
+  const cam = cameraView(pos, zoom);
+  const viewBox = `${cam.x} ${cam.y} ${cam.width} ${cam.height}`;
+  const size = lerp(MAP.scale, NEAR.scale, t);
+  // 마을 그림은 다시 그리지 않고 보는 곳(viewBox)만 바꾼다 (매 화면 다시 그리면 태블릿에서 느려진다)
+  useLayoutEffect(() => {
+    boxRef.current?.querySelector('svg[data-village]')?.setAttribute('viewBox', viewBox);
+  }, [viewBox]);
+
   return (
-    <div className="relative">
+    <div ref={boxRef} className="relative overflow-hidden rounded-3xl">
       <VillageScene
+        near={view === 'near'}
         looks={looks}
         reviving={reviving}
         darkness={darkness}
         markers={markers}
         onGroundClick={onGroundClick}
         onPlaceClick={onPlaceClick}
-        className="rounded-3xl"
       />
 
       {/* 탐험대·화살표는 위에 겹친 그림 (누르기는 아래 지도로 통과) */}
-      <svg viewBox={`0 0 ${WORLD.width} ${WORLD.height}`} className="pointer-events-none absolute inset-0 h-full w-full">
-        {target && !paused && <DownArrow x={PLACES[target].x} y={PLACES[target].y - 130} />}
+      <svg viewBox={viewBox} className="pointer-events-none absolute inset-0 h-full w-full">
+        {target && !paused && (
+          <DownArrow x={PLACES[target].x} y={PLACES[target].y - lerp(130, 100, t)} scale={lerp(1, 0.55, t)} />
+        )}
 
         {/* 탐험대와 뒤따라 나는 반디 */}
-        <g transform={`translate(${pos.x} ${pos.y})`}>
+        <g transform={`translate(${pos.x} ${pos.y}) scale(${size})`}>
           <ellipse cx={0} cy={20} rx={24} ry={7} fill="#000" opacity={0.25} />
           <g transform={`translate(${facingLeft ? 40 : -40} -62)`}>
             <g className="bob" style={{ animationDuration: '1.6s' }}>
