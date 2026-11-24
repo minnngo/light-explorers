@@ -1,10 +1,13 @@
 // 효과음 (명세서 14장 S1). 음원 파일 없이 Web Audio로 만든다. 파일이 생기면 교체해도 된다.
 
-let ctx: AudioContext | null = null;
+// 소리 장치는 페이지 전체에 하나만 둔다. 개발 중 코드가 바뀌어 이 파일을 다시 불러와도
+// (화면 새로고침 없이 갈아 끼우기) 새 장치를 또 만들지 않도록 전역(globalThis)에 보관한다.
+const g = globalThis as typeof globalThis & { __lightExplorersAudio?: AudioContext };
 
 export function audio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
-  ctx ??= new AudioContext();
+  g.__lightExplorersAudio ??= new AudioContext();
+  const ctx = g.__lightExplorersAudio;
   if (ctx.state === 'suspended') void ctx.resume();
   return ctx;
 }

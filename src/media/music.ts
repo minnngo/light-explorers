@@ -33,11 +33,17 @@ const PAD: number[][] = [
   [C4, E4, G4], [E4 - 12, G4 - 12, B4 - 12], [F4 - 12, A4 - 12, C4], [G4 - 12, B4 - 12, D4],
 ];
 
-let master: GainNode | null = null;
-let timer: ReturnType<typeof setInterval> | null = null;
-let nextBarTime = 0;
-let bar = 0;
-let level = 1;
+// 연주 상태는 전역(globalThis)에 하나만 둔다. 개발 중 이 파일을 다시 불러오면 예전 연주가 남아
+// 음악이 두 겹으로 들리고 소리 끄기로도 안 꺼지므로, 불러올 때마다 예전 연주를 먼저 멈춘다.
+type MusicState = { master: GainNode | null; timer: ReturnType<typeof setInterval> | null; nextBarTime: number; bar: number };
+const g = globalThis as typeof globalThis & { __lightExplorersMusic?: MusicState };
+if (g.__lightExplorersMusic) {
+  const old = g.__lightExplorersMusic;
+  if (old.timer) clearInterval(old.timer);
+  old.master?.disconnect();
+}
+const m: MusicState = { master: null, timer: null, nextBarTime: 0, bar: 0 };
+g.__lightExplorersMusic = m;
 
 function note(ac: AudioContext, out: AudioNode, freq: number, t: number, volume: number, decay: number, type: OscillatorType) {
   const osc = ac.createOscillator();
@@ -53,12 +59,12 @@ function note(ac: AudioContext, out: AudioNode, freq: number, t: number, volume:
 }
 
 function scheduleBar(ac: AudioContext, out: AudioNode, index: number, start: number) {
-  MELODY[index].forEach((m, i) => {
-    if (m === null) return;
+  MELODY[index].forEach((pitch, i) => {
+    if (pitch === null) return;
     const t = start + i * EIGHTH;
     // 오르골: 세모파 + 한 옥타브 위 사인파를 살짝
-    note(ac, out, hz(m), t, 0.05, 0.9, 'triangle');
-    note(ac, out, hz(m + 12), t, 0.012, 0.5, 'sine');
+    note(ac, out, hz(pitch), t, 0.05, 0.9, 'triangle');
+    note(ac, out, hz(pitch + 12), t, 0.012, 0.5, 'sine');
   });
   note(ac, out, hz(BASS[index]), start, 0.045, BAR / 2, 'sine');
   note(ac, out, hz(BASS[index]), start + BAR / 2, 0.035, BAR / 2, 'sine');
@@ -67,45 +73,44 @@ function scheduleBar(ac: AudioContext, out: AudioNode, index: number, start: num
 
 function tick() {
   const ac = audio();
-  if (!ac || !master) return;
-  while (nextBarTime < ac.currentTime + LOOKAHEAD_S) {
-    scheduleBar(ac, master, bar, nextBarTime);
-    bar = (bar + 1) % MELODY.length;
-    nextBarTime += BAR;
+  if (!ac || !m.master) return;
+  while (m.nextBarTime < ac.currentTime + LOOKAHEAD_S) {
+    scheduleBar(ac, m.master, m.bar, m.nextBarTime);
+    m.bar = (m.bar + 1) % MELODY.length;
+    m.nextBarTime += BAR;
   }
 }
 
 /** 음악 크기 (0 = 끔, 1 = 보통). 바뀔 때는 부드럽게 줄이고 키운다 */
-export function setMusicLevel(next: number) {
-  level = next;
+export function setMusicLevel(level: number) {
   const ac = audio();
   if (!ac) return;
   if (level <= 0) {
     stopMusic();
     return;
   }
-  if (!master) {
-    master = ac.createGain();
-    master.gain.value = 0.0001;
-    master.connect(ac.destination);
-    bar = 0;
-    nextBarTime = ac.currentTime + 0.1;
+  if (!m.master) {
+    m.master = ac.createGain();
+    m.master.gain.value = 0.0001;
+    m.master.connect(ac.destination);
+    m.bar = 0;
+    m.nextBarTime = ac.currentTime + 0.1;
     tick();
-    timer = setInterval(tick, TICK_MS);
+    m.timer = setInterval(tick, TICK_MS);
   }
-  master.gain.cancelScheduledValues(ac.currentTime);
-  master.gain.setTargetAtTime(VOLUME * level, ac.currentTime, 0.6);
+  m.master.gain.cancelScheduledValues(ac.currentTime);
+  m.master.gain.setTargetAtTime(VOLUME * level, ac.currentTime, 0.6);
 }
 
 export function stopMusic() {
   const ac = audio();
-  if (timer) clearInterval(timer);
-  timer = null;
-  if (master && ac) {
-    const old = master;
+  if (m.timer) clearInterval(m.timer);
+  m.timer = null;
+  if (m.master && ac) {
+    const old = m.master;
     old.gain.cancelScheduledValues(ac.currentTime);
     old.gain.setTargetAtTime(0.0001, ac.currentTime, 0.3);
     setTimeout(() => old.disconnect(), 1500);
   }
-  master = null;
+  m.master = null;
 }

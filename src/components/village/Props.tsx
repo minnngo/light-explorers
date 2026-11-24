@@ -16,6 +16,14 @@ export type RoofColor = keyof typeof ROOFS;
 export function PropDefs() {
   return (
     <>
+      <linearGradient id="p-lock" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#c7bdf5" />
+        <stop offset="100%" stopColor="#8f82d6" />
+      </linearGradient>
+      <linearGradient id="p-star" x1="0" y1="0" x2="0" y2="1">
+        <stop offset="0%" stopColor="#ffe58a" />
+        <stop offset="100%" stopColor="#f5b62e" />
+      </linearGradient>
       <linearGradient id="p-wall" x1="0" y1="0" x2="0" y2="1">
         <stop offset="0%" stopColor="#fffaf0" />
         <stop offset="100%" stopColor="#efdcbc" />
@@ -291,5 +299,35 @@ export function GloveIcon({ className = 'size-9' }: { className?: string }) {
       {/* 빛 하나 */}
       <rect x={19.5} y={13} width={3} height={10} rx={1.5} fill="#ffffff" opacity={0.6} />
     </svg>
+  );
+}
+
+/** 잠김 표시: 둥근 연보라 자물쇠 (가운데가 원점, 지름 약 1). 이름표처럼 진한 테두리를 두른다 */
+export function LockMark({ size, halo = '#1e1b4b' }: { size: number; halo?: string }) {
+  const k = size / 24;
+  return (
+    <g transform={`scale(${k})`} pointerEvents="none">
+      {/* 고리: 테두리는 몸통과 같은 두께(바깥 0.75)로 */}
+      <path d="M -6 -2 V -6 A 6 6 0 0 1 6 -6 V -2" fill="none" stroke={halo} strokeWidth={4.7} strokeLinecap="round" />
+      <path d="M -6 -2 V -6 A 6 6 0 0 1 6 -6 V -2" fill="none" stroke="#e4e7f2" strokeWidth={3.2} strokeLinecap="round" />
+      {/* 몸통 */}
+      <rect x={-10} y={-3} width={20} height={15} rx={5} fill="url(#p-lock)" stroke={halo} strokeWidth={1.5} paintOrder="stroke" />
+      <rect x={-7.5} y={-1} width={6} height={2.4} rx={1.2} fill="#ffffff" opacity={0.5} />
+      {/* 열쇠 구멍 */}
+      <circle cx={0} cy={3.4} r={2.1} fill="#4b3f8f" />
+      <rect x={-0.9} y={3.4} width={1.8} height={4} rx={0.9} fill="#4b3f8f" />
+    </g>
+  );
+}
+
+/** 완료 표시: 끝이 둥근 금빛 별 (가운데가 원점) */
+export function StarMark({ size, halo = '#1e1b4b' }: { size: number; halo?: string }) {
+  const k = size / 19;
+  return (
+    <g transform={`scale(${k}) translate(-12 -12)`} pointerEvents="none">
+      <path d="M12 17.27l4.15 2.51c.76.46 1.69-.22 1.49-1.08l-1.1-4.72 3.67-3.18c.67-.58.31-1.68-.57-1.75l-4.83-.41-1.89-4.46c-.34-.81-1.5-.81-1.84 0L9.19 8.63l-4.83.41c-.88.07-1.24 1.17-.57 1.75l3.67 3.18-1.1 4.72c-.2.86.73 1.54 1.49 1.08L12 17.27z"
+        fill="url(#p-star)" stroke={halo} strokeWidth={1.2} strokeLinejoin="round" paintOrder="stroke" />
+      <ellipse cx={10.2} cy={9.6} rx={1.1} ry={1.8} fill="#ffffff" opacity={0.7} transform="rotate(30 10.2 9.6)" />
+    </g>
   );
 }

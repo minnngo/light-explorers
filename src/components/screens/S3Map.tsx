@@ -18,6 +18,7 @@ import { nextTarget } from '@/lib/world/movement';
 import { Button, ConfirmDialog } from '../ui';
 import { FairyIcon } from '../village/Characters';
 import MoveTutorial from '../village/MoveTutorial';
+import { LockMark } from '../village/Props';
 import SoundToggle from '../SoundToggle';
 import SituationScene from '../village/SituationScene';
 import VillageWorld, { type WorldView } from '../village/VillageWorld';
@@ -34,6 +35,12 @@ export default function S3Map() {
   // 처음 도착 인사를 들은 뒤 움직이는 방법 튜토리얼
   const [tutorial, setTutorial] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
+  // 튜토리얼은 연습: 돌아다니기만 하고, 끝나면 처음 자리로 돌아와 진짜로 출발한다
+  const [practiceRound, setPracticeRound] = useState(0);
+  const endTutorial = () => {
+    setTutorial(false);
+    setPracticeRound((n) => n + 1);
+  };
   const closeRestart = useCallback(() => setConfirmRestart(false), []);
   const revived = revivedCount(state);
   const done = allMissionsDone(state);
@@ -76,6 +83,8 @@ export default function S3Map() {
           darkness={darkness}
           view={view}
           onArrive={onArrive}
+          practice={tutorial}
+          resetKey={practiceRound}
         />
       </div>
 
@@ -91,13 +100,14 @@ export default function S3Map() {
           </svg>
           {RESTART.short}
         </button>
-        <h1 className="pointer-events-auto flex min-h-11 items-center gap-3 rounded-full bg-white/60 px-5 text-xl font-bold shadow-sm backdrop-blur">
+        <h1 className="pointer-events-auto flex min-h-11 items-center gap-3 rounded-full bg-white/60 px-5 text-lg font-bold shadow-sm backdrop-blur">
           [{state.groupName}] {COMMON.revived(revived)}
-          <span className="flex gap-1" aria-hidden>
+          <span className="flex gap-0.5" aria-hidden>
             {MISSION_ORDER.map((id) => (
-              <svg key={id} viewBox="0 0 24 24" className="size-6">
-                <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"
-                  strokeWidth={1.8} strokeLinejoin="round"
+              // 끝이 둥근 별 (동글동글하게)
+              <svg key={id} viewBox="2.5 2.5 19 19" className="size-8">
+                <path d="M12 17.27l4.15 2.51c.76.46 1.69-.22 1.49-1.08l-1.1-4.72 3.67-3.18c.67-.58.31-1.68-.57-1.75l-4.83-.41-1.89-4.46c-.34-.81-1.5-.81-1.84 0L9.19 8.63l-4.83.41c-.88.07-1.24 1.17-.57 1.75l3.67 3.18-1.1 4.72c-.2.86.73 1.54 1.49 1.08L12 17.27z"
+                  strokeWidth={0.6} strokeLinejoin="round"
                   className={status[id] === 'done' ? 'fill-amber-400 stroke-amber-500' : 'fill-white stroke-slate-300'} />
               </svg>
             ))}
@@ -123,7 +133,7 @@ export default function S3Map() {
           }} />
       )}
 
-      {!story && !arrived && tutorial && <MoveTutorial near={view === 'near'} onDone={() => setTutorial(false)} />}
+      {!story && !arrived && tutorial && <MoveTutorial near={view === 'near'} onDone={endTutorial} />}
 
       {!story && arrived && (
         <SituationPanel
@@ -136,8 +146,10 @@ export default function S3Map() {
       )}
 
       {!story && !arrived && lockedMessage && (
-        <p role="status" className="pop-in absolute left-1/2 top-20 z-30 -translate-x-1/2 rounded-2xl bg-white px-4 py-2 text-lg font-bold text-rose-700 shadow-lg">
-          🔒 {S3.locked}
+        <p role="status" className="pop-in absolute left-1/2 top-20 z-30 flex -translate-x-1/2 items-center gap-2 rounded-2xl bg-white px-4 py-2 text-lg font-bold text-rose-700 shadow-lg">
+          {/* 자물쇠 색은 마을 그림(PropDefs)의 그라데이션을 함께 쓴다 */}
+          <svg viewBox="-13 -13 26 26" className="size-7" aria-hidden><LockMark size={24} halo="#ffffff" /></svg>
+          {S3.locked}
         </p>
       )}
 
@@ -158,9 +170,13 @@ export default function S3Map() {
             ?
           </button>
           {helpOpen && (
-            <p role="status" className="modal-rise rounded-full bg-white/60 px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm backdrop-blur">
+            <div role="status" className="modal-rise flex items-center gap-1 rounded-full bg-white/60 py-1.5 pl-4 pr-3 text-sm font-semibold text-stone-700 shadow-sm backdrop-blur">
               {WORLD.howToMove}
-            </p>
+              <button type="button" onClick={() => { setHelpOpen(false); setTutorial(true); }}
+                className="rounded-full px-1 py-1 text-sm font-semibold text-stone-600 underline underline-offset-2 outline-none transition hover:text-stone-800">
+                {WORLD.tutorial.replay}
+              </button>
+            </div>
           )}
         </div>
       )}
@@ -205,16 +221,18 @@ function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
   );
 }
 
-/** 가까이 보기 / 지도 보기 */
+/** 탐험(가까이) / 지도(전체). 고른 쪽을 가리키는 흰 칸이 옆으로 스르륵 미끄러진다 */
 function ViewToggle({ view, onChange }: { view: WorldView; onChange: (v: WorldView) => void }) {
   const options: [WorldView, string][] = [['near', WORLD.viewNear], ['map', WORLD.viewMap]];
   return (
-    <div className="flex justify-self-end rounded-full bg-white/45 p-1 shadow-sm backdrop-blur" role="group" aria-label="보기">
+    <div className="relative grid grid-cols-2 justify-self-end rounded-full bg-white/45 p-1 shadow-sm backdrop-blur" role="group" aria-label="보기">
+      <span aria-hidden
+        className={`absolute inset-y-1 left-1 w-[calc(50%-0.25rem)] rounded-full bg-white/85 shadow-sm transition-transform duration-300 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+          view === 'map' ? 'translate-x-full' : 'translate-x-0'
+        }`} />
       {options.map(([v, label]) => (
         <button key={v} type="button" aria-pressed={view === v} onClick={() => onChange(v)}
-          className={`min-h-9 rounded-full px-4 text-sm font-bold outline-none transition ${
-            view === v ? 'bg-white/85 text-stone-700 shadow-sm' : 'text-stone-700 hover:bg-white/40'
-          }`}>
+          className="relative min-h-9 rounded-full px-4 text-sm font-bold text-stone-700 outline-none">
           {label}
         </button>
       ))}

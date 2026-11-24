@@ -18,7 +18,7 @@ import {
   TownDetails,
   Tree,
 } from './VillageDetails';
-import { CuteBellTower, CuteLamp, CuteSign, CuteTree, CuteWindmill, PropDefs, type RoofColor } from './Props';
+import { CuteBellTower, CuteLamp, CuteSign, CuteTree, CuteWindmill, LockMark, PropDefs, StarMark, type RoofColor } from './Props';
 
 export type PlaceLook = 'dim' | 'on';
 
@@ -252,11 +252,26 @@ function Windmill({ look, revive, k }: { look: PlaceLook; revive: boolean; k: nu
 
 function PlaceLabel({ id, status, small }: { id: MissionId; status?: MissionStatus; small?: boolean }) {
   const { x, y } = PLACES[id];
-  const mark = status === 'locked' ? '🔒 ' : status === 'done' ? '⭐ ' : '';
+  const fontSize = small ? 6.5 : 22;
+  const label = S3.places[id];
+  const ty = y + (id === 'm2' ? (small ? 46 : 100) : small ? 52 : 70);
+  const mark = status === 'locked' || status === 'done' ? status : null;
+  // 표시(자물쇠·별)는 글자 왼쪽에 붙인다. 한글 한 글자 ≈ 글자 크기, 빈칸 ≈ 0.3배로 폭을 어림한다
+  const textWidth = [...label].reduce((w, ch) => w + (ch === ' ' ? 0.3 : 0.95) * fontSize, 0);
+  const icon = fontSize * 1.25;
+  const gap = fontSize * 0.25;
+  const shift = mark ? (icon + gap) / 2 : 0;
   return (
-    <text x={x} y={y + (id === 'm2' ? (small ? 46 : 100) : small ? 52 : 70)} textAnchor="middle" fontSize={small ? 6.5 : 22}
-      fontWeight={800} fill="#fff" stroke="#1e1b4b" strokeWidth={small ? 2 : 5} paintOrder="stroke" pointerEvents="none">
-      {mark}{S3.places[id]}
-    </text>
+    <g pointerEvents="none">
+      {mark && (
+        <g transform={`translate(${x + shift - textWidth / 2 - gap - icon / 2} ${ty - fontSize * 0.36})`}>
+          {mark === 'locked' ? <LockMark size={icon} /> : <StarMark size={icon} />}
+        </g>
+      )}
+      <text x={x + shift} y={ty} textAnchor="middle" fontSize={fontSize}
+        fontWeight={800} fill="#fff" stroke="#1e1b4b" strokeWidth={small ? 2 : 5} paintOrder="stroke">
+        {label}
+      </text>
+    </g>
   );
 }

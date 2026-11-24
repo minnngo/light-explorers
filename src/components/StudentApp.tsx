@@ -151,8 +151,35 @@ export default function StudentApp() {
       window.removeEventListener('keydown', unlock);
     };
   }, []);
+  // 학생 화면을 탭 여러 개로 열어도 음악은 한 곳에서만: 보이는 탭 중 마지막으로 보거나 누른 탭이 연주한다
+  const [musicOwner, setMusicOwner] = useState(true);
+  useEffect(() => {
+    if (typeof BroadcastChannel === 'undefined') return;
+    const id = crypto.randomUUID();
+    const channel = new BroadcastChannel('light-explorers:music');
+    const claim = () => {
+      if (document.visibilityState !== 'visible') return;
+      setMusicOwner(true);
+      channel.postMessage(id);
+    };
+    channel.onmessage = (e) => {
+      if (e.data !== id) setMusicOwner(false);
+    };
+    const onVisibility = () => (document.visibilityState === 'visible' ? claim() : setMusicOwner(false));
+    claim();
+    document.addEventListener('visibilitychange', onVisibility);
+    window.addEventListener('focus', claim);
+    window.addEventListener('pointerdown', claim);
+    return () => {
+      document.removeEventListener('visibilitychange', onVisibility);
+      window.removeEventListener('focus', claim);
+      window.removeEventListener('pointerdown', claim);
+      channel.close();
+    };
+  }, []);
   // 버저 미션(종)은 소리의 크기를 비교하는 실험이라 음악을 끈다. 다른 미션에서는 작게
-  const musicLevel = muted || !audioReady ? 0 : screen === 'S4' ? (state.currentMission === 'm2' ? 0 : 0.4) : 1;
+  const musicLevel =
+    muted || !audioReady || !musicOwner ? 0 : screen === 'S4' ? (state.currentMission === 'm2' ? 0 : 0.4) : 1;
   useEffect(() => {
     setMusicLevel(musicLevel);
   }, [musicLevel]);

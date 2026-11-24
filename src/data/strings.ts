@@ -43,7 +43,7 @@ export const COMMON = {
 
 /** 3단계: 여러 기기로 함께하기 */
 export const ROOM = {
-  togetherToggle: '여러 기기로 함께하기 (A 회로·B 회로를 기기마다 나누어 맡아요)',
+  togetherToggle: '여러 기기로 함께하기',
   modeNew: '새 모둠으로 시작',
   modeJoin: '모둠 방에 들어가기',
   myName: '내 이름 (모둠 친구들에게 보여요)',
@@ -140,7 +140,7 @@ export const S1 = {
   title: '불빛 탐험대 출동!',
   nameGuide: '우리 모둠 이름을 지어 주세요.',
   namePlaceholder: '예) 반짝반짝 탐험대',
-  safetyTitle: '안전 약속(모두 체크해야 시작할 수 있어요):',
+  safetyTitle: '안전 약속 (모두 체크해야 시작할 수 있어요)',
   safetyPromises: [
     '전기 부품을 만질 때는 절연 장갑을 끼고, 젖은 손으로 만지지 않아요.',
     '전구의 유리 부분은 깨지기 쉬우니 조심해서 다뤄요.',
@@ -218,11 +218,12 @@ export const WORLD = {
     next: '다음',
     start: '출발!',
     skip: '건너뛰기',
+    replay: '튜토리얼 다시 보기',
   },
   startMission: '미션 시작!',
   close: '닫기',
-  viewNear: '가까이 보기',
-  viewMap: '지도 보기',
+  viewNear: '탐험',
+  viewMap: '지도',
   problem: '문제 상황',
   todo: '우리가 할 일',
   review: '결과 확인하기',

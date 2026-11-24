@@ -81,12 +81,18 @@ function StepArt({ step }: { step: number }) {
     );
   }
   if (step === 2) {
+    // 작은 지도 한 조각: 길과 집, 누른 곳에 퍼지는 동그라미, 그곳을 누르는 마우스 커서
     return (
       <span className={box} aria-hidden>
-        <svg viewBox="0 0 40 40" className="size-12">
-          <circle cx={20} cy={18} r={12} fill="none" stroke="#f59e0b" strokeWidth={2.5} opacity={0.5} />
-          <circle cx={20} cy={18} r={5} fill="#f59e0b" />
-          <path d="M 20 24 L 24 36 L 26.5 31 L 31 35 L 33 33 L 28.5 29 L 33.5 27 Z" fill="#7c5a3a" />
+        <svg viewBox="0 0 40 40" className="size-14">
+          <rect x={1} y={1} width={38} height={38} rx={8} fill="#8cc47a" />
+          <path d="M 1 31 Q 14 26 22 20 T 39 9" fill="none" stroke="#ead8b3" strokeWidth={5} strokeLinecap="round" />
+          <rect x={6} y={9} width={10} height={8} rx={1.5} fill="#fff6e5" />
+          <path d="M 4.5 10 L 11 4.5 L 17.5 10 Z" fill="#f28b8b" />
+          <circle cx={26} cy={17} r={6.5} fill="none" stroke="#ffffff" strokeWidth={1.6} opacity={0.9} />
+          <circle cx={26} cy={17} r={2.6} fill="#f59e0b" />
+          <path d="M 27.5 18.5 L 27.5 33 L 31 29.5 L 33.6 35 L 36 34 L 33.4 28.5 L 38 28.5 Z"
+            fill="#ffffff" stroke="#5b4a3a" strokeWidth={1.3} strokeLinejoin="round" />
         </svg>
       </span>
     );

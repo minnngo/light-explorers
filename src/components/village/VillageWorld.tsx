@@ -42,9 +42,13 @@ interface Props {
   view: WorldView;
   /** 장소에 도착함 (또는 그 장소 안에서 Enter·장소 누르기) */
   onArrive: (id: MissionId) => void;
+  /** 연습 중(튜토리얼): 돌아다닐 수만 있고 미션 장소에 닿아도 알리지 않는다 */
+  practice?: boolean;
+  /** 이 값이 바뀌면 탐험대를 처음 자리로 되돌린다 (연습이 끝났을 때) */
+  resetKey?: number;
 }
 
-export default function VillageWorld({ status, target, paused, reviving, darkness, view, onArrive }: Props) {
+export default function VillageWorld({ status, target, paused, reviving, darkness, view, onArrive, practice = false, resetKey = 0 }: Props) {
   const start = useMemo(() => startPosition(status, SPAWN), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [pos, setPos] = useState<Vec>(start);
   const [moving, setMoving] = useState(false);
@@ -55,6 +59,7 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
   const goal = useRef<Vec | null>(null);
   const inside = useRef<MissionId | null>(placeAt(start)); // 처음 서 있는 곳에서는 바로 알리지 않는다
   const pausedRef = useRef(paused);
+  const practiceRef = useRef(practice);
   const onArriveRef = useRef(onArrive);
   const viewRef = useRef(view);
   const [zoom, setZoom] = useState<number>(view === 'near' ? NEAR.zoom : MAP.zoom);
@@ -75,6 +80,25 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
   useEffect(() => {
     viewRef.current = view;
   }, [view]);
+
+  useEffect(() => {
+    practiceRef.current = practice;
+  }, [practice]);
+
+  // 연습이 끝나면 처음 자리에서 다시 출발한다
+  const firstReset = useRef(true);
+  useEffect(() => {
+    if (firstReset.current) {
+      firstReset.current = false;
+      return;
+    }
+    posRef.current = start;
+    goal.current = null;
+    keys.current.clear();
+    inside.current = placeAt(start);
+    setPos(start);
+    setMoving(false);
+  }, [resetKey, start]);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -125,7 +149,7 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
         const here = placeAt(next);
         if (here !== inside.current) {
           inside.current = here;
-          if (here) onArriveRef.current(here);
+          if (here && !practiceRef.current) onArriveRef.current(here);
         }
       }
       raf = requestAnimationFrame(tick);
@@ -141,7 +165,7 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
       if (MOVE_KEYS.has(e.key)) {
         e.preventDefault();
         keys.current.add(e.key);
-      } else if ((e.key === 'Enter' || e.key === ' ') && inside.current) {
+      } else if ((e.key === 'Enter' || e.key === ' ') && inside.current && !practiceRef.current) {
         e.preventDefault();
         onArriveRef.current(inside.current);
       }
@@ -163,7 +187,7 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
   }, []);
   const onPlaceClick = useCallback((id: MissionId) => {
     if (pausedRef.current) return;
-    if (inside.current === id) onArriveRef.current(id); // 이미 와 있으면 바로
+    if (inside.current === id && !practiceRef.current) onArriveRef.current(id); // 이미 와 있으면 바로
     else goal.current = PLACES[id];
   }, []);
 
