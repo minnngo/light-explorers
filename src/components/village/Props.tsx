@@ -267,3 +267,29 @@ export function CuteSign({ text }: { text: string }) {
     </g>
   );
 }
+
+/** 절연 장갑 (S1 안전 약속). 작게 보여도 한눈에 알아보게 단순한 둥근 고무장갑 */
+export function GloveIcon({ className = 'size-9' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 64 64" className={className} aria-hidden>
+      <defs>
+        <linearGradient id="glove-rubber" gradientUnits="userSpaceOnUse" x1="10" y1="6" x2="50" y2="52">
+          <stop offset="0%" stopColor="#9be39a" />
+          <stop offset="100%" stopColor="#3fae5a" />
+        </linearGradient>
+      </defs>
+      {/* 엄지 */}
+      <rect x={6} y={26} width={13} height={22} rx={6.5} fill="url(#glove-rubber)" transform="rotate(-35 12.5 37)" />
+      {/* 손가락 셋 */}
+      <rect x={16} y={9} width={10} height={30} rx={5} fill="url(#glove-rubber)" />
+      <rect x={27.5} y={5} width={10} height={30} rx={5} fill="url(#glove-rubber)" />
+      <rect x={39} y={10} width={10} height={28} rx={5} fill="url(#glove-rubber)" />
+      {/* 손바닥 */}
+      <rect x={16} y={26} width={33} height={24} rx={11} fill="url(#glove-rubber)" />
+      {/* 손목 띠 */}
+      <rect x={18} y={47} width={29} height={12} rx={6} fill="#2e8a4a" />
+      {/* 빛 하나 */}
+      <rect x={19.5} y={13} width={3} height={10} rx={1.5} fill="#ffffff" opacity={0.6} />
+    </svg>
+  );
+}

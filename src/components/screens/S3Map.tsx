@@ -6,7 +6,7 @@
 //  - 장소에 도착: 상황 장면(움직이는 그림) + 문제 상황·우리가 할 일 → "미션 시작!"
 //  - 잠긴 곳: "앞의 미션을 먼저 해결해야 열려요!"
 //  - 세 곳 모두 되살리면 "마무리로 가기"
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
 import { CHARACTER, COMMON, RESTART, S3, SITUATION, WORLD } from '@/data/strings';
 import { allMissionsDone, revivedCount } from '@/lib/flow/missionFlow';
@@ -15,7 +15,7 @@ import { useStore } from '@/lib/store/StoreContext';
 import type { MissionId, StoryKey } from '@/lib/types';
 import { WORLD as WORLD_SIZE } from '@/data/world';
 import { nextTarget } from '@/lib/world/movement';
-import { Button, Speech } from '../ui';
+import { Button, ConfirmDialog, Speech } from '../ui';
 import SituationScene from '../village/SituationScene';
 import VillageWorld, { type WorldView } from '../village/VillageWorld';
 
@@ -46,6 +46,8 @@ export const darknessFor = (revived: number) => [0.6, 0.42, 0.25, 0.06][revived]
 
 export default function S3Map() {
   const { state, dispatch, room, restart } = useStore();
+  const [confirmRestart, setConfirmRestart] = useState(false);
+  const closeRestart = useCallback(() => setConfirmRestart(false), []);
   const [fitRef, fitWidth] = useFitWidth();
   const revived = revivedCount(state);
   const done = allMissionsDone(state);
@@ -80,8 +82,14 @@ export default function S3Map() {
       style={{ height: room ? `calc(100dvh - ${ROOM_BAR_HEIGHT}px)` : '100dvh' }}>
       <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
         {/* 다른 모둠으로 바꾸거나 처음부터 다시 할 때 (이 기기의 기록만 지운다) */}
-        <button type="button" onClick={() => window.confirm(RESTART.confirm) && restart()}
-          className="min-h-9 justify-self-start rounded-xl px-3 text-sm font-bold text-slate-500 outline-none hover:bg-slate-100">
+        <button type="button" onClick={() => setConfirmRestart(true)}
+          className="flex min-h-9 items-center gap-1.5 justify-self-start rounded-xl px-3 text-sm font-bold text-stone-500 outline-none transition hover:bg-amber-100 hover:text-amber-800">
+          {/* 나가기 아이콘: 문과 바깥쪽 화살표 */}
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.2}
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
+            <path d="M15 8l4 4-4 4M19 12H9" />
+          </svg>
           {RESTART.short}
         </button>
         <h1 className="flex items-center gap-3 text-2xl font-black">
@@ -98,6 +106,8 @@ export default function S3Map() {
         </h1>
         <ViewToggle view={view} onChange={setView} />
       </header>
+      <ConfirmDialog open={confirmRestart} title={RESTART.title} body={RESTART.body} okLabel={RESTART.ok}
+        cancelLabel={RESTART.cancel} onOk={restart} onCancel={closeRestart} />
 
       {/* 지도는 남은 공간에 꽉 차게, 가로·세로 중 좁은 쪽에 맞춘다 (위 제목·아래 안내까지 한 화면에) */}
       <div ref={fitRef} className="min-h-0 w-full flex-1">
@@ -185,11 +195,11 @@ function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
 function ViewToggle({ view, onChange }: { view: WorldView; onChange: (v: WorldView) => void }) {
   const options: [WorldView, string][] = [['near', WORLD.viewNear], ['map', WORLD.viewMap]];
   return (
-    <div className="flex justify-self-end rounded-2xl border-2 border-slate-300 bg-white p-1" role="group" aria-label="보기">
+    <div className="flex justify-self-end rounded-full bg-stone-200/70 p-1" role="group" aria-label="보기">
       {options.map(([v, label]) => (
         <button key={v} type="button" aria-pressed={view === v} onClick={() => onChange(v)}
-          className={`min-h-9 rounded-xl px-3 text-sm font-bold outline-none transition ${
-            view === v ? 'bg-amber-700 text-white' : 'text-slate-600 hover:bg-slate-100'
+          className={`min-h-9 rounded-full px-4 text-sm font-bold outline-none transition ${
+            view === v ? 'bg-white text-amber-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'
           }`}>
           {label}
         </button>

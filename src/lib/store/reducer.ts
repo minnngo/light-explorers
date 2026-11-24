@@ -35,6 +35,7 @@ export type Action =
   | { type: 'ANSWER_FAN_REASON'; value: NonNullable<IntroRecord['fanReason']> }
   | { type: 'ANSWER_FAN_PREDICT'; value: NonNullable<IntroRecord['fanPredict']> }
   | { type: 'NEXT_INTRO_CUT' }
+  | { type: 'PREV_INTRO_CUT' }
   // S3
   | { type: 'OPEN_MISSION'; mission: MissionId; at: number }
   | { type: 'LEAVE_MISSION' }
@@ -134,6 +135,11 @@ export function reducer(state: AppState, action: Action): AppState {
       if (state.currentScreen !== 'S2' || !canAdvanceIntro(state)) return state;
       if (state.introCut >= INTRO_CUT_COUNT - 1) return goTo(state, 'S3');
       return { ...state, introCut: state.introCut + 1 };
+    }
+    case 'PREV_INTRO_CUT': {
+      // 앞 장면으로 돌아가도 이미 고른 답은 그대로 남는다
+      if (state.currentScreen !== 'S2' || state.introCut === 0) return state;
+      return { ...state, introCut: state.introCut - 1 };
     }
 
     // ───── S3 ─────

@@ -5,7 +5,7 @@ import type { MissionId } from '@/lib/types';
 /** A1 마을 배경·A4 도입 컷: components/village/VillageScene.tsx, IntroScene.tsx 에 도형으로 그려 두었다 */
 
 // A3 안내 인물(빛 요정 반디)과 탐험대: components/village/Characters.tsx 에 도형으로 그려 두었다
-export const GLOVE_ART = '🧤'; // A5 절연 장갑 (S1에서만)
+// A5 절연 장갑: components/village/Props.tsx 의 GloveIcon
 export const VILLAGE_ART = { dark: '🌑🏘️', bright: '🌕🏘️✨' }; // A1 마을 배경
 
 /** 되살아남 연출 (명세서 8장). 차례로 하나씩 나타난다 */

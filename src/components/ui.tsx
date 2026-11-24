@@ -1,7 +1,7 @@
 'use client';
 
 // 화면 공통 작은 부품. 버튼은 손가락으로 누르기 쉽게 최소 높이 44px(min-h-11).
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { FairyIcon } from '@/components/village/Characters';
 
 export function Button({
@@ -30,8 +30,8 @@ export function Choice({
     <button
       type="button"
       aria-pressed={selected}
-      className={`min-h-11 rounded-xl border-2 px-4 py-2 text-left transition disabled:cursor-not-allowed ${
-        selected ? 'border-amber-500 bg-amber-100 font-bold' : 'border-slate-200 bg-white hover:border-amber-300'
+      className={`min-h-11 rounded-xl px-4 py-2 text-left outline-none transition disabled:cursor-not-allowed ${
+        selected ? 'bg-amber-100 font-bold ring-2 ring-amber-500' : 'bg-[#f6efdf] hover:bg-amber-50 hover:ring-2 hover:ring-amber-300'
       } ${className}`}
       {...props}
     >
@@ -46,11 +46,25 @@ export function Speech({ speaker, children }: { speaker: string | null; children
   return (
     <div className="flex items-start gap-3">
       {speaker && <FairyIcon className="size-12 shrink-0" />}
-      <div className={`rounded-2xl px-4 py-3 ${speaker ? 'bg-white shadow' : 'bg-slate-100 italic'}`}>
+      <div className={`flex-1 rounded-2xl px-4 py-3 ${speaker ? 'bg-white shadow' : 'bg-white italic'}`}>
         {speaker && <p className="text-sm font-bold text-amber-700">{speaker}</p>}
-        <p>{children}</p>
+        <p className="whitespace-pre-line">{children}</p>
       </div>
     </div>
+  );
+}
+
+/** 진행 점: 지금 칸이 길쭉해진다. 넘길 때 앞 칸은 줄고 다음 칸은 늘어나며 흘러가듯 옮겨 간다 */
+export function ProgressDots({ count, index }: { count: number; index: number }) {
+  return (
+    <span className="flex items-center gap-1.5" role="img" aria-label={`${index + 1} / ${count}`}>
+      {Array.from({ length: count }, (_, i) => (
+        <span key={i}
+          className={`h-2 rounded-full transition-[width,background-color] duration-500 ease-[cubic-bezier(0.65,0,0.35,1)] ${
+            i === index ? 'w-6 bg-amber-500' : 'w-2 bg-stone-200'
+          }`} />
+      ))}
+    </span>
   );
 }
 
@@ -61,5 +75,56 @@ export function TextArea(props: React.TextareaHTMLAttributes<HTMLTextAreaElement
       className="w-full rounded-xl border-2 border-slate-200 bg-white p-3 focus:border-amber-400 focus:outline-none"
       {...props}
     />
+  );
+}
+
+/** 앱 스타일 확인 창 (브라우저 기본 확인창 대신). Esc나 바깥을 누르면 취소 */
+export function ConfirmDialog({
+  open,
+  title,
+  body,
+  okLabel,
+  cancelLabel,
+  onOk,
+  onCancel,
+}: {
+  open: boolean;
+  title: string;
+  body: string;
+  okLabel: string;
+  cancelLabel: string;
+  onOk: () => void;
+  onCancel: () => void;
+}) {
+  const cancelRef = useRef<HTMLButtonElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    cancelRef.current?.focus(); // 실수로 Enter를 눌러도 기록이 지워지지 않게 취소에 먼저 둔다
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onCancel();
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open, onCancel]);
+  if (!open) return null;
+  return (
+    <div className="modal-fade fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4" onClick={onCancel}>
+      <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-body"
+        className="modal-rise flex w-full max-w-sm flex-col items-center gap-3 rounded-3xl bg-white px-6 pb-6 pt-7 text-center shadow-2xl"
+        onClick={(e) => e.stopPropagation()}>
+        <h2 id="confirm-title" className="text-xl font-black">{title}</h2>
+        <p id="confirm-body" className="whitespace-pre-line text-base text-slate-600">{body}</p>
+        <div className="mt-2 grid w-full grid-cols-2 gap-2">
+          <button ref={cancelRef} type="button" onClick={onCancel}
+            className="min-h-11 rounded-2xl bg-stone-100 font-bold text-stone-700 outline-none transition hover:bg-stone-200">
+            {cancelLabel}
+          </button>
+          <button type="button" onClick={onOk}
+            className="min-h-11 rounded-2xl bg-amber-700 font-bold text-white outline-none transition hover:bg-amber-800">
+            {okLabel}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

@@ -12,6 +12,7 @@ import type { CompareChoice, PredictionChoice } from '@/lib/types';
 import { REVIVAL_ART } from '@/media/assets';
 import { playSuccess } from '@/media/sound';
 import { Button, Choice, Speech, TextArea } from '../ui';
+import MissionIntro from './MissionIntro';
 
 export default function MissionWorksheet({ className = '', ref }: { className?: string; ref?: Ref<HTMLElement> }) {
   const { state } = useStore();
@@ -31,19 +32,35 @@ function PredictPanel() {
   const { state, dispatch } = useStore();
   const text = MISSION_STRINGS[state.currentMission!];
   const [picked, setPicked] = useState<PredictionChoice | null>(null);
+  // 들어오면 반디의 이야기부터 듣고, 다 들으면 하이라이트가 문제로 넘어온다
+  const [storyOpen, setStoryOpen] = useState(true);
+  if (storyOpen) return <MissionIntro id={state.currentMission!} onDone={() => setStoryOpen(false)} />;
   return (
-    <>
-      <Speech speaker={CHARACTER}>{text.intro}</Speech>
-      <p className="font-bold">{text.predictQuestion}</p>
-      {(['a', 'b', 'c'] as const).map((k) => (
-        <Choice key={k} selected={picked === k} onClick={() => setPicked(k)}>
-          {text.predictChoices[k]}
-        </Choice>
-      ))}
+    <div className="modal-rise flex flex-col gap-4">
+      <h2 className="text-xl font-bold leading-snug">{text.predictQuestion}</h2>
+      <div className="flex flex-col gap-2">
+        {(['a', 'b', 'c'] as const).map((k) => {
+          const full = text.predictChoices[k];
+          // "(가) 전지 2개를…" → 배지 "가" + 본문
+          const m = /^\((.)\)\s*(.*)$/.exec(full);
+          const selected = picked === k;
+          return (
+            <button key={k} type="button" aria-pressed={selected} aria-label={full} onClick={() => setPicked(k)}
+              className={`flex items-baseline gap-2 rounded-2xl px-4 py-3 text-left outline-none transition ${
+                selected ? 'bg-amber-100 ring-2 ring-amber-500' : 'bg-[#f6efdf] hover:bg-amber-50 hover:ring-2 hover:ring-amber-300'
+              }`}>
+              <span className={`w-5 shrink-0 font-bold ${selected ? 'text-amber-700' : 'text-stone-400'}`}>
+                {m ? m[1] : k}
+              </span>
+              <span className={selected ? 'font-bold' : ''}>{m ? m[2] : full}</span>
+            </button>
+          );
+        })}
+      </div>
       <Button disabled={!picked} onClick={() => picked && dispatch({ type: 'SET_PREDICTION', choice: picked })}>
         {text.predictConfirm}
       </Button>
-    </>
+    </div>
   );
 }
 

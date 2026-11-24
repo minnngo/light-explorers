@@ -5,7 +5,7 @@ import { COMMON, S2 } from '@/data/strings';
 import { canAdvanceIntro, INTRO_CUT_COUNT } from '@/lib/flow/screenFlow';
 import { useStore } from '@/lib/store/StoreContext';
 import type { IntroRecord } from '@/lib/types';
-import { Button, Choice, Speech } from '../ui';
+import { Button, Choice, ProgressDots, Speech } from '../ui';
 import IntroScene from '../village/IntroScene';
 
 /** S2. 도입 장면 (컷 5장, 건너뛰기 없음) */
@@ -18,35 +18,47 @@ export default function S2Intro() {
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-4 p-4">
-      <p className="text-right text-sm text-slate-500">
-        {state.introCut + 1} / {INTRO_CUT_COUNT}
-      </p>
       <IntroScene cut={state.introCut} />
       <Speech speaker={cut.speaker}>{text}</Speech>
 
       {state.introCut === 2 && <RecallQuestion />}
       {state.introCut === 3 && <FanQuestions />}
 
-      <Button
-        className="self-end text-xl"
-        disabled={!canAdvanceIntro(state)}
-        onClick={() => dispatch({ type: 'NEXT_INTRO_CUT' })}
-      >
-        {isLast ? S2.depart : COMMON.next}
-      </Button>
+      {/* 진행 점과 다음 버튼을 한 줄에 (미션 이야기 장면과 같은 모양) */}
+      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
+        {state.introCut > 0 ? (
+          <button type="button" onClick={() => dispatch({ type: 'PREV_INTRO_CUT' })}
+            className="min-h-11 justify-self-start rounded-2xl bg-amber-700 px-6 font-bold text-white outline-none transition hover:bg-amber-800">
+            ← {COMMON.prev}
+          </button>
+        ) : (
+          <span aria-hidden />
+        )}
+        <ProgressDots count={INTRO_CUT_COUNT} index={state.introCut} />
+        <Button
+          className="justify-self-end px-6"
+          disabled={!canAdvanceIntro(state)}
+          onClick={() => dispatch({ type: 'NEXT_INTRO_CUT' })}
+        >
+          {isLast ? S2.depart : `${COMMON.next} →`}
+        </Button>
+      </div>
     </main>
   );
 }
 
 /** 컷 3: 불이 켜지는 회로의 조건 떠올리기. 복습이므로 고르면 바로 맞고 틀림을 알려 준다 */
 function RecallQuestion() {
-  const { dispatch } = useStore();
-  const [picked, setPicked] = useState<'correct' | 'wrong' | null>(null);
+  const { state, dispatch } = useStore();
+  // 이전으로 갔다가 돌아와도 고른 답이 보이게 (기록에는 처음 고른 답이 남아 있다)
+  const [picked, setPicked] = useState<'correct' | 'wrong' | null>(state.intro.recall);
   const q = S2.recall;
   return (
-    <section className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow">
+    <section className="flex flex-col gap-3 rounded-2xl bg-white p-5">
       <p>
-        {q.before} ( <b>?</b> ) {q.after}
+        {q.before}{' '}
+        <span className="mx-0.5 inline-block rounded-lg bg-amber-100 px-3 font-bold text-amber-700">?</span>{' '}
+        {q.after}
       </p>
       <div className="flex gap-3">
         {(['correct', 'wrong'] as const).map((k) => (
@@ -75,7 +87,7 @@ function RecallQuestion() {
 function FanQuestions() {
   const { state, dispatch } = useStore();
   return (
-    <section className="flex flex-col gap-5 rounded-2xl bg-white p-5 shadow">
+    <section className="flex flex-col gap-5 rounded-2xl bg-white p-5">
       <div className="flex flex-col gap-2">
         <p className="font-bold">{S2.fanReason.question}</p>
         {(Object.keys(S2.fanReason.choices) as NonNullable<IntroRecord['fanReason']>[]).map((k) => (

@@ -23,6 +23,7 @@ export const COMMON = {
   muteOn: '🔇 소리 켜기',
   muteOff: '🔊 소리 끄기',
   backToMap: '지도로 돌아가기',
+  prev: '이전',
   darkViewOn: '🌙 어둡게 보기',
   darkViewOff: '☀️ 밝게 보기',
   sameBulbs: '같은 전구 2개',
@@ -77,14 +78,18 @@ export const ROOM = {
     OPEN_MISSION: '미션을 열었어요',
     START_CHALLENGE: '도전을 시작했어요',
     NEXT_INTRO_CUT: '다음으로 넘겼어요',
+    PREV_INTRO_CUT: '이전으로 돌아갔어요',
     NEXT_WRAPUP_STEP: '다음으로 넘겼어요',
   } as Partial<Record<string, string>>,
 };
 
 export const RESTART = {
   button: '처음부터 다시 하기 (다음 모둠)',
-  short: '새로 시작하기',
-  confirm: '이 기기의 기록을 지우고 처음 화면으로 돌아갈까요? (선생님 화면에 저장된 기록은 남아요)',
+  short: '나가기',
+  title: '처음 화면으로 돌아갈까요?',
+  body: '이 기기에 있는 기록은 지워져요.\n선생님 화면에 저장된 기록은 그대로 남아요.',
+  ok: '돌아가기',
+  cancel: '계속하기',
 };
 
 /** 회로 만들기 튜토리얼 (처음 ② 만들기에 들어왔을 때) */
@@ -148,7 +153,7 @@ export const S2 = {
   cuts: [
     {
       speaker: null,
-      text: '여기는 전지의 힘으로 불을 밝히는 반짝마을이에요. 오늘 밤은 일 년에 한 번 열리는 불빛 축제 날이에요. 그런데 해가 지자 마을이 이상하게 어두워요.',
+      text: '여기는 전지의 힘으로 불을 밝히는 반짝마을이에요. 오늘 밤은 일 년에 한 번 열리는 불빛 축제 날이에요.\n그런데 해가 지자 마을이 이상하게 어두워요.',
     },
     {
       speaker: CHARACTER,
@@ -570,5 +575,43 @@ export const SITUATION: Record<MissionId, {
     todo: '전지의 개수를 달리하면 전동기가 도는 빠르기가 어떻게 달라지는지 알아보고, 풍차를 다시 돌려요.',
     troubleLine: '꼼짝도 안 해요',
     fixedLine: '씽씽 돌아요!',
+  },
+};
+
+/** 미션에 들어가면 반디가 들려주는 이야기. 마지막 줄에는 미션 도입 문장(MISSION_STRINGS.intro)이 이어진다.
+ *  POE 규칙: 결과(전지가 많으면 더 밝다 등)를 미리 말하지 않는다 */
+export const MISSION_INTRO: Record<MissionId, { lines: readonly string[]; start: string; skip: string; next: string; prev: string }> = {
+  m1: {
+    lines: [
+      '여기가 가로등 거리예요. 와, 정말 깜깜하죠?',
+      '축제에 가던 병아리가 길을 잃었대요. 할아버지 곰은 촛불 하나로 겨우 버티고 있어요.',
+      '가로등 안에는 전구와 전지가 들어 있어요.',
+    ],
+    start: '예상하러 가기',
+    skip: '건너뛰기',
+    next: '다음',
+    prev: '이전',
+  },
+  m2: {
+    lines: [
+      '광장에 도착했어요! 저기 안내 종 보이죠?',
+      '여우가 종을 아무리 흔들어도 소리가 하나도 안 들려요. 친구들이 고개를 갸웃하고 있어요.',
+      '종 안에는 소리를 내는 버저가 숨어 있어요.',
+    ],
+    start: '예상하러 가기',
+    skip: '건너뛰기',
+    next: '다음',
+    prev: '이전',
+  },
+  m3: {
+    lines: [
+      '언덕 위 풍차까지 왔어요. 그런데 날개가 꼼짝도 안 해요.',
+      '풍차가 돌아야 축제 무대에 불이 켜져요. 농부 돼지가 발을 동동 구르고 있어요.',
+      '풍차 안에는 날개를 돌리는 전동기가 들어 있어요.',
+    ],
+    start: '예상하러 가기',
+    skip: '건너뛰기',
+    next: '다음',
+    prev: '이전',
   },
 };

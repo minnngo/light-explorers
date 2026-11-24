@@ -41,6 +41,17 @@ describe('S1 → S2', () => {
   });
 });
 
+describe('S2 도입 장면 넘기기', () => {
+  it('이전으로 돌아가도 고른 답은 남고, 첫 장면에서는 더 돌아가지 않는다', () => {
+    const intro: AppState = { ...createInitialState(), currentScreen: 'S2', groupId: 'g1', groupName: '탐험대' };
+    const s = play(intro, { type: 'NEXT_INTRO_CUT' }, { type: 'NEXT_INTRO_CUT' }, { type: 'ANSWER_RECALL', correct: true },
+      { type: 'PREV_INTRO_CUT' });
+    expect(s.introCut).toBe(1);
+    expect(play(s, { type: 'NEXT_INTRO_CUT' }).introCut).toBe(2);
+    expect(play(s, { type: 'PREV_INTRO_CUT' }, { type: 'PREV_INTRO_CUT' }).introCut).toBe(0);
+  });
+});
+
 describe('미션 단계 진행 (명세서 7-2)', () => {
   it('잠긴 미션은 열 수 없다', () => {
     expect(reducer(atMap(), { type: 'OPEN_MISSION', mission: 'm2', at: 0 }).currentScreen).toBe('S3');

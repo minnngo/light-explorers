@@ -7,8 +7,8 @@ import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
 import { isRealtimeAvailable } from '@/lib/sync/realtime';
 import { normalizeRoomCode, ROOM_CODE_LENGTH, type Role } from '@/lib/sync/roomSync';
-import { GLOVE_ART } from '@/media/assets';
 import { Button, Choice } from '../ui';
+import { GloveIcon } from '../village/Props';
 
 /** 방을 찾지 못했다고 알려 주기까지 기다리는 시간 */
 const JOIN_TIMEOUT_MS = 10_000;
@@ -87,7 +87,7 @@ export default function S1Entry() {
       )}
 
       {realtime && (mode === 'join' || together) && (
-        <section className="flex flex-col gap-3 rounded-2xl bg-sky-50 p-5">
+        <section className="flex flex-col gap-3 rounded-2xl bg-white p-5">
           <label className="flex flex-col gap-2">
             <span className="font-bold">{ROOM.myName}</span>
             <input value={myName} onChange={(e) => setMyName(e.target.value)} placeholder={ROOM.myNamePlaceholder}
@@ -106,7 +106,7 @@ export default function S1Entry() {
 
       <fieldset className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow">
         <legend className="flex items-center gap-2 px-1 font-bold">
-          <span className="text-3xl" aria-hidden>{GLOVE_ART}</span>
+          <GloveIcon className="size-10" />
           {S1.safetyTitle}
         </legend>
         {S1.safetyPromises.map((text, i) => (

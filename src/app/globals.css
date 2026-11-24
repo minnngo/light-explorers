@@ -319,7 +319,33 @@ body {
   animation: compass-nudge 0.9s ease-in-out infinite;
 }
 
+/* 확인 창: 배경은 서서히 어두워지고, 카드는 살짝 커지며 올라온다 */
+@keyframes modal-fade {
+  from { opacity: 0; }
+}
+.modal-fade {
+  animation: modal-fade 0.18s ease-out both;
+}
+@keyframes modal-rise {
+  from { opacity: 0; transform: translateY(12px) scale(0.96); }
+}
+.modal-rise {
+  animation: modal-rise 0.24s cubic-bezier(0.2, 0.9, 0.3, 1.2) both;
+}
+
+/* 반디가 아래쪽에서 날아 들어온다 */
+@keyframes bandi-arrive {
+  from { opacity: 0; transform: translate(-80px, 40px) scale(0.5) rotate(-20deg); }
+  70% { opacity: 1; transform: translate(6px, -6px) scale(1.05) rotate(6deg); }
+}
+.bandi-arrive {
+  animation: bandi-arrive 0.9s ease-out both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .bandi-arrive,
+  .modal-fade,
+  .modal-rise,
   .walker *,
   .compass-nudge,
   .villager-sway,
