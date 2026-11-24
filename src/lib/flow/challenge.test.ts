@@ -1,6 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { judge } from '@/lib/circuit/judge';
-import { boardComponents } from '@/data/boards';
 import type { BoardState, Wire } from '@/lib/types';
 import { challengeStep, fixLoopCoach } from './challenge';
 
@@ -10,7 +8,7 @@ const board = (pairs: [string, string][], switchClosed = false): BoardState => (
   switchClosed,
   lastChangedAt: 0,
 });
-const step = (b: BoardState) => challengeStep(b, judge({ components: boardComponents('B', 'bulb'), wires: b.wires, switchClosed: true }));
+const step = (b: BoardState) => challengeStep(b);
 
 describe('도전 단계 (같은 극끼리 이어 보기)', () => {
   it('처음(서로 다른 극으로 이어진 회로)에서는 전지 사이 전선을 지우는 단계', () => {
@@ -23,9 +21,9 @@ describe('도전 단계 (같은 극끼리 이어 보기)', () => {
     expect(step(board([['bat1.plus', 'bat2.plus'], ['bat2.plus', 'load.a'], ['load.b', 'sw.a'], ['sw.b', 'bat1.minus']]))).toBe(2);
   });
 
-  it('같은 극끼리 이어진 고리가 되면 스위치를 닫아 보는 단계', () => {
+  it('같은 극끼리 이은 뒤로는 끝까지 고리를 고치는 단계 (힌트는 3개)', () => {
     const b = board([['bat1.plus', 'bat2.plus'], ['bat2.minus', 'load.a'], ['load.b', 'sw.a'], ['sw.b', 'bat1.minus']]);
-    expect(step(b)).toBe(3);
+    expect(step(b)).toBe(2);
   });
 
   it('3단계 시범: + 끝에 붙은 바깥 전선을 먼저 반짝이고, 지우면 빈 − 끝과 빈 단자를 잇게 보여 준다', () => {

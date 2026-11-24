@@ -5,7 +5,7 @@
 // 카드는 화면 가운데 서 있는 탐험대의 발밑에 뜬다 (조이스틱 단계는 조이스틱 위).
 import { useState } from 'react';
 import { WORLD } from '@/data/strings';
-import { ProgressDots } from '../ui';
+import { CloseButton, ProgressDots } from '../ui';
 
 const T = WORLD.tutorial;
 
@@ -28,7 +28,8 @@ export default function MoveTutorial({ near, onDone }: { near: boolean; onDone: 
         className={`modal-rise absolute z-20 flex w-[min(22rem,calc(100%-2rem))] flex-col gap-3 rounded-3xl bg-white p-5 shadow-xl ${
           step === 1 ? 'bottom-40 right-4' : 'left-1/2 top-[calc(50%+3rem)] -translate-x-1/2'
         }`}>
-        <div className="flex items-center gap-3">
+        <CloseButton onClick={onDone} className="!right-2 !top-2 !size-8 !shadow-none" />
+        <div className="flex items-center gap-3 pr-6">
           <StepArt step={step} />
           <div className="flex flex-col gap-0.5">
             <p className="text-lg font-bold">{title}</p>

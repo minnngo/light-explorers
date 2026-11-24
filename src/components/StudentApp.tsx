@@ -177,9 +177,8 @@ export default function StudentApp() {
       channel.close();
     };
   }, []);
-  // 버저 미션(종)은 소리의 크기를 비교하는 실험이라 음악을 끈다. 다른 미션에서는 작게
-  const musicLevel =
-    muted || !audioReady || !musicOwner ? 0 : screen === 'S4' ? (state.currentMission === 'm2' ? 0 : 0.4) : 1;
+  // 미션 화면에서도 다른 화면과 같은 크기로 음악이 나온다
+  const musicLevel = muted || !audioReady || !musicOwner ? 0 : 1;
   useEffect(() => {
     setMusicLevel(musicLevel);
   }, [musicLevel]);

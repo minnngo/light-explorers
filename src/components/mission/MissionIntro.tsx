@@ -8,7 +8,7 @@ import { playOpen } from '@/media/sound';
 import type { MissionId } from '@/lib/types';
 import { FairyIcon } from '../village/Characters';
 import SituationScene from '../village/SituationScene';
-import { ProgressDots } from '../ui';
+import { CloseButton, ProgressDots } from '../ui';
 
 const TYPE_MS = 45;
 
@@ -34,7 +34,8 @@ export default function MissionIntro({ id, onDone }: { id: MissionId; onDone: ()
   return (
     <div className="modal-fade fixed inset-0 z-50 flex items-center justify-center bg-slate-950/70 p-4">
       <div role="dialog" aria-modal="true" aria-label={MISSION_STRINGS[id].title}
-        className="modal-rise flex max-h-full w-full max-w-3xl flex-col overflow-auto rounded-3xl bg-white shadow-2xl">
+        className="modal-rise relative flex max-h-full w-full max-w-3xl flex-col overflow-auto rounded-3xl bg-white shadow-2xl">
+        <CloseButton onClick={onDone} />
         <div className="relative">
           <SituationScene id={id} fixed={false} />
           <p className="absolute left-4 top-3 rounded-full bg-slate-950/45 px-3 py-1 text-sm font-bold text-white">

@@ -15,9 +15,10 @@ import type { BoardId, BoardState, JudgeResult, MissionStep } from '@/lib/types'
 import CircuitBoard from '../circuit/CircuitBoard';
 import { ownerNames, useRecentNote } from '../RoomBar';
 import { useHint } from '../circuit/useHint';
+import MissionIntro from '../mission/MissionIntro';
 import MissionWorksheet from '../mission/MissionWorksheet';
 import SoundToggle from '../SoundToggle';
-import { ProgressDots } from '../ui';
+import { CloseButton, ProgressDots } from '../ui';
 
 const STEPS: MissionStep[] = ['predict', 'build', 'compare', 'confirm'];
 
@@ -34,12 +35,14 @@ export default function S4Mission() {
   const record = state.missions[id];
   const results = currentResults(state)!;
   const [dark, setDark] = useState(false);
+  // 미션에 들어올 때마다(다시 하기 포함) 반디의 이야기부터. ✕나 건너뛰기로 언제든 닫을 수 있다
+  const [storyOpen, setStoryOpen] = useState(true);
 
   // 회로 만들기 튜토리얼: 이 기기에서 처음 ② 만들기에 들어오면 자동으로, 이후에는 "다시 보기"로
   const building = record.step === 'build' && record.status !== 'done';
   const tutorialBoard: BoardId = room?.me.role ?? 'A';
   // 자동으로 뜨는 건 미션 1(가로등)을 처음 만들 때만. 미션 2·3에서는 "연결 방법 다시 보기"로 직접 연다
-  const tutorial = useTutorial(building, id === MISSION_ORDER[0], state.boards[tutorialBoard]);
+  const tutorial = useTutorial(building && !storyOpen, id === MISSION_ORDER[0], state.boards[tutorialBoard]);
 
   // 지금 할 일이 있는 곳만 밝게, 나머지는 어둡게 (튜토리얼 중에는 회로판)
   const focus: MissionFocus | null = tutorial.step
@@ -105,6 +108,8 @@ export default function S4Mission() {
           style={{ opacity: spotlight?.dim === 'strong' ? 0.7 : 0.55 }} />
       )}
 
+      {storyOpen && <MissionIntro id={id} onDone={() => setStoryOpen(false)} />}
+
       <main className="grid flex-1 gap-4 p-4 lg:grid-cols-2 xl:grid-cols-[1fr_1fr_400px]">
         {(['A', 'B'] as const).map((b) => {
           const practising = tutorial.step !== null && b === tutorialBoard;
@@ -166,7 +171,7 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
   if (record.step !== 'predict') {
     if (result.level > 0 && result.level === REQUIRED_LEVEL[boardId]) observation = text.observation[boardId];
     if (result.reason === 'BUZZER_REVERSED' && board.switchClosed) observation = text.observation.extra ?? null;
-    if (result.motorDirection === 'ccw') observation = text.observation.extra ?? observation;
+    // 전동기가 반대로 도는 것은 이 차시의 관심(빠르기)이 아니라서 따로 알리지 않는다
   }
 
   return (
@@ -272,8 +277,9 @@ function TutorialCard({ step, onNext, onSkip }: {
   const last = step === 'go';
   return (
     <section key={step} role="dialog" aria-label={TUTORIAL.title}
-      className="modal-rise flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-xl">
-      <div className="flex items-center gap-3">
+      className="modal-rise relative flex flex-col gap-3 rounded-3xl bg-white p-5 shadow-xl">
+      <CloseButton onClick={onSkip} className="!right-2 !top-2 !size-8 !shadow-none" />
+      <div className="flex items-center gap-3 pr-6">
         <TutorialArt step={step} />
         <div className="flex flex-col gap-0.5">
           <p className="text-lg font-bold">{t.title}</p>

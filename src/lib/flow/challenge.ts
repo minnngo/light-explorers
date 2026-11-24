@@ -2,15 +2,16 @@
 // 단계는 B 회로판의 지금 모습에서 바로 계산한다 (따로 저장하지 않는다).
 //   0. 두 전지 사이의 전선(+ ↔ −)을 지운다
 //   1. 두 전지의 같은 극끼리(+ ↔ + 또는 − ↔ −) 전선으로 잇는다
-//   2. 남은 끝이 전구·스위치로 이어지게 고쳐서 고리를 만든다 (판정이 SAME_POLE)
-//   3. 스위치를 닫고 전구를 본다 → 도전 완료 (reducer가 challenge: 'done'으로 바꾼다)
+//   2. 남은 끝이 전구·스위치로 이어지게 고친다. 스위치는 밝기를 비교할 때 이미 닫혀 있으므로
+//      고리가 완성되면 바로 전구가 꺼지고 도전이 끝난다 (reducer가 challenge: 'done'으로 바꾼다).
+//      도중에 스위치를 열어 두었다면 마지막에 스위치를 닫으라고 시범을 보여 준다.
 import type { CoachMark } from '@/lib/tutorial/tutorial';
 import type { BoardState, JudgeResult } from '@/lib/types';
 
-export type ChallengeStep = 0 | 1 | 2 | 3;
+export type ChallengeStep = 0 | 1 | 2;
 
 /** 단계(힌트) 수 */
-export const CHALLENGE_HINT_COUNT = 4;
+export const CHALLENGE_HINT_COUNT = 3;
 
 const OPPOSITE: readonly [string, string][] = [['bat1.plus', 'bat2.minus'], ['bat1.minus', 'bat2.plus']];
 const SAME: readonly [string, string][] = [['bat1.plus', 'bat2.plus'], ['bat1.minus', 'bat2.minus']];
@@ -18,24 +19,22 @@ const SAME: readonly [string, string][] = [['bat1.plus', 'bat2.plus'], ['bat1.mi
 const linked = (board: BoardState, [a, b]: readonly [string, string]) =>
   board.wires.some((w) => (w.from === a && w.to === b) || (w.from === b && w.to === a));
 
-export function challengeStep(board: BoardState, result: JudgeResult): ChallengeStep {
+export function challengeStep(board: BoardState): ChallengeStep {
   if (OPPOSITE.some((pair) => linked(board, pair))) return 0;
   if (!SAME.some((pair) => linked(board, pair))) return 1;
-  if (result.reason !== 'SAME_POLE') return 2;
-  return 3;
+  return 2;
 }
 
 /** 단계마다 B 회로판 위에 보여 줄 시범: 지울 전선 반짝 / 이을 단자 / 누를 스위치 */
-export function challengeCoach(step: ChallengeStep, board: BoardState): CoachMark | undefined {
+export function challengeCoach(step: ChallengeStep, board: BoardState, result: JudgeResult): CoachMark | undefined {
   switch (step) {
     case 0:
       return { wires: true, onlyWires: OPPOSITE }; // 두 전지 사이 전선만 반짝
     case 1:
       return { terminals: ['bat1.plus', 'bat2.plus'] };
     case 2:
-      return fixLoopCoach(board);
-    case 3:
-      return { switch: true };
+      // 고리는 다 됐는데 스위치가 열려 있으면 스위치를 닫는 시범
+      return result.reason === 'SAME_POLE' && !board.switchClosed ? { switch: true } : fixLoopCoach(board);
   }
 }
 
@@ -66,6 +65,6 @@ export function fixLoopCoach(board: BoardState): CoachMark | undefined {
 
 /** 회로판 시범은 그 단계의 힌트를 연 뒤에만 보여 준다 (정답을 먼저 보여 주지 않게) */
 export function challengeBoardCoach(board: BoardState, result: JudgeResult, opened: number): CoachMark | undefined {
-  const step = challengeStep(board, result);
-  return step < opened ? challengeCoach(step, board) : undefined;
+  const step = challengeStep(board);
+  return step < opened ? challengeCoach(step, board, result) : undefined;
 }

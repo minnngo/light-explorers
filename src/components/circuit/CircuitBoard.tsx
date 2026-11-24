@@ -393,6 +393,7 @@ function Motor({ layout, result, ink, label }: { layout: ComponentLayout; result
         ))}
         <circle cx={center.x} cy={center.y - 4} r={8} fill="#0f172a" />
       </g>
+      {/* 도는 방향: +와 −를 반대로 이으면 바뀐다 (설명은 미션 3 도움말·더 알아보기에) */}
       {result.motorDirection && (
         <text x={center.x + 78} y={center.y - 10} textAnchor="middle" fontSize={16} fontWeight={700} fill={ink}>
           도는 방향 {result.motorDirection === 'cw' ? '↻' : '↺'}

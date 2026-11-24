@@ -1,16 +1,14 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { type ReactNode, useCallback, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
 import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S2, S5, withoutMark } from '@/data/strings';
 import { canAdvanceWrapup, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
 import { useStore } from '@/lib/store/StoreContext';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
-import { VILLAGE_ART } from '@/media/assets';
 import { Button, Choice, ConfirmDialog, Speech, TextArea } from '../ui';
-import VillageScene from '../village/VillageScene';
+import { VillagePanorama } from './Opening';
 
-const ALL_ON = { m1: 'on', m2: 'on', m3: 'on' } as const;
 
 /** S5. 마무리 7단계 (지도서 마무리 7분). 한 화면에 한 단계씩 */
 export default function S5Wrapup() {
@@ -20,24 +18,34 @@ export default function S5Wrapup() {
 
   if (state.finished) {
     return (
-      <main className="m-auto flex flex-col items-center gap-4 p-6 text-center">
-        <span className="text-8xl" aria-hidden>{VILLAGE_ART.bright}</span>
-        <p className="text-3xl font-black">{S5.finish.done}</p>
+      <Ending title={S5.finish.done}>
         {/* 같은 기기를 다음 모둠이 쓸 수 있게 (선생님용, 눈에 덜 띄게) */}
-        <button type="button" className="mt-10 min-h-11 text-base text-slate-400 underline"
+        <button type="button" className="min-h-11 text-base text-white/60 underline outline-none hover:text-white"
           onClick={() => setConfirmRestart(true)}>
           {RESTART.button}
         </button>
         <ConfirmDialog open={confirmRestart} title={RESTART.title} body={RESTART.body} okLabel={RESTART.ok}
-        cancelLabel={RESTART.cancel} onOk={restart} onCancel={closeRestart} />
-      </main>
+          cancelLabel={RESTART.cancel} onOk={restart} onCancel={closeRestart} />
+      </Ending>
     );
   }
 
   const step = state.wrapupStep;
   const isLast = step === WRAPUP_STEP_COUNT - 1;
   const panels = [<ResultsStep key={0} />, <ShareStep key={1} />, <ExplainStep key={2} />, <CheckStep key={3} />,
-    <MisconceptionStep key={4} />, <SelfEvalStep key={5} />, <FinishStep key={6} />];
+    <MisconceptionStep key={4} />, <SelfEvalStep key={5} />];
+
+  // 7. 마치기: 오프닝처럼 화면을 가득 채운 축제 장면
+  if (isLast) {
+    return (
+      <Ending title={S5.finish.title} text={S5.finish.text}>
+        <button type="button" onClick={() => dispatch({ type: 'FINISH' })}
+          className="modal-rise pulse-cta min-h-14 rounded-full bg-amber-500 px-10 text-xl font-black text-white shadow-lg outline-none transition hover:bg-amber-600">
+          {S5.finish.button}
+        </button>
+      </Ending>
+    );
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-5 p-6">
@@ -89,7 +97,17 @@ function ShareStep() {
   return (
     <section className={card}>
       <p className="font-bold">{S5.share.guide}</p>
-      <p className="rounded-xl bg-slate-50 p-3 text-slate-600">{S5.share.frame}</p>
+      {/* 문장 틀의 ( ) 자리를 길쭉한 빈칸으로 보여 준다 */}
+      <p className="rounded-xl bg-stone-100/70 p-3 leading-loose text-stone-600">
+        {S5.share.frame.split('( )').map((part, i, all) => (
+          <span key={i}>
+            {part}
+            {i < all.length - 1 && (
+              <span aria-label="빈칸" className="mx-1 inline-block h-7 w-28 rounded-lg bg-amber-100 align-middle ring-2 ring-amber-300" />
+            )}
+          </span>
+        ))}
+      </p>
       <TextArea value={state.final.groupThought}
         onChange={(e) => dispatch({ type: 'UPDATE_FINAL', patch: { groupThought: e.target.value } })} />
     </section>
@@ -156,7 +174,7 @@ function CheckStep() {
         {S5.check.after}
       </p>
       {check === 'darker' && <p className="font-bold text-rose-700">{S5.check.wrong}</p>}
-      {check === 'brighter' && <p className="font-bold text-emerald-700">✔</p>}
+      {check === 'brighter' && <p className="pop-in font-bold text-emerald-700">{S5.correct}</p>}
     </section>
   );
 }
@@ -171,13 +189,18 @@ function MisconceptionStep() {
         const result = state.final.misconception[item.key];
         const chosen: OX | null = result === null ? null : result === 'correct' ? item.answer : item.answer === 'O' ? 'X' : 'O';
         return (
-          <div key={item.key} className="flex flex-col gap-2 border-t pt-3">
+          <div key={item.key} className="flex flex-col gap-2 border-t border-stone-200 pt-3">
             <p>{item.text}</p>
             <div className="flex gap-2">
               {(['O', 'X'] as const).map((k) => (
-                <Choice key={k} mark={false} selected={chosen === k} disabled={result !== null} className="min-w-16 text-center text-xl"
+                <Choice key={k} mark={false} selected={chosen === k} disabled={result !== null}
+                  aria-label={k === 'O' ? '○' : '×'} className="flex w-16 items-center justify-center"
                   onClick={() => dispatch({ type: 'ANSWER_MISCONCEPTION', key: item.key, choice: k })}>
-                  {k === 'O' ? '○' : '×'}
+                  {/* 글꼴마다 ○·× 크기와 높이가 달라서 같은 크기 그림으로 가운데에 */}
+                  <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={2.6}
+                    strokeLinecap="round" aria-hidden>
+                    {k === 'O' ? <circle cx={12} cy={12} r={7.5} /> : <path d="M5.5 5.5l13 13M18.5 5.5l-13 13" />}
+                  </svg>
                 </Choice>
               ))}
             </div>
@@ -209,22 +232,24 @@ function SelfEvalStep() {
   );
 }
 
-/** 7. 마치기 */
-function FinishStep() {
-  const { state, dispatch } = useStore();
+
+/** 마무리 장면: 환하게 되살아난 반짝마을 풍경 위에 제목과 버튼 (오프닝과 같은 그림) */
+function Ending({ title, text, children }: { title: string; text?: string; children: ReactNode }) {
   return (
-    <section className={`${card} items-center text-center`}>
-      {/* 환하게 되살아난 마을 장면 */}
-      <div className="pop-in w-full overflow-hidden rounded-2xl" aria-hidden>
-        <VillageScene looks={ALL_ON} darkness={0.06} festival />
+    <main className="fixed inset-0 z-50 overflow-hidden bg-[#0b1033]" aria-label={title}>
+      <VillagePanorama ending />
+      <div className="relative flex h-full flex-col items-center px-4 pt-[18vh] text-center">
+        <h1 className="opening-title text-5xl font-black tracking-tight text-[#fff6d6] md:text-7xl"
+          style={{ animationDelay: '0.3s', textShadow: '0 0 24px rgb(255 214 94 / 0.75), 0 4px 0 rgb(120 72 20 / 0.45)' }}>
+          {title}
+        </h1>
+        {text && (
+          <p className="opening-sub mt-4 max-w-3xl whitespace-pre-line text-lg font-bold text-amber-100 md:text-xl" style={{ animationDelay: '1s' }}>
+            {text}
+          </p>
+        )}
+        <div className="mt-10 flex flex-col items-center gap-3">{children}</div>
       </div>
-      <p className="text-3xl font-black">{S5.finish.title}</p>
-      <p>{S5.finish.text}</p>
-      <label className="flex w-full flex-col gap-2 text-left">
-        <span className="font-bold">{S5.finish.toCharacter}</span>
-        <TextArea rows={2} value={state.final.toCharacter} placeholder={COMMON.optional}
-          onChange={(e) => dispatch({ type: 'UPDATE_FINAL', patch: { toCharacter: e.target.value } })} />
-      </label>
-    </section>
+    </main>
   );
 }

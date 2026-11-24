@@ -33,6 +33,7 @@ export const COMMON = {
   myPrediction: '내 예상',
   actualResult: '실제 결과',
   help: '도움말',
+  furtherLearning: '더 알아보기 (심화)',
   seeResult: '결과 보기',
   compareRight: '맞혔어요!',
   compareWrong: (word: string) => `정답은 '${word}'예요`,
@@ -129,8 +130,7 @@ export const CHALLENGE = {
   steps: [
     '두 전지 사이를 잇는 전선을 눌러서 지워요.',
     '두 전지의 + 끝끼리 전선으로 이어요.',
-    '전구와 스위치로 가는 전선이 두 전지의 − 끝에 하나씩 이어지게 고쳐요. (+ 끝에 붙은 전선은 지우고 − 끝에 다시 이어요)',
-    '스위치를 닫고 전구가 어떻게 되는지 봐요.',
+    '전구와 스위치로 가는 전선이 두 전지의 − 끝에 하나씩 이어지게 고치고, 전구가 어떻게 되는지 봐요. (+ 끝에 붙은 전선은 지우고 − 끝에 다시 이어요)',
   ] as const,
   done: '전지를 늘리기만 해서는 안 되고, 서로 다른 극끼리 한 줄로 이어야 해요.',
   firstHint: '힌트 보기',
@@ -271,7 +271,9 @@ export interface MissionStrings {
   checklistTitle: string;
   checklist: readonly [string, string, string];
   /** 탐험 과제 아래 "도움말"을 누르면 펼쳐지는 한 줄 */
-  checklistHelp: string;
+  checklistHelp: string | readonly string[];
+  /** ④ 확인에서 펼쳐 보는 심화 내용 (선택) */
+  furtherLearning?: string;
   goCompare: string;
   observation: { A: string; B: string; extra?: string };
   compareGuide: string;
@@ -390,11 +392,15 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
       'B 회로: 전지 2개를 서로 다른 극끼리 한 줄로 이은 뒤 전동기, 스위치를 연결해 보세요.',
       '두 회로의 스위치를 닫고 날개가 도는 빠르기를 비교해 보세요.',
     ],
-    checklistHelp: '날개 달린 전동기에 손을 다치지 않게 조심해요.',
+    checklistHelp: [
+      '날개 달린 전동기에 손을 다치지 않게 조심해요.',
+      '전동기에 이은 전지의 +와 −를 반대로 바꾸면 날개가 도는 방향이 바뀌어요. 빠르기를 비교할 때는 방향은 신경 쓰지 않아도 돼요.',
+    ],
+    furtherLearning:
+      '전동기는 전기가 들어오는 방향에 따라 도는 방향이 정해져요. 전지의 + 쪽 전선과 − 쪽 전선을 서로 바꿔 이으면 전기가 반대로 흘러서 날개도 반대로 돌아요. 하지만 전지의 개수가 같으면 도는 빠르기는 같아요. 선풍기나 장난감 자동차가 앞뒤로 움직이는 것도 이 원리를 이용한 거예요.',
     observation: {
       A: 'A 회로(전지 1개): 풍차가 느리게 돌아요.',
       B: 'B 회로(전지 2개): 풍차가 빠르게 돌아요!',
-      extra: '날개가 도는 방향이 바뀌었어요. 빠르기는 어떤가요?',
     },
     compareBefore: `${COMPARE_BEFORE} 날개 달린 전동기가 더 (`,
     compareAfter: ') 돌아요.',
@@ -409,6 +415,7 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
 };
 
 export const S5 = {
+  correct: '정답입니다.',
   stepTitles: [
     '1. 결과 모아 보기',
     '2. 함께 생각을 나누기',
@@ -489,10 +496,9 @@ export const S5 = {
   },
   finish: {
     title: '마을이 환하게 되살아났어요!',
-    text: '탐험대 덕분에 가로등도, 안내 종도, 풍차도 힘차게 움직여요. 이제 반짝마을의 불빛 축제가 시작돼요!',
-    toCharacter: `${CHARACTER}에게 알려 주고 싶은 것을 한 줄로 써 보세요.`,
+    text: '탐험대 덕분에 가로등도, 안내 종도, 풍차도 힘차게 움직여요.\n이제 반짝마을의 불빛 축제가 시작돼요!',
     button: '탐험 마치기',
-    done: '수고했어요, 탐험대! (끝)',
+    done: '수고했어요, 탐험대!',
   },
 };
 

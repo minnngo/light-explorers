@@ -192,7 +192,7 @@ describe('8-1 선택 보충: 같은 극끼리 이어 보기', () => {
     expect(s.missions.m1.attempts).toBe(attempts); // 도전 조작은 시도 횟수에 넣지 않는다
   });
 
-  it('도전 힌트는 하나씩 열리고 4개를 넘지 않는다', () => {
+  it('도전 힌트는 하나씩 열리고 3개를 넘지 않는다', () => {
     const atConfirm = play(
       atMap(),
       { type: 'OPEN_MISSION', mission: 'm1', at: 0 },
@@ -207,7 +207,7 @@ describe('8-1 선택 보충: 같은 극끼리 이어 보기', () => {
     const started = play(atConfirm, { type: 'START_CHALLENGE' });
     const hint = { type: 'SHOW_CHALLENGE_HINT' } as const;
     expect(play(started, hint).missions.m1.challengeHints).toBe(1);
-    expect(play(started, hint, hint, hint, hint, hint).missions.m1.challengeHints).toBe(4);
+    expect(play(started, hint, hint, hint, hint).missions.m1.challengeHints).toBe(3);
   });
 
   it('미션 2에는 도전이 없다', () => {

@@ -130,3 +130,16 @@ export function ConfirmDialog({
     </div>
   );
 }
+
+/** 팝업 오른쪽 위의 ✕ (모든 떠 있는 창에서 언제든 닫을 수 있게) */
+export function CloseButton({ onClick, label = '닫기', className = '' }: { onClick: () => void; label?: string; className?: string }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title={label}
+      className={`absolute right-3 top-3 z-10 flex size-9 items-center justify-center rounded-full bg-white/90 text-stone-500 shadow-sm outline-none transition hover:bg-white hover:text-stone-800 ${className}`}>
+      <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.4}
+        strokeLinecap="round" aria-hidden>
+        <path d="M6 6l12 12M18 6L6 18" />
+      </svg>
+    </button>
+  );
+}

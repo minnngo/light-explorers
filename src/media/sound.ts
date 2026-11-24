@@ -87,7 +87,8 @@ function blip(from: number, to: number, volume: number, startOffset = 0, duratio
 /** 버튼을 눌렀을 때: 작은 "톡" */
 export function playClick() {
   if (uiMuted) return;
-  blip(720, 980, 0.065, 0, 0.07);
+  // 낮고 짧은 "톡" 하나 (높은 소리는 귀에 거슬려서 뺐다)
+  blip(420, 360, 0.09, 0, 0.06);
 }
 
 /** 창이 열릴 때: 올라가는 "띠링" */

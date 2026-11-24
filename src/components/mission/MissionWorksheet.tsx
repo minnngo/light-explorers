@@ -12,9 +12,8 @@ import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
 import type { CompareChoice, PredictionChoice } from '@/lib/types';
 import { playSuccess } from '@/media/sound';
-import { Button, Choice, TextArea } from '../ui';
+import { Button, Choice, CloseButton, TextArea } from '../ui';
 import { FairyIcon } from '../village/Characters';
-import MissionIntro from './MissionIntro';
 
 export default function MissionWorksheet({ className = '', ref }: { className?: string; ref?: Ref<HTMLElement> }) {
   const { state } = useStore();
@@ -34,9 +33,6 @@ function PredictPanel() {
   const { state, dispatch } = useStore();
   const text = MISSION_STRINGS[state.currentMission!];
   const [picked, setPicked] = useState<PredictionChoice | null>(null);
-  // 들어오면 반디의 이야기부터 듣고, 다 들으면 하이라이트가 문제로 넘어온다
-  const [storyOpen, setStoryOpen] = useState(true);
-  if (storyOpen) return <MissionIntro id={state.currentMission!} onDone={() => setStoryOpen(false)} />;
   return (
     <div className="modal-rise flex flex-col gap-4">
       <h2 className="text-xl font-bold leading-snug">{text.predictQuestion}</h2>
@@ -235,6 +231,7 @@ function ConfirmPanel() {
       {/* 확인 화면이 나오기 전에 반디가 먼저 떠서 한마디 (다시 보기에서는 생략) */}
       {celebrate && <Celebration text={text.revival} onDone={() => setCelebrate(false)} />}
       {MISSIONS[id].hasChallenge && !reviewing && <ChallengeBox />}
+      {text.furtherLearning && <HelpToggle text={text.furtherLearning} label={COMMON.furtherLearning} />}
       {reviewing ? (
         <Button onClick={() => dispatch({ type: 'LEAVE_MISSION' })}>{COMMON.backToMap}</Button>
       ) : (
@@ -262,7 +259,7 @@ function ChallengeBox() {
       {challenge === 'active' && (() => {
         // 힌트는 하나씩 연다. 연 힌트 중 지금 할 단계는 노랑, 마친 단계는 초록 체크 (B 회로판 모습으로 저절로 넘어간다)
         const opened = record.challengeHints ?? 0;
-        const now = challengeStep(state.boards.B, currentResults(state)!.B);
+        const now = challengeStep(state.boards.B);
         return (
           <>
             {opened > 0 && (
@@ -305,20 +302,29 @@ function ChallengeBox() {
   );
 }
 
-/** 접어 둔 도움말: "도움말 ⌄"을 누르면 아래에 한 줄이 펼쳐진다 */
-function HelpToggle({ text }: { text: string }) {
+/** 접어 둔 도움말: "도움말 ⌄"을 누르면 아래에 펼쳐진다. 여러 줄이면 점 목록으로 */
+function HelpToggle({ text, label = COMMON.help }: { text: string | readonly string[]; label?: string }) {
   const [open, setOpen] = useState(false);
+  const lines = typeof text === 'string' ? [text] : text;
   return (
     <div className="flex flex-col gap-2">
       <button type="button" aria-expanded={open} onClick={() => setOpen((v) => !v)}
         className="flex items-center gap-1 self-start rounded-full px-1 text-sm font-semibold text-stone-500 outline-none hover:text-stone-800">
-        {COMMON.help}
+        {label}
         <svg viewBox="0 0 24 24" className={`size-4 transition-transform ${open ? 'rotate-180' : ''}`} fill="none"
           stroke="currentColor" strokeWidth={2.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M6 9l6 6 6-6" />
         </svg>
       </button>
-      {open && <p className="modal-rise rounded-xl bg-stone-100/70 px-3 py-2 text-sm text-stone-600">{text}</p>}
+      {open && (
+        lines.length === 1 ? (
+          <p className="modal-rise rounded-xl bg-stone-100/70 px-3 py-2 text-sm text-stone-600">{lines[0]}</p>
+        ) : (
+          <ul className="modal-rise flex list-disc flex-col gap-1 rounded-xl bg-stone-100/70 py-2 pl-7 pr-3 text-sm text-stone-600">
+            {lines.map((l) => <li key={l}>{l}</li>)}
+          </ul>
+        )
+      )}
     </div>
   );
 }
@@ -342,7 +348,8 @@ function Celebration({ text, onDone }: { text: string; onDone: () => void }) {
         </div>
         <div className="modal-rise relative mb-10 flex max-w-md flex-col gap-3 rounded-3xl bg-white px-6 py-5 shadow-2xl">
           <span aria-hidden className="absolute -left-2 bottom-7 size-5 rotate-45 rounded-sm bg-white" />
-          <p className="relative text-sm font-bold text-amber-700">{CHARACTER}</p>
+          <CloseButton onClick={onDone} className="!right-2 !top-2 !size-8 !shadow-none" />
+          <p className="relative pr-8 text-sm font-bold text-amber-700">{CHARACTER}</p>
           <p className="relative whitespace-pre-line text-xl font-semibold leading-snug">{text}</p>
           <button type="button" onClick={onDone} autoFocus
             className="relative min-h-11 self-end rounded-2xl bg-amber-700 px-5 font-bold text-white outline-none transition hover:bg-amber-800">

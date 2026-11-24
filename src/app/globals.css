@@ -392,7 +392,21 @@ body[data-celebrating] .spot-raised {
   animation: firefly-drift 4s ease-in-out infinite both;
 }
 
+/* 마무리 불꽃놀이: 작게 터져 퍼지며 사라진다 */
+@keyframes firework {
+  0% { transform: scale(0.1); opacity: 0; }
+  15% { opacity: 1; }
+  60% { transform: scale(1); opacity: 0.9; }
+  100% { transform: scale(1.15); opacity: 0; }
+}
+.firework {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: firework 3.2s ease-out infinite both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .firework,
   .opening-fly,
   .night-lift,
   .opening-title,

@@ -100,7 +100,7 @@ export interface MissionRecord {
   finalBoards?: Record<BoardId, BoardState>;
   /** 8-1 선택 보충 "같은 극끼리 이어 보기" 도전 (미션 1만). 지도서에 없는 활동 */
   challenge?: ChallengeState;
-  /** 도전 중에 열어 본 힌트 수 (0~4, 하나씩 연다) */
+  /** 도전 중에 열어 본 힌트 수 (0~3, 하나씩 연다) */
   challengeHints?: number;
 }
 
