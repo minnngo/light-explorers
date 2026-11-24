@@ -9,6 +9,7 @@
 import { PLACES, SPAWN, WORLD } from '@/data/world';
 import { angleTo } from '@/lib/world/movement';
 import { CompassArrow, DownArrow, Explorer, Fairy } from './Characters';
+import { Battery, Flashlight, HandFan, Remote } from './Products';
 import VillageScene from './VillageScene';
 
 const ALL_DIM = { m1: 'dim', m2: 'dim', m3: 'dim' } as const;
@@ -82,20 +83,26 @@ function CircuitCut() {
 /** 컷 4: 전지가 1개 또는 2개 들어가는 제품 */
 function ProductsCut() {
   const items = [
-    { art: '🌀', label: '손 선풍기', batteries: '🔋' },
-    { art: '🌀', label: '손 선풍기', batteries: '🔋🔋' },
-    { art: '🔦', label: '손전등', batteries: '🔋🔋' },
-    { art: '📺', label: '리모컨', batteries: '🔋🔋' },
+    { Art: HandFan, label: '손 선풍기', batteries: 1 },
+    { Art: HandFan, label: '손 선풍기', batteries: 2 },
+    { Art: Flashlight, label: '손전등', batteries: 2 },
+    { Art: Remote, label: '리모컨', batteries: 2 },
   ];
   return (
-    <div className="flex h-36 items-center justify-center gap-8 rounded-3xl bg-indigo-950 px-4 text-white" aria-hidden>
-      {items.map((it, i) => (
+    <div className="flex items-end justify-center gap-6 rounded-3xl bg-indigo-950 px-4 py-6 text-white sm:gap-12" aria-hidden>
+      {items.map(({ Art, label, batteries }, i) => (
         <div key={i} className="light-up" style={{ animationDelay: `${i * 0.3}s` }}>
-          <div className="flex flex-col items-center gap-1">
-          {/* 컷 4는 예상 문항이라 정답을 알려 주면 안 된다: 두 손 선풍기를 똑같이 그린다 (돌리지 않음) */}
-          <span className="text-5xl">{it.art}</span>
-          <span className="text-sm">{it.label}</span>
-          <span className="text-2xl">{it.batteries}</span>
+          <div className="flex flex-col items-center gap-2">
+            {/* 컷 4는 예상 문항이라 정답을 알려 주면 안 된다: 두 손 선풍기를 똑같이 그린다 (돌리지 않음) */}
+            <div className="size-24 sm:size-28">
+              <Art id={`product-${i}`} />
+            </div>
+            <span className="font-bold">{label}</span>
+            <div className="flex h-10 gap-1">
+              {Array.from({ length: batteries }, (_, b) => (
+                <Battery key={b} id={`battery-${i}-${b}`} />
+              ))}
+            </div>
           </div>
         </div>
       ))}

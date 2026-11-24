@@ -142,6 +142,10 @@ body {
 .revive-in {
   animation: revive-in 1.2s ease-out both;
 }
+/* 켜진 그림이 겹쳐 나타날 때 꺼진 그림은 사라진다 */
+.revive-out {
+  animation: revive-in 1.2s ease-out reverse both;
+}
 
 /* 길 안내 화살표가 목표 쪽으로 흘러간다 */
 @keyframes dash-flow {
@@ -342,7 +346,53 @@ body {
   animation: bandi-arrive 0.9s ease-out both;
 }
 
+/* 오프닝: 반디가 마을을 가로질러 날아와 제목 옆에 머문다 (SVG 좌표 1200×700) */
+@keyframes opening-fly {
+  0% { transform: translate(-80px, 560px) rotate(-10deg); opacity: 0; }
+  10% { opacity: 1; }
+  30% { transform: translate(330px, 440px) rotate(8deg); }
+  55% { transform: translate(800px, 470px) rotate(-6deg); }
+  78% { transform: translate(520px, 330px) rotate(-8deg); }
+  100% { transform: translate(270px, 245px) rotate(0deg); opacity: 1; }
+}
+.opening-fly {
+  animation: opening-fly 3.2s ease-in-out 0.4s both;
+}
+@keyframes night-lift {
+  from { opacity: 0.6; }
+  to { opacity: 0; }
+}
+.night-lift {
+  pointer-events: none;
+  animation: night-lift 2.2s ease-in-out 1.1s both;
+}
+@keyframes opening-title {
+  from { opacity: 0; transform: translateY(-24px) scale(0.85); filter: blur(8px); }
+  60% { opacity: 1; transform: translateY(4px) scale(1.04); filter: blur(0); }
+  to { opacity: 1; transform: none; filter: none; }
+}
+.opening-title {
+  animation: opening-title 1.1s cubic-bezier(0.2, 0.9, 0.3, 1) 2.2s both;
+}
+.opening-sub {
+  animation: modal-fade 0.8s ease-out 3s both;
+}
+@keyframes firefly-drift {
+  0%, 100% { opacity: 0; transform: translate(0, 0); }
+  25% { opacity: 1; }
+  50% { opacity: 0.6; transform: translate(14px, -22px); }
+  75% { opacity: 1; transform: translate(-10px, -34px); }
+}
+.firefly-drift {
+  animation: firefly-drift 4s ease-in-out infinite both;
+}
+
 @media (prefers-reduced-motion: reduce) {
+  .opening-fly,
+  .night-lift,
+  .opening-title,
+  .opening-sub,
+  .firefly-drift,
   .bandi-arrive,
   .modal-fade,
   .modal-rise,
@@ -366,6 +416,7 @@ body {
   .flicker,
   .pulse-ring,
   .revive-in,
+  .revive-out,
   .dash-flow,
   .bob,
   .fly-in,

@@ -615,3 +615,11 @@ export const MISSION_INTRO: Record<MissionId, { lines: readonly string[]; start:
     prev: '이전',
   },
 };
+
+/** 처음 접속하거나 처음부터 다시 할 때 나오는 오프닝 */
+export const OPENING = {
+  title: '불빛 탐험대',
+  subtitle: '꺼진 마을을 밝혀라',
+  start: '시작하기',
+  skip: '건너뛰기',
+};

@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { COMMON, S2 } from '@/data/strings';
 import { canAdvanceIntro, INTRO_CUT_COUNT } from '@/lib/flow/screenFlow';
 import { useStore } from '@/lib/store/StoreContext';
@@ -16,34 +16,65 @@ export default function S2Intro() {
   const text = typeof cut.text === 'function' ? cut.text(state.groupName) : cut.text;
   const isLast = state.introCut === INTRO_CUT_COUNT - 1;
 
+  const canNext = canAdvanceIntro(state);
+  const prev = () => dispatch({ type: 'PREV_INTRO_CUT' });
+  const next = () => dispatch({ type: 'NEXT_INTRO_CUT' });
+
+  // 키보드 ←·→ 로도 넘길 수 있다 (마지막 장면의 출발은 버튼으로만)
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft' && state.introCut > 0) dispatch({ type: 'PREV_INTRO_CUT' });
+      if (e.key === 'ArrowRight' && !isLast && canNext) dispatch({ type: 'NEXT_INTRO_CUT' });
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [state.introCut, isLast, canNext, dispatch]);
+
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-4 p-4">
-      <IntroScene cut={state.introCut} />
+      {/* 양옆의 꺾쇠로 앞뒤 장면을 넘긴다 (화면 세로 가운데에 고정) */}
+      <div className="relative">
+        <IntroScene cut={state.introCut} />
+        {state.introCut > 0 && (
+          <ArrowButton side="left" label={COMMON.prev} onClick={prev} />
+        )}
+        {!isLast && (
+          <ArrowButton side="right" label={COMMON.next} onClick={next} disabled={!canNext} />
+        )}
+      </div>
       <Speech speaker={cut.speaker}>{text}</Speech>
 
       {state.introCut === 2 && <RecallQuestion />}
       {state.introCut === 3 && <FanQuestions />}
 
-      {/* 진행 점과 다음 버튼을 한 줄에 (미션 이야기 장면과 같은 모양) */}
-      <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        {state.introCut > 0 ? (
-          <button type="button" onClick={() => dispatch({ type: 'PREV_INTRO_CUT' })}
-            className="min-h-11 justify-self-start rounded-2xl bg-amber-700 px-6 font-bold text-white outline-none transition hover:bg-amber-800">
-            ← {COMMON.prev}
-          </button>
-        ) : (
-          <span aria-hidden />
-        )}
+      <div className="flex flex-col items-center gap-4">
         <ProgressDots count={INTRO_CUT_COUNT} index={state.introCut} />
-        <Button
-          className="justify-self-end px-6"
-          disabled={!canAdvanceIntro(state)}
-          onClick={() => dispatch({ type: 'NEXT_INTRO_CUT' })}
-        >
-          {isLast ? S2.depart : `${COMMON.next} →`}
-        </Button>
+        {isLast && (
+          <Button className="pulse-cta px-8 text-xl" onClick={next}>{S2.depart}</Button>
+        )}
       </div>
     </main>
+  );
+}
+
+/** 앞뒤로 넘기는 꺾쇠 버튼. 장면마다 내용 높이가 달라도 움직이지 않게 화면 세로 가운데에 고정한다.
+ *  화면이 넓으면 본문 양옆 바깥, 좁으면 화면 가장자리 */
+function ArrowButton({ side, label, onClick, disabled = false }: {
+  side: 'left' | 'right';
+  label: string;
+  onClick: () => void;
+  disabled?: boolean;
+}) {
+  return (
+    <button type="button" onClick={onClick} disabled={disabled} aria-label={label}
+      className={`fixed top-1/2 z-10 flex size-16 -translate-y-1/2 items-center justify-center rounded-full text-amber-700 outline-none transition hover:bg-white hover:text-amber-800 disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-transparent ${
+        side === 'left' ? 'left-1 lg:left-[calc(50%-24rem-5rem)]' : 'right-1 lg:right-[calc(50%-24rem-5rem)]'
+      }`}>
+      <svg viewBox="0 0 24 24" className="size-11" fill="none" stroke="currentColor" strokeWidth={3}
+        strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <path d={side === 'left' ? 'M15 5l-7 7 7 7' : 'M9 5l7 7-7 7'} />
+      </svg>
+    </button>
   );
 }
 
@@ -57,7 +88,9 @@ function RecallQuestion() {
     <section className="flex flex-col gap-3 rounded-2xl bg-white p-5">
       <p>
         {q.before}{' '}
-        <span className="mx-0.5 inline-block rounded-lg bg-amber-100 px-3 font-bold text-amber-700">?</span>{' '}
+        <span className={`mx-1 inline-block min-w-28 rounded-lg bg-amber-100 px-4 py-0.5 text-center text-amber-700 ring-2 ring-amber-300 ${
+          picked ? 'font-bold' : 'text-xl font-black'
+        }`}>{picked ? q.choices[picked] : '?'}</span>{' '}
         {q.after}
       </p>
       <div className="flex gap-3">

@@ -18,10 +18,10 @@ export function Button({
   return <button type="button" className={`${base} ${look} ${className}`} {...props} />;
 }
 
-/** 고르는 버튼. 고르면 앞에 ○표가 붙는다 (지도서의 ○표 형식). ○/× 문항처럼 표시가 겹치면 mark={false} */
+/** 고르는 버튼. 고르면 노란 바탕과 주황 테두리로 표시된다. mark를 주면 앞에 ○표도 붙는다 */
 export function Choice({
   selected,
-  mark = true,
+  mark = false,
   children,
   className = '',
   ...props

@@ -9,6 +9,7 @@ import { isRealtimeAvailable } from '@/lib/sync/realtime';
 import { normalizeRoomCode, ROOM_CODE_LENGTH, type Role } from '@/lib/sync/roomSync';
 import { Button, Choice } from '../ui';
 import { GloveIcon } from '../village/Props';
+import Opening from './Opening';
 
 /** 방을 찾지 못했다고 알려 주기까지 기다리는 시간 */
 const JOIN_TIMEOUT_MS = 10_000;
@@ -27,7 +28,10 @@ export default function S1Entry() {
   const [role, setRole] = useState<Role | null>(null);
   const [code, setCode] = useState('');
   const [checks, setChecks] = useState([false, false, false]);
+  // 처음 접속했을 때와 처음부터 다시 할 때는 오프닝부터 (방에 들어가는 중이면 건너뛴다)
+  const [opening, setOpening] = useState(() => room === null);
 
+  if (opening) return <Opening onDone={() => setOpening(false)} />;
   if (room && waitingForRoom) return <JoinWaiting />;
 
   const safetyOk = checks.every(Boolean);
