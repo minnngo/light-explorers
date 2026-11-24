@@ -8,7 +8,7 @@
 //  - 세 곳 모두 되살리면 "마무리로 가기"
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
-import { CHARACTER, COMMON, S3, SITUATION, WORLD } from '@/data/strings';
+import { CHARACTER, COMMON, RESTART, S3, SITUATION, WORLD } from '@/data/strings';
 import { allMissionsDone, revivedCount } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
@@ -45,7 +45,7 @@ const ROOM_BAR_HEIGHT = 36;
 export const darknessFor = (revived: number) => [0.6, 0.42, 0.25, 0.06][revived] ?? 0.06;
 
 export default function S3Map() {
-  const { state, dispatch, room } = useStore();
+  const { state, dispatch, room, restart } = useStore();
   const [fitRef, fitWidth] = useFitWidth();
   const revived = revivedCount(state);
   const done = allMissionsDone(state);
@@ -79,7 +79,11 @@ export default function S3Map() {
     <main className="mx-auto flex w-full max-w-[1800px] flex-col gap-2 px-4 py-3"
       style={{ height: room ? `calc(100dvh - ${ROOM_BAR_HEIGHT}px)` : '100dvh' }}>
       <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        <span aria-hidden />
+        {/* 다른 모둠으로 바꾸거나 처음부터 다시 할 때 (이 기기의 기록만 지운다) */}
+        <button type="button" onClick={() => window.confirm(RESTART.confirm) && restart()}
+          className="min-h-9 justify-self-start rounded-xl px-3 text-sm font-bold text-slate-500 outline-none hover:bg-slate-100">
+          {RESTART.short}
+        </button>
         <h1 className="flex items-center gap-3 text-2xl font-black">
           [{state.groupName}] {COMMON.revived(revived)}
           <span className="flex gap-1.5" aria-hidden>

@@ -83,6 +83,7 @@ export const ROOM = {
 
 export const RESTART = {
   button: '처음부터 다시 하기 (다음 모둠)',
+  short: '새로 시작하기',
   confirm: '이 기기의 기록을 지우고 처음 화면으로 돌아갈까요? (선생님 화면에 저장된 기록은 남아요)',
 };
 
