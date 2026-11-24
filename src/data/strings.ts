@@ -65,7 +65,6 @@ export const ROOM = {
   me: '(나)',
   nobody: '아직 없음',
   roleOwner: (role: 'A' | 'B', names: string) => `${role} 회로 담당: ${names}`,
-  notMyBoard: (role: 'A' | 'B') => `${role} 회로 담당 기기에서 조작해요`,
   did: (name: string, what: string) => `${name}: ${what}`,
   actions: {
     ADD_WIRE: '전선을 이었어요',

@@ -1,19 +1,21 @@
 'use client';
 
 // 작은 소리 버튼 (배경 음악·효과음 함께 끄고 켜기). 보통은 화면 오른쪽 위에 떠 있고,
-// 마을 지도에서는 위쪽 줄의 보기 전환 옆에 놓인다 (inline). 미션 화면은 아래쪽 줄에 따로 있다.
+// 마을 지도에서는 위쪽 줄의 보기 전환 옆에 놓인다 (inline). 미션 화면은 위쪽 줄 자리에 맞춰 떠 있어서
+// 이야기 창·축하 장면이 덮여 있어도 언제든 누를 수 있다.
 import { COMMON } from '@/data/strings';
 import { useStore } from '@/lib/store/StoreContext';
 
 /** 함께하기 방의 위쪽 줄 높이만큼 내려서 띄운다 */
 const ROOM_BAR_HEIGHT = 36;
 
-export default function SoundToggle({ inline = false }: { inline?: boolean }) {
+/** floatTop: 떠 있을 때 위에서 얼마나 내릴지 (미션 화면은 위쪽 줄 안에 맞춰 8) */
+export default function SoundToggle({ inline = false, floatTop = 16 }: { inline?: boolean; floatTop?: number }) {
   const { muted, setMuted, room } = useStore();
   const label = muted ? COMMON.muteOn : COMMON.muteOff;
   return (
     <button type="button" onClick={() => setMuted(!muted)} aria-label={label} aria-pressed={muted} title={label}
-      style={inline ? undefined : { top: (room ? ROOM_BAR_HEIGHT : 0) + 16 }}
+      style={inline ? undefined : { top: (room ? ROOM_BAR_HEIGHT : 0) + floatTop }}
       className={`flex size-11 shrink-0 items-center justify-center rounded-full bg-white/60 text-stone-700 shadow-sm outline-none backdrop-blur transition hover:bg-white/80 ${
         inline ? '' : 'fixed right-4 z-[55]'
       }`}>

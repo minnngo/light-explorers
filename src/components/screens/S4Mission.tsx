@@ -96,9 +96,12 @@ export default function S4Mission() {
               </svg>
             </button>
           )}
-          <SoundToggle inline />
+          {/* 소리 버튼 자리. 위쪽 줄은 흐림 효과 때문에 이야기 창 아래에 깔리므로,
+              버튼은 이 자리에 맞춰 화면 위에 따로 띄운다 (덮개가 있어도 눌린다) */}
+          <span className="size-11 shrink-0" aria-hidden />
         </div>
       </header>
+      <SoundToggle floatTop={9} />
 
 
       {/* 스포트라이트: 화면 전체를 어둡게 덮고, 지금 할 곳(z-40)만 그 위로 밝게 드러난다.
@@ -188,12 +191,16 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
         <h2 className="text-lg font-bold">{boardId === 'A' ? COMMON.boardA : COMMON.boardB}</h2>
         {/* 함께하기에서만: 이 회로판을 맡은 사람 이름 (혼자 할 때는 보이지 않는다) */}
         {room && (
-          <span className="rounded-full bg-stone-200/70 px-2.5 py-0.5 text-xs font-semibold text-stone-600">
-            {ROOM.roleOwner(boardId, ownerNames(members, boardId, room.me))}
+          // 이름만 (회로 이름은 바로 옆 제목에 있다). 내가 맡은 회로는 주황, 친구가 맡은 회로는 파랑
+          <span className={`flex items-center gap-1.5 rounded-full py-1 pl-2 pr-3 text-sm font-bold ring-1 ${
+            mine ? 'bg-amber-100 text-amber-800 ring-amber-300' : 'bg-sky-100 text-sky-800 ring-sky-300'
+          }`}>
+            <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
+              <circle cx={12} cy={8} r={4} />
+              <path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5z" />
+            </svg>
+            {ownerNames(members, boardId, room.me)}
           </span>
-        )}
-        {room && !mine && isEditable(state, boardId) && (
-          <span className="text-sm text-slate-500">· {ROOM.notMyBoard(boardId)}</span>
         )}
       </div>
       <div className={`relative ${editable ? '' : 'opacity-90'}`}>
