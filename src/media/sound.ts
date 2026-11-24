@@ -2,7 +2,7 @@
 
 let ctx: AudioContext | null = null;
 
-function audio(): AudioContext | null {
+export function audio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
   ctx ??= new AudioContext();
   if (ctx.state === 'suspended') void ctx.resume();
@@ -53,4 +53,43 @@ export function playSuccess() {
   tone(523, 0.2, 0, 0.25);
   tone(659, 0.2, 0.12, 0.25);
   tone(784, 0.25, 0.24, 0.4);
+}
+
+// ───── 화면 조작 효과음 (아주 작고 짧게) ─────
+
+/** 소리 끄기를 누르면 화면 조작 효과음도 멈춘다 (StudentApp이 알려 준다) */
+let uiMuted = false;
+export function setUiSoundMuted(muted: boolean) {
+  uiMuted = muted;
+}
+
+/** 짧은 음 하나. 높이가 살짝 미끄러지면 "톡" 하고 귀엽게 들린다 */
+function blip(from: number, to: number, volume: number, startOffset = 0, duration = 0.09, type: OscillatorType = 'sine') {
+  const ac = audio();
+  if (!ac) return;
+  const t = ac.currentTime + startOffset;
+  const osc = ac.createOscillator();
+  const gain = ac.createGain();
+  osc.type = type;
+  osc.frequency.setValueAtTime(from, t);
+  osc.frequency.exponentialRampToValueAtTime(to, t + duration);
+  gain.gain.setValueAtTime(0.0001, t);
+  gain.gain.exponentialRampToValueAtTime(volume, t + 0.01);
+  gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+  osc.connect(gain).connect(ac.destination);
+  osc.start(t);
+  osc.stop(t + duration + 0.02);
+}
+
+/** 버튼을 눌렀을 때: 작은 "톡" */
+export function playClick() {
+  if (uiMuted) return;
+  blip(720, 980, 0.065, 0, 0.07);
+}
+
+/** 창이 열릴 때: 올라가는 "띠링" */
+export function playOpen() {
+  if (uiMuted) return;
+  tone(784, 0.065, 0, 0.25, 'triangle');
+  tone(1175, 0.06, 0.08, 0.35, 'triangle');
 }

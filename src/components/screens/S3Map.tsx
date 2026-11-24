@@ -6,38 +6,22 @@
 //  - 장소에 도착: 상황 장면(움직이는 그림) + 문제 상황·우리가 할 일 → "미션 시작!"
 //  - 잠긴 곳: "앞의 미션을 먼저 해결해야 열려요!"
 //  - 세 곳 모두 되살리면 "마무리로 가기"
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
 import { CHARACTER, COMMON, RESTART, S3, SITUATION, WORLD } from '@/data/strings';
 import { allMissionsDone, revivedCount } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
 import type { MissionId, StoryKey } from '@/lib/types';
-import { WORLD as WORLD_SIZE } from '@/data/world';
+import { playOpen } from '@/media/sound';
 import { nextTarget } from '@/lib/world/movement';
-import { Button, ConfirmDialog, Speech } from '../ui';
+import { Button, ConfirmDialog } from '../ui';
+import { FairyIcon } from '../village/Characters';
+import MoveTutorial from '../village/MoveTutorial';
+import SoundToggle from '../SoundToggle';
 import SituationScene from '../village/SituationScene';
 import VillageWorld, { type WorldView } from '../village/VillageWorld';
 
-/**
- * 지도는 제목·안내를 놓고 남은 공간에 꽉 차게(비율 유지) 맞춘다.
- * 남은 공간의 크기를 직접 재서 폭 = min(남은 폭, 남은 높이 × 1200/700).
- */
-function useFitWidth() {
-  const ref = useRef<HTMLDivElement>(null);
-  const [width, setWidth] = useState<number | null>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    // 관찰을 시작하면 처음 한 번 바로 알려 주고, 이후 크기가 바뀔 때마다 다시 잰다
-    const observer = new ResizeObserver(() =>
-      setWidth(Math.min(el.clientWidth, (el.clientHeight * WORLD_SIZE.width) / WORLD_SIZE.height)),
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-  return [ref, width] as const;
-}
 /** 함께하기 중에는 화면 맨 위에 방 코드 띠(RoomBar)가 있다 */
 const ROOM_BAR_HEIGHT = 36;
 
@@ -47,8 +31,10 @@ export const darknessFor = (revived: number) => [0.6, 0.42, 0.25, 0.06][revived]
 export default function S3Map() {
   const { state, dispatch, room, restart } = useStore();
   const [confirmRestart, setConfirmRestart] = useState(false);
+  // 처음 도착 인사를 들은 뒤 움직이는 방법 튜토리얼
+  const [tutorial, setTutorial] = useState(false);
+  const [helpOpen, setHelpOpen] = useState(false);
   const closeRestart = useCallback(() => setConfirmRestart(false), []);
-  const [fitRef, fitWidth] = useFitWidth();
   const revived = revivedCount(state);
   const done = allMissionsDone(state);
   const [s1, s2, s3] = [state.missions.m1.status, state.missions.m2.status, state.missions.m3.status];
@@ -78,40 +64,10 @@ export default function S3Map() {
   };
 
   return (
-    <main className="mx-auto flex w-full max-w-[1800px] flex-col gap-2 px-4 py-3"
+    // 지도가 화면 전체를 채우고, 제목·버튼·안내는 그 위에 떠 있다
+    <main className="relative w-full overflow-hidden bg-[#3f5a4c]"
       style={{ height: room ? `calc(100dvh - ${ROOM_BAR_HEIGHT}px)` : '100dvh' }}>
-      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2">
-        {/* 다른 모둠으로 바꾸거나 처음부터 다시 할 때 (이 기기의 기록만 지운다) */}
-        <button type="button" onClick={() => setConfirmRestart(true)}
-          className="flex min-h-9 items-center gap-1.5 justify-self-start rounded-xl px-3 text-sm font-bold text-stone-500 outline-none transition hover:bg-amber-100 hover:text-amber-800">
-          {/* 나가기 아이콘: 문과 바깥쪽 화살표 */}
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.2}
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
-            <path d="M15 8l4 4-4 4M19 12H9" />
-          </svg>
-          {RESTART.short}
-        </button>
-        <h1 className="flex items-center gap-3 text-2xl font-black">
-          [{state.groupName}] {COMMON.revived(revived)}
-          <span className="flex gap-1.5" aria-hidden>
-            {MISSION_ORDER.map((id) => (
-              <svg key={id} viewBox="0 0 24 24" className="size-7">
-                <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"
-                  strokeWidth={1.8} strokeLinejoin="round"
-                  className={status[id] === 'done' ? 'fill-amber-400 stroke-amber-500' : 'fill-white stroke-slate-300'} />
-              </svg>
-            ))}
-          </span>
-        </h1>
-        <ViewToggle view={view} onChange={setView} />
-      </header>
-      <ConfirmDialog open={confirmRestart} title={RESTART.title} body={RESTART.body} okLabel={RESTART.ok}
-        cancelLabel={RESTART.cancel} onOk={restart} onCancel={closeRestart} />
-
-      {/* 지도는 남은 공간에 꽉 차게, 가로·세로 중 좁은 쪽에 맞춘다 (위 제목·아래 안내까지 한 화면에) */}
-      <div ref={fitRef} className="min-h-0 w-full flex-1">
-        <div className="relative mx-auto" style={{ width: fitWidth ?? '100%', visibility: fitWidth ? 'visible' : 'hidden' }}>
+      <div className="absolute inset-0">
         <VillageWorld
           status={status}
           target={story ? null : nextTarget(status)}
@@ -121,45 +77,93 @@ export default function S3Map() {
           view={view}
           onArrive={onArrive}
         />
-
-        {story && (
-          <StoryPanel storyKey={story} groupName={state.groupName} showWrapup={story === 'after-m3'}
-            onDone={() => dispatch({ type: 'SEE_STORY', key: story })}
-            onWrapup={() => {
-              dispatch({ type: 'SEE_STORY', key: story });
-              dispatch({ type: 'GO_TO_WRAPUP' });
-            }} />
-        )}
-
-        {!story && arrived && (
-          <SituationPanel
-            id={arrived}
-            done={state.missions[arrived].status === 'done'}
-            onStart={() => dispatch(actions.openMission(arrived))}
-            onRetry={() => dispatch(actions.retryMission(arrived))}
-            onClose={() => setArrived(null)}
-          />
-        )}
-
-        {!story && !arrived && lockedMessage && (
-          <p role="status" className="pop-in absolute left-1/2 top-4 -translate-x-1/2 rounded-2xl bg-white px-4 py-2 text-lg font-bold text-rose-700 shadow-lg">
-            🔒 {S3.locked}
-          </p>
-        )}
-      </div>
       </div>
 
-      <footer className="grid grid-cols-[1fr_auto_1fr] items-center gap-3">
-        <span aria-hidden />
-        <p className="text-center text-sm text-slate-600">{WORLD.howToMove}</p>
-        <div className="justify-self-end">
-          {done && !story && (
-            <Button className="px-10 text-2xl" onClick={() => dispatch({ type: 'GO_TO_WRAPUP' })}>
-              {S3.toWrapup}
-            </Button>
+      <header className="pointer-events-none absolute inset-x-0 top-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-2 p-3">
+        {/* 다른 모둠으로 바꾸거나 처음부터 다시 할 때 (이 기기의 기록만 지운다) */}
+        <button type="button" onClick={() => setConfirmRestart(true)}
+          className="pointer-events-auto flex min-h-11 items-center gap-1.5 justify-self-start rounded-full bg-white/60 px-4 text-sm font-bold text-stone-700 shadow-sm outline-none backdrop-blur transition hover:bg-white/80">
+          {/* 나가기 아이콘: 문과 바깥쪽 화살표 */}
+          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.2}
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
+            <path d="M15 8l4 4-4 4M19 12H9" />
+          </svg>
+          {RESTART.short}
+        </button>
+        <h1 className="pointer-events-auto flex min-h-11 items-center gap-3 rounded-full bg-white/60 px-5 text-xl font-bold shadow-sm backdrop-blur">
+          [{state.groupName}] {COMMON.revived(revived)}
+          <span className="flex gap-1" aria-hidden>
+            {MISSION_ORDER.map((id) => (
+              <svg key={id} viewBox="0 0 24 24" className="size-6">
+                <path d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"
+                  strokeWidth={1.8} strokeLinejoin="round"
+                  className={status[id] === 'done' ? 'fill-amber-400 stroke-amber-500' : 'fill-white stroke-slate-300'} />
+              </svg>
+            ))}
+          </span>
+        </h1>
+        <div className="pointer-events-auto flex items-center gap-2 justify-self-end">
+          <ViewToggle view={view} onChange={setView} />
+          <SoundToggle inline />
+        </div>
+      </header>
+      <ConfirmDialog open={confirmRestart} title={RESTART.title} body={RESTART.body} okLabel={RESTART.ok}
+        cancelLabel={RESTART.cancel} onOk={restart} onCancel={closeRestart} />
+
+      {story && (
+        <StoryPanel storyKey={story} groupName={state.groupName} showWrapup={story === 'after-m3'}
+          onDone={() => {
+            dispatch({ type: 'SEE_STORY', key: story });
+            if (story === 'arrive') setTutorial(true);
+          }}
+          onWrapup={() => {
+            dispatch({ type: 'SEE_STORY', key: story });
+            dispatch({ type: 'GO_TO_WRAPUP' });
+          }} />
+      )}
+
+      {!story && !arrived && tutorial && <MoveTutorial near={view === 'near'} onDone={() => setTutorial(false)} />}
+
+      {!story && arrived && (
+        <SituationPanel
+          id={arrived}
+          done={state.missions[arrived].status === 'done'}
+          onStart={() => dispatch(actions.openMission(arrived))}
+          onRetry={() => dispatch(actions.retryMission(arrived))}
+          onClose={() => setArrived(null)}
+        />
+      )}
+
+      {!story && !arrived && lockedMessage && (
+        <p role="status" className="pop-in absolute left-1/2 top-20 z-30 -translate-x-1/2 rounded-2xl bg-white px-4 py-2 text-lg font-bold text-rose-700 shadow-lg">
+          🔒 {S3.locked}
+        </p>
+      )}
+
+      {/* 아래쪽: 마무리로 가기 버튼과 움직이는 방법 (이야기·튜토리얼 중에는 숨긴다) */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex flex-col items-center gap-3">
+        {done && !story && (
+          <Button className="pointer-events-auto px-10 text-2xl" onClick={() => dispatch({ type: 'GO_TO_WRAPUP' })}>
+            {S3.toWrapup}
+          </Button>
+        )}
+      </div>
+
+      {/* 왼쪽 아래 물음표: 누르면 움직이는 방법을 다시 알려 준다 (이야기·튜토리얼 중에는 숨긴다) */}
+      {!story && !tutorial && (
+        <div className="absolute bottom-4 left-4 z-20 flex items-center gap-2">
+          <button type="button" onClick={() => setHelpOpen((o) => !o)} aria-expanded={helpOpen} aria-label={WORLD.help}
+            className="flex size-11 items-center justify-center rounded-full bg-white/60 text-xl font-black text-stone-700 shadow-sm outline-none backdrop-blur transition hover:bg-white/80">
+            ?
+          </button>
+          {helpOpen && (
+            <p role="status" className="modal-rise rounded-full bg-white/60 px-4 py-2 text-sm font-semibold text-stone-700 shadow-sm backdrop-blur">
+              {WORLD.howToMove}
+            </p>
           )}
         </div>
-      </footer>
+      )}
     </main>
   );
 }
@@ -171,22 +175,32 @@ export function pendingStory(seen: readonly StoryKey[], status: Record<MissionId
   return id ? `after-${id}` : null;
 }
 
-const overlay = 'pop-in absolute inset-x-4 bottom-4 flex flex-col gap-3 rounded-2xl bg-white/95 p-4 shadow-xl md:inset-x-auto md:right-4 md:w-[26rem]';
-
+/** 반디의 이야기: 상자 없이 반디와 말풍선만 지도 위에 떠 있다 */
 function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
   storyKey: StoryKey; groupName: string; showWrapup: boolean; onDone: () => void; onWrapup: () => void;
 }) {
   const line = WORLD.stories[storyKey];
   const text = typeof line === 'function' ? line(groupName) : line;
   return (
-    <div className={overlay} role="dialog" aria-label={CHARACTER}>
-      <Speech speaker={CHARACTER}>{text}</Speech>
-      {storyKey === 'arrive' && <p className="text-center text-sm text-slate-600">{WORLD.howToMove}</p>}
-      {showWrapup ? (
-        <Button onClick={onWrapup}>{S3.toWrapup}</Button>
-      ) : (
-        <Button onClick={onDone} autoFocus>{WORLD.ok}</Button>
-      )}
+    <div className="pop-in pointer-events-none absolute inset-x-4 bottom-6 z-20 flex items-end justify-start gap-1"
+      role="dialog" aria-label={CHARACTER}>
+      <div className="bob shrink-0">
+        <FairyIcon className="size-24 drop-shadow-lg" />
+      </div>
+      <div className="pointer-events-auto relative mb-8 flex max-w-xl flex-col gap-3 rounded-3xl bg-white px-6 py-4 shadow-xl">
+        <span aria-hidden className="absolute -left-2 bottom-6 size-5 rotate-45 rounded-sm bg-white" />
+        <div className="relative">
+          <p className="text-sm font-bold text-amber-700">{CHARACTER}</p>
+          <p className="text-lg leading-snug">{text}</p>
+        </div>
+        <div className="relative flex justify-end">
+          {showWrapup ? (
+            <Button onClick={onWrapup}>{S3.toWrapup}</Button>
+          ) : (
+            <Button onClick={onDone} autoFocus>{WORLD.ok}</Button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -195,11 +209,11 @@ function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
 function ViewToggle({ view, onChange }: { view: WorldView; onChange: (v: WorldView) => void }) {
   const options: [WorldView, string][] = [['near', WORLD.viewNear], ['map', WORLD.viewMap]];
   return (
-    <div className="flex justify-self-end rounded-full bg-stone-200/70 p-1" role="group" aria-label="보기">
+    <div className="flex justify-self-end rounded-full bg-white/45 p-1 shadow-sm backdrop-blur" role="group" aria-label="보기">
       {options.map(([v, label]) => (
         <button key={v} type="button" aria-pressed={view === v} onClick={() => onChange(v)}
           className={`min-h-9 rounded-full px-4 text-sm font-bold outline-none transition ${
-            view === v ? 'bg-white text-amber-800 shadow-sm' : 'text-stone-500 hover:text-stone-700'
+            view === v ? 'bg-white/85 text-stone-700 shadow-sm' : 'text-stone-700 hover:bg-white/40'
           }`}>
           {label}
         </button>
@@ -219,6 +233,7 @@ interface SituationProps {
 /** 미션 장소에 도착: 움직이는 상황 장면과 문제 상황·우리가 할 일 */
 function SituationPanel({ id, done, onStart, onRetry, onClose }: SituationProps) {
   const text = SITUATION[id];
+  useEffect(() => playOpen(), []); // 장소에 도착하면 "띠링"
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
       <div className="pop-in relative flex max-h-full w-full max-w-2xl flex-col overflow-auto rounded-3xl bg-white shadow-2xl"

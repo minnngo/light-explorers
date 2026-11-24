@@ -108,9 +108,12 @@ export interface View {
  * 카메라: zoom배로 가까이 볼 때 탐험대를 가운데 두는 viewBox.
  * 지도 바깥이 보이지 않게 가장자리에서는 멈춘다. zoom 1이면 지도 전체.
  */
-export function cameraView(pos: Vec, zoom: number): View {
-  const width = WORLD.width / zoom;
-  const height = WORLD.height / zoom;
+export function cameraView(pos: Vec, zoom: number, aspect: number = WORLD.width / WORLD.height): View {
+  // 확대한 창(w0×h0)을 화면 비율(aspect = 가로/세로)에 맞춰 꽉 채운다: 남는 쪽을 잘라 지도 바깥이 보이지 않게
+  const w0 = WORLD.width / zoom;
+  const h0 = WORLD.height / zoom;
+  const width = aspect > w0 / h0 ? w0 : h0 * aspect;
+  const height = aspect > w0 / h0 ? w0 / aspect : h0;
   const axis = (p: number, size: number, total: number) => Math.min(total - size, Math.max(0, p - size / 2));
   return { x: axis(pos.x, width, WORLD.width), y: axis(pos.y, height, WORLD.height), width, height };
 }

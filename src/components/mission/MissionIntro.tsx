@@ -4,6 +4,7 @@
 // 위: 움직이는 상황 그림 / 아래: 반디가 날아와 한 줄씩 또박또박 말한다. 말풍선을 누르면 한 번에 다 보인다.
 import { useEffect, useState } from 'react';
 import { CHARACTER, MISSION_INTRO, MISSION_STRINGS } from '@/data/strings';
+import { playOpen } from '@/media/sound';
 import type { MissionId } from '@/lib/types';
 import { FairyIcon } from '../village/Characters';
 import SituationScene from '../village/SituationScene';
@@ -17,6 +18,7 @@ export default function MissionIntro({ id, onDone }: { id: MissionId; onDone: ()
   const [index, setIndex] = useState(0);
   const [skipped, setSkipped] = useState(false);
   const last = index === lines.length - 1;
+  useEffect(() => playOpen(), []);
 
   const next = () => {
     if (last) return onDone();

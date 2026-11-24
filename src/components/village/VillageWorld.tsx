@@ -60,6 +60,17 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
   const [zoom, setZoom] = useState<number>(view === 'near' ? NEAR.zoom : MAP.zoom);
   const zoomRef = useRef(zoom);
   const boxRef = useRef<HTMLDivElement>(null);
+  // 화면(상자) 비율: 지도가 화면을 꽉 채우도록 카메라 창을 이 비율로 자른다
+  const [aspect, setAspect] = useState<number | undefined>(undefined);
+  useEffect(() => {
+    const el = boxRef.current;
+    if (!el) return;
+    const observer = new ResizeObserver(() => {
+      if (el.clientWidth > 0 && el.clientHeight > 0) setAspect(el.clientWidth / el.clientHeight);
+    });
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     viewRef.current = view;
@@ -173,7 +184,7 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
 
   // 카메라: 가까이 보기에서는 탐험대를 가운데 두고 크게, 탐험대는 마을보다 훨씬 작게
   const t = (zoom - MAP.zoom) / (NEAR.zoom - MAP.zoom);
-  const cam = cameraView(pos, zoom);
+  const cam = cameraView(pos, zoom, aspect);
   const viewBox = `${cam.x} ${cam.y} ${cam.width} ${cam.height}`;
   const size = lerp(MAP.scale, NEAR.scale, t);
   // 마을 그림은 다시 그리지 않고 보는 곳(viewBox)만 바꾼다 (매 화면 다시 그리면 태블릿에서 느려진다)
@@ -182,8 +193,9 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
   }, [viewBox]);
 
   return (
-    <div ref={boxRef} className="relative overflow-hidden rounded-3xl">
+    <div ref={boxRef} className="relative size-full overflow-hidden">
       <VillageScene
+        fill
         near={view === 'near'}
         looks={looks}
         reviving={reviving}

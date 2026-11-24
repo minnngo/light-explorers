@@ -87,6 +87,14 @@ describe('가까이 보기 카메라', () => {
     expect(cameraView({ x: 900, y: 100 }, 1)).toEqual({ x: 0, y: 0, width: 1200, height: 700 });
   });
 
+  it('화면 비율에 맞춰 꽉 채운다 (세로로 긴 화면이면 좌우를 잘라 탐험대를 따라간다)', () => {
+    const v = cameraView({ x: 100, y: 350 }, 1, 1);
+    expect(v).toEqual({ x: 0, y: 0, width: 700, height: 700 });
+    expect(cameraView({ x: 1200, y: 350 }, 1, 1).x).toBe(500);
+    // 가로로 아주 긴 화면이면 위아래를 자른다
+    expect(cameraView({ x: 600, y: 350 }, 1, 3)).toEqual({ x: 0, y: 150, width: 1200, height: 400 });
+  });
+
   it('가까이 보기에서는 천천히 걸을 수 있다', () => {
     expect(walk({ x: 600, y: 400 }, { x: 1, y: 0 }, 1, 100).x).toBe(700);
   });

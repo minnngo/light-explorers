@@ -8,18 +8,36 @@ import { type RemoteNote, StoreContext, type StoreValue } from '@/lib/store/Stor
 import { createSupabaseTransport } from '@/lib/sync/realtime';
 import { scheduleRemoteSave } from '@/lib/sync/remoteSave';
 import { createRoomSync, generateRoomCode, type Member, type RoomInfo, type RoomSync } from '@/lib/sync/roomSync';
+import { setMusicLevel } from '@/media/music';
+import { audio, playClick, setUiSoundMuted } from '@/media/sound';
 import RoomBar from './RoomBar';
+import SoundToggle from './SoundToggle';
 import S1Entry from './screens/S1Entry';
 import S2Intro from './screens/S2Intro';
 import S3Map from './screens/S3Map';
 import S4Mission from './screens/S4Mission';
 import S5Wrapup from './screens/S5Wrapup';
 
+const MUTE_KEY = 'light-explorers:muted';
+
 const BOARD_ACTIONS: ReadonlySet<Action['type']> = new Set<Action['type']>(['ADD_WIRE', 'REMOVE_WIRE', 'TOGGLE_SWITCH']);
 
 export default function StudentApp() {
   const [state, rawDispatch] = useReducer(reducer, undefined, () => loadLocal() ?? createInitialState());
-  const [muted, setMuted] = useState(false);
+  // 소리 끄기는 이 기기에 기억해 둔다
+  const [muted, setMutedState] = useState(() => {
+    try {
+      return window.localStorage.getItem(MUTE_KEY) === '1';
+    } catch {
+      return false;
+    }
+  });
+  const setMuted = useCallback((next: boolean) => {
+    setMutedState(next);
+    try {
+      window.localStorage.setItem(MUTE_KEY, next ? '1' : '0');
+    } catch {}
+  }, []);
 
   // ───── 3단계: 여러 기기로 함께하기 ─────
   const [room, setRoom] = useState<RoomInfo | null>(() => loadRoom());
@@ -110,10 +128,45 @@ export default function StudentApp() {
       leaveRoom,
       restart,
     }),
-    [state, dispatch, muted, room, members, connection, joining, remoteNote, createRoom, joinRoom, leaveRoom, restart],
+    [state, dispatch, muted, setMuted, room, members, connection, joining, remoteNote, createRoom, joinRoom, leaveRoom, restart],
   );
 
   const screen = joining ? 'S1' : state.currentScreen;
+
+  // ───── 배경 음악과 효과음 ─────
+  // 들어오자마자 음악을 틀어 본다. 브라우저가 자동 재생을 막으면(대부분 기본값) 첫 누름 뒤에 시작한다
+  const [audioReady, setAudioReady] = useState(false);
+  useEffect(() => {
+    const ac = audio();
+    if (ac) {
+      void ac.resume().then(() => {
+        if (ac.state === 'running') setAudioReady(true);
+      });
+    }
+    const unlock = () => setAudioReady(true);
+    window.addEventListener('pointerdown', unlock, { once: true });
+    window.addEventListener('keydown', unlock, { once: true });
+    return () => {
+      window.removeEventListener('pointerdown', unlock);
+      window.removeEventListener('keydown', unlock);
+    };
+  }, []);
+  // 버저 미션(종)은 소리의 크기를 비교하는 실험이라 음악을 끈다. 다른 미션에서는 작게
+  const musicLevel = muted || !audioReady ? 0 : screen === 'S4' ? (state.currentMission === 'm2' ? 0 : 0.4) : 1;
+  useEffect(() => {
+    setMusicLevel(musicLevel);
+  }, [musicLevel]);
+  useEffect(() => () => setMusicLevel(0), []);
+  // 버튼을 누르면 작은 "톡"
+  useEffect(() => {
+    setUiSoundMuted(muted);
+    const onClick = (e: MouseEvent) => {
+      const el = (e.target as Element | null)?.closest('button, [role="button"]');
+      if (el && !(el as HTMLButtonElement).disabled) playClick();
+    };
+    document.addEventListener('click', onClick, true);
+    return () => document.removeEventListener('click', onClick, true);
+  }, [muted]);
 
   return (
     <StoreContext value={store}>
@@ -123,6 +176,8 @@ export default function StudentApp() {
       {screen === 'S3' && <S3Map />}
       {screen === 'S4' && <S4Mission />}
       {screen === 'S5' && <S5Wrapup />}
+      {/* 마을 지도는 위쪽 줄에, 미션 화면은 아래쪽 줄에 소리 버튼이 따로 있다 */}
+      {screen !== 'S3' && screen !== 'S4' && <SoundToggle />}
     </StoreContext>
   );
 }

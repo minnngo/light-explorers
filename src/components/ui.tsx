@@ -3,6 +3,7 @@
 // 화면 공통 작은 부품. 버튼은 손가락으로 누르기 쉽게 최소 높이 44px(min-h-11).
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import { FairyIcon } from '@/components/village/Characters';
+import { playOpen } from '@/media/sound';
 
 export function Button({
   variant = 'primary',
@@ -100,6 +101,7 @@ export function ConfirmDialog({
   useEffect(() => {
     if (!open) return;
     cancelRef.current?.focus(); // 실수로 Enter를 눌러도 기록이 지워지지 않게 취소에 먼저 둔다
+    playOpen();
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onCancel();
     };

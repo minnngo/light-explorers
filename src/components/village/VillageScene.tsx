@@ -46,6 +46,8 @@ export interface VillageSceneProps {
   festival?: boolean;
   /** 가까이 보기: 큰 집·나무·마을 사람 같은 자세한 모습을 그린다 */
   near?: boolean;
+  /** 부모 상자를 꽉 채운다 (보는 곳은 viewBox로 따로 정한다) */
+  fill?: boolean;
   onGroundClick?: (p: Vec) => void;
   onPlaceClick?: (id: MissionId) => void;
   className?: string;
@@ -63,7 +65,7 @@ const TREES: readonly Vec[] = [{ x: 300, y: 250 }, { x: 760, y: 590 }, { x: 760,
 const LANTERN_COLORS = ['#f87171', '#fbbf24', '#34d399', '#60a5fa', '#c084fc', '#f472b6', '#fbbf24'];
 
 function VillageScene(props: VillageSceneProps) {
-  const { looks, reviving, darkness, nightfall, highlight, markers, festival, near, className = '' } = props;
+  const { looks, reviving, darkness, nightfall, highlight, markers, festival, near, fill = false, className = '' } = props;
   const svgRef = useRef<SVGSVGElement>(null);
   const litHouses = MISSION_ORDER.filter((id) => looks[id] === 'on').length * 3 + (festival ? 1 : 0);
 
@@ -78,7 +80,7 @@ function VillageScene(props: VillageSceneProps) {
       ref={svgRef}
       data-village=""
       viewBox={`0 0 ${WORLD.width} ${WORLD.height}`}
-      className={`block h-auto w-full select-none ${className}`}
+      className={`${fill ? 'absolute inset-0 size-full' : 'block h-auto w-full'} select-none ${className}`}
       onPointerDown={onGround}
       role="img"
       aria-label={`${WORLD_TEXT.villageSign} 지도`}
