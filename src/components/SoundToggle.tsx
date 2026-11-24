@@ -10,7 +10,7 @@ const ROOM_BAR_HEIGHT = 36;
 
 export default function SoundToggle({ inline = false }: { inline?: boolean }) {
   const { muted, setMuted, room } = useStore();
-  const label = (muted ? COMMON.muteOn : COMMON.muteOff).replace(/^\S+\s/, '');
+  const label = muted ? COMMON.muteOn : COMMON.muteOff;
   return (
     <button type="button" onClick={() => setMuted(!muted)} aria-label={label} aria-pressed={muted} title={label}
       style={inline ? undefined : { top: (room ? ROOM_BAR_HEIGHT : 0) + 16 }}

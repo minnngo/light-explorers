@@ -54,7 +54,7 @@ src/
     village/IntroScene.tsx    S2 도입 컷 애니메이션
     circuit/CircuitBoard.tsx  SVG 회로판 (전선 잇기·지우기·스위치)
     mission/MissionWorksheet  학습지 패널 (단계별)
-  media/                      남은 이모지 임시 그림(장갑·되살아남 연출·마무리)과 효과음
+  media/                      남은 이모지 임시 그림(S5 마무리 마을), 효과음, 배경 음악(Web Audio)
 supabase/schema.sql           2단계 DB 스키마
 ```
 
@@ -99,7 +99,7 @@ supabase/schema.sql           2단계 DB 스키마
 
 ## 남은 일
 
-- [ ] 남은 이모지 그림(S1 절연 장갑, 미션 ④ 되살아남 연출, S5 마무리 마을)을 `village/` 그림체로 바꾸기. 마을·인물·장소는 SVG로 그려 두었다
+- [ ] 남은 이모지 그림(S5 마무리 마을 `VILLAGE_ART`)을 `village/` 그림체로 바꾸기. 장갑·마을·인물·장소·제품은 SVG로 그려 두었다
 - [ ] 교사용 평가 기준(상·중·하)을 지도서 문장으로 교체
 - [ ] 3단계를 실제 Supabase 프로젝트와 태블릿 2대로 시연해 보기
 - [ ] 태블릿 실기기에서 글자·버튼 크기와 S5 7분 안에 끝나는지 확인

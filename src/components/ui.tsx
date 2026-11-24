@@ -15,7 +15,7 @@ export function Button({
   const look =
     variant === 'primary'
       ? 'border-2 border-amber-700 bg-amber-700 text-white hover:border-amber-800 hover:bg-amber-800'
-      : 'border-2 border-slate-300 bg-white text-slate-700 hover:bg-slate-50';
+      : 'border border-stone-300 bg-white text-stone-700 hover:bg-stone-50';
   return <button type="button" className={`${base} ${look} ${className}`} {...props} />;
 }
 

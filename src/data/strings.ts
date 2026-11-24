@@ -17,28 +17,29 @@ export const COMMON = {
   appTitle: '불빛 탐험대: 꺼진 마을을 밝혀라',
   next: '다음',
   revived: (n: number) => `미션 ${n}/3 완료`,
-  stepLabels: ['① 예상', '② 만들기', '③ 비교·이유', '④ 확인'] as const,
+  stepLabels: ['예상', '만들기', '비교·이유', '확인'] as const,
   safetyFooter:
     '전기 부품을 만질 때는 절연 장갑을 끼고, 젖은 손으로 만지지 않아요. 진짜 콘센트 전기로는 절대 실험하지 않아요!',
-  muteOn: '🔇 소리 켜기',
-  muteOff: '🔊 소리 끄기',
+  muteOn: '소리 켜기',
+  muteOff: '소리 끄기',
   backToMap: '지도로 돌아가기',
+  mapShort: '지도',
+  missionTitle: (n: number, title: string) => `미션 ${n}. ${title}`,
   prev: '이전',
-  darkViewOn: '🌙 어둡게 보기',
-  darkViewOff: '☀️ 밝게 보기',
-  sameBulbs: '같은 전구 2개',
-  roleA: 'A 회로 담당',
-  roleB: 'B 회로 담당',
+  darkViewOn: '어둡게 보기',
+  darkViewOff: '밝게 보기',
   boardA: 'A 회로 (전지 1개)',
   boardB: 'B 회로 (전지 2개)',
-  wireHowTo: '단자를 눌러 다른 단자까지 끌면 전선이 이어져요. 단자 두 개를 차례로 눌러도 돼요. 전선을 누르면 지워져요.',
   myPrediction: '내 예상',
   actualResult: '실제 결과',
-  showHelp: '도움말 보기',
+  help: '도움말',
+  seeResult: '결과 보기',
+  compareRight: '맞혔어요!',
+  compareWrong: (word: string) => `정답은 '${word}'예요`,
+  modelReason: '모범 답안',
   minChars: (now: number, min: number) => `${Math.min(now, min)}/${min}글자 이상`,
   loading: '불빛 탐험대를 준비하고 있어요…',
   optional: '(선택)',
-  reviewing: '완료한 곳이에요. 결과를 다시 볼 수 있어요.',
 };
 
 /** 3단계: 여러 기기로 함께하기 */
@@ -77,6 +78,7 @@ export const ROOM = {
     COMPLETE_MISSION: '지도로 돌아갔어요',
     OPEN_MISSION: '미션을 열었어요',
     START_CHALLENGE: '도전을 시작했어요',
+    SHOW_CHALLENGE_HINT: '도전 힌트를 열었어요',
     NEXT_INTRO_CUT: '다음으로 넘겼어요',
     PREV_INTRO_CUT: '이전으로 돌아갔어요',
     NEXT_WRAPUP_STEP: '다음으로 넘겼어요',
@@ -94,27 +96,26 @@ export const RESTART = {
 
 /** 회로 만들기 튜토리얼 (처음 ② 만들기에 들어왔을 때) */
 export const TUTORIAL = {
-  title: '🎓 회로 만드는 방법',
-  replay: '🎓 연결 방법 다시 보기',
+  title: '회로 만드는 방법',
+  replay: '연결 방법 다시 보기',
   skip: '건너뛰기',
   next: '다음',
   start: '시작!',
-  where: (board: 'A' | 'B') => `👇 ${board} 회로판에서 해 보세요`,
   steps: {
     connect: {
-      title: '1. 전선 잇기',
+      title: '전선 잇기',
       text: '반짝이는 전지의 + 단자를 누른 채 전구 쪽 단자까지 끌어 보세요. 단자 두 개를 차례로 눌러도 돼요.',
     },
     remove: {
-      title: '2. 전선 지우기',
+      title: '전선 지우기',
       text: '전선이 이어졌어요! 잘못 이었을 때는 전선을 누르면 지워져요. 방금 이은 전선을 눌러 보세요.',
     },
     switch: {
-      title: '3. 스위치 누르기',
+      title: '스위치 누르기',
       text: '스위치는 처음에 열려 있어요. 스위치를 눌러 닫아 보세요. 한 번 더 누르면 다시 열려요.',
     },
     go: {
-      title: '4. 이제 스스로!',
+      title: '이제 스스로!',
       text: '탐험 과제를 보며 전지의 양 끝(+, −)과 부품, 스위치가 끊기지 않게 이어 보세요.',
     },
   } as Record<'connect' | 'remove' | 'switch' | 'go', { title: string; text: string }>,
@@ -124,8 +125,16 @@ export const TUTORIAL = {
 export const CHALLENGE = {
   button: '도전! 더 해 보기 (선택)',
   prompt: '도전! B 회로의 전지 두 개를 같은 극끼리 이어 보세요. 어떻게 되나요?',
-  howTo: 'B 회로의 전선을 지우고 다시 이은 뒤 스위치를 닫아 보세요.',
+  /** 하나씩 따라 하는 단계 (B 회로판 모습을 보고 저절로 다음 단계로 넘어간다) */
+  steps: [
+    '두 전지 사이를 잇는 전선을 눌러서 지워요.',
+    '두 전지의 + 끝끼리 전선으로 이어요.',
+    '전구와 스위치로 가는 전선이 두 전지의 − 끝에 하나씩 이어지게 고쳐요. (+ 끝에 붙은 전선은 지우고 − 끝에 다시 이어요)',
+    '스위치를 닫고 전구가 어떻게 되는지 봐요.',
+  ] as const,
   done: '전지를 늘리기만 해서는 안 되고, 서로 다른 극끼리 한 줄로 이어야 해요.',
+  firstHint: '힌트 보기',
+  nextHint: '다음 힌트 보기',
 };
 
 export const PART_NAMES: Record<PartKind | 'battery' | 'switch', string> = {
@@ -261,6 +270,7 @@ export interface MissionStrings {
   predictConfirm: string;
   checklistTitle: string;
   checklist: readonly [string, string, string];
+  /** 탐험 과제 아래 "도움말"을 누르면 펼쳐지는 한 줄 */
   checklistHelp: string;
   goCompare: string;
   observation: { A: string; B: string; extra?: string };
@@ -278,6 +288,8 @@ export interface MissionStrings {
   predictionDifferent: string;
   summary: string;
   revival: string;
+  /** ④ 확인에서 보여 주는 이유 모범 답안 (POE: 확인 전에는 절대 보여 주지 않는다) */
+  modelReason: string;
 }
 
 const COMPARE_BEFORE =
@@ -291,7 +303,7 @@ const SHARED = {
   retry: '다시 해 보기',
   confirmButton: '확인하기',
   predictionRight: '맞혔어요!',
-  predictionDifferent: '예상과 달랐네요. 괜찮아요, 관찰한 결과가 중요해요.',
+  predictionDifferent: '예상과 달랐네요.\n괜찮아요, 관찰한 결과가 중요해요.',
 };
 
 export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
@@ -312,7 +324,7 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
       'B 회로: 전지 2개를 서로 다른 극끼리 한 줄로 이은 뒤 전구, 스위치를 연결해 보세요.',
       '두 회로의 스위치를 모두 닫고 전구의 밝기를 비교해 보세요.',
     ],
-    checklistHelp: '(도움말) 주변이 어두우면 밝기를 더 잘 볼 수 있어요.',
+    checklistHelp: '주변이 어두우면 밝기를 더 잘 볼 수 있어요.',
     observation: {
       A: 'A 회로(전지 1개): 전구가 희미하게 켜졌어요.',
       B: 'B 회로(전지 2개): 전구가 훨씬 환하게 켜졌어요!',
@@ -324,8 +336,9 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
     reasonPlaceholder: '예) 전지가 2개일 때 전구가 더 ( ) 해요. 왜냐하면…',
     reasonHelp: '두 회로에서 다른 점이 무엇이었는지 떠올려 보세요.',
     actualResult: '전지 2개 회로의 전구가 더 밝아요',
-    summary: '이번에는 전구로 확인했어요. 버저와 풍차에서도 같을까요?',
+    summary: '이번에는 전구로 확인했어요.\n버저와 풍차에서도 같을까요?',
     revival: '와! 마을 거리가 환해졌어요. 고마워요, 탐험대!',
+    modelReason: '전지 2개를 서로 다른 극끼리 한 줄로 연결하면 전지 1개일 때보다 전구에 전기 에너지가 더 많이 공급되기 때문에 전구가 더 밝아져요.',
   },
   m2: {
     ...SHARED,
@@ -344,7 +357,7 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
       'B 회로: 전지 2개를 서로 다른 극끼리 한 줄로 이은 뒤 버저, 스위치를 연결해 보세요.',
       '두 회로의 스위치를 닫고 소리의 세기를 비교해 보세요.',
     ],
-    checklistHelp: '(도움말) 버저의 빨간 선은 전지의 + 쪽에, 검은 선은 − 쪽에 이어요.',
+    checklistHelp: '버저의 빨간 선은 전지의 + 쪽에, 검은 선은 − 쪽에 이어요.',
     observation: {
       A: 'A 회로(전지 1개): 안내 종이 작게 울려요.',
       B: 'B 회로(전지 2개): 안내 종이 더 크게 울려요!',
@@ -356,8 +369,9 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
     reasonPrompt: '왜 그랬을까요? 가로등 미션과 비슷한 점이 있었나요? 모둠이 함께 이유를 써 보세요.',
     reasonPlaceholder: '예) 가로등 미션과 ( ) 점이 같았어요.',
     actualResult: '전지 2개 회로의 소리가 더 커요',
-    summary: '버저에서도 가로등과 같은 결과가 나왔어요. 풍차에서도 확인해 볼까요?',
+    summary: '버저에서도 가로등과 같은 결과가 나왔어요.\n풍차에서도 확인해 볼까요?',
     revival: '종소리가 마을 끝까지 들려요! 이제 사람들이 모일 수 있겠어요.',
+    modelReason: '전지 2개를 서로 다른 극끼리 한 줄로 연결하면 전지 1개일 때보다 버저에 전기 에너지가 더 많이 공급되기 때문에 소리가 더 커져요.',
   },
   m3: {
     ...SHARED,
@@ -376,7 +390,7 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
       'B 회로: 전지 2개를 서로 다른 극끼리 한 줄로 이은 뒤 전동기, 스위치를 연결해 보세요.',
       '두 회로의 스위치를 닫고 날개가 도는 빠르기를 비교해 보세요.',
     ],
-    checklistHelp: '(안전) 날개 달린 전동기에 손을 다치지 않게 조심해요.',
+    checklistHelp: '날개 달린 전동기에 손을 다치지 않게 조심해요.',
     observation: {
       A: 'A 회로(전지 1개): 풍차가 느리게 돌아요.',
       B: 'B 회로(전지 2개): 풍차가 빠르게 돌아요!',
@@ -388,8 +402,9 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
     reasonPrompt: '왜 그랬을까요? 앞의 두 미션에서 본 것과 비교해서 모둠이 함께 이유를 써 보세요.',
     reasonPlaceholder: '예) 세 미션에서 공통으로 알게 된 것은…',
     actualResult: '전지 2개 회로의 풍차가 더 빠르게 돌아요',
-    summary: '전구, 버저, 풍차 모두 확인했어요! 마지막으로 마을에서 알게 된 것을 정리해 볼까요?',
+    summary: '전구, 버저, 풍차 모두 확인했어요!\n마지막으로 마을에서 알게 된 것을 정리해 볼까요?',
     revival: '풍차가 씽씽 돌아가요! 마을이 완전히 되살아났어요.',
+    modelReason: '전지 2개를 서로 다른 극끼리 한 줄로 연결하면 전지 1개일 때보다 전동기에 전기 에너지가 더 많이 공급되기 때문에 전동기가 더 빠르게 돌아요.',
   },
 };
 
@@ -637,3 +652,6 @@ export const OPENING = {
   start: '시작하기',
   skip: '건너뛰기',
 };
+
+/** 선택지 앞의 "(가) " 표시를 뗀 본문. 고른 답을 다시 보여 줄 때 쓴다 (선생님 화면은 표시를 그대로 둔다) */
+export const withoutMark = (choice: string) => choice.replace(/^\([^)]\)\s*/, '');

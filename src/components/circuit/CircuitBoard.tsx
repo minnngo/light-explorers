@@ -118,7 +118,8 @@ export default function CircuitBoard(props: Props) {
       ref={svgRef}
       viewBox={`0 0 ${BOARD_VIEWBOX.width} ${BOARD_VIEWBOX.height}`}
       className="w-full touch-none select-none rounded-2xl"
-      style={{ background: dark ? '#111827' : '#f4ecd8', transition: 'background 0.4s' }}
+      // 전선을 끄는 동안에는 회로판 어디서나 손가락 모양 커서
+      style={{ background: dark ? '#111827' : '#f4ecd8', transition: 'background 0.4s', cursor: pending ? 'pointer' : undefined }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
       role="group"
@@ -138,7 +139,8 @@ export default function CircuitBoard(props: Props) {
         const color = WIRE_COLORS[i % WIRE_COLORS.length];
         return (
           <g key={w.id}>
-            {props.coach?.wires && (
+            {props.coach?.wires && (!props.coach.onlyWires
+              || props.coach.onlyWires.some(([a, b]) => (w.from === a && w.to === b) || (w.from === b && w.to === a))) && (
               <path d={d} stroke="#fbbf24" strokeWidth={18} fill="none" strokeLinecap="round" className="coach-glow" pointerEvents="none" />
             )}
             <path d={d} stroke={color} strokeWidth={6} fill="none" strokeLinecap="round" />
@@ -182,7 +184,7 @@ export default function CircuitBoard(props: Props) {
             r={TERMINAL_HIT_RADIUS}
             fill="transparent"
             pointerEvents="all"
-            style={{ cursor: editable ? 'crosshair' : 'default' }}
+            style={{ cursor: editable ? 'pointer' : 'default' }}
             onPointerDown={(e) => onTerminalDown(t.id, e)}
           />
         </g>
@@ -193,7 +195,7 @@ export default function CircuitBoard(props: Props) {
   );
 }
 
-/** 튜토리얼 표시: 반짝이는 고리와 시범 손가락. 누르기는 아래로 통과한다 */
+/** 튜토리얼 표시: 반짝이는 고리와 시범 커서. 누르기는 아래로 통과한다 */
 function Coach({ coach, layout, terminals }: {
   coach: CoachMark;
   layout: ComponentLayout[];
@@ -214,16 +216,31 @@ function Coach({ coach, layout, terminals }: {
           <path d={wirePath(from, to)} stroke="#f59e0b" strokeWidth={5} strokeDasharray="10 10" fill="none" className="dash-flow" />
           <g>
             <animateMotion dur="2.4s" repeatCount="indefinite" path={wirePath(from, to)} keyPoints="0;0;1;1" keyTimes="0;0.2;0.8;1" calcMode="linear" />
-            <text x={-14} y={44} fontSize={40}>👆</text>
+            <CoachCursor />
           </g>
         </>
       )}
       {coach.switch && sw && (
         <>
-          {ring(sw.center.x - 4, sw.center.y, 50, 'sw')}
-          <text x={sw.center.x - 20} y={sw.center.y + 30} fontSize={40} className="bob">👆</text>
+          <g transform={`translate(${sw.center.x} ${sw.center.y})`}>
+            <g className="bob">
+              <CoachCursor press />
+            </g>
+          </g>
         </>
       )}
+    </g>
+  );
+}
+
+/** 시범 커서: 큼직한 흰 화살표 (끝이 원점). press면 끝에서 누르는 동그라미가 퍼진다 */
+function CoachCursor({ press = false }: { press?: boolean }) {
+  const arrow = 'M 0 0 L 0 38 L 10 29 L 17 45 L 24 42 L 17 27 L 30 27 Z';
+  return (
+    <g pointerEvents="none">
+      {press && <circle r={14} fill="none" stroke="#ffffff" strokeWidth={4} className="pulse-ring" />}
+      <path d={arrow} transform="translate(3 4)" fill="#000" opacity={0.18} />
+      <path d={arrow} fill="#ffffff" stroke="#3b2f2a" strokeWidth={3} strokeLinejoin="round" />
     </g>
   );
 }
@@ -306,8 +323,9 @@ function Leads({ layout, colors }: { layout: ComponentLayout; colors: [string, s
 
 function Bulb({ layout, level, label }: { layout: ComponentLayout; level: number; label: LabelFn }) {
   const { center } = layout;
-  // 밝기 3단계: 꺼짐(검은 전구) / 약함(희미한 노란빛) / 밝음(환한 빛과 빛줄기)
-  const fill = ['#374151', '#fde68a', '#fffbe0'][level];
+  // 밝기 3단계: 꺼짐(검은 전구) / 약함(흐릿한 연노랑) / 밝음(진한 노랑 + 빛줄기).
+  // 아이들은 "더 노란 것 = 더 밝은 것"으로 읽으므로 밝을수록 노랑이 진하게 (흰빛으로 가면 덜 밝아 보인다)
+  const fill = ['#374151', '#eee2b8', 'url(#bulb-bright)'][level];
   return (
     <g pointerEvents="none">
       <Leads layout={layout} colors={['#64748b', '#64748b']} />
@@ -320,7 +338,16 @@ function Bulb({ layout, level, label }: { layout: ComponentLayout; level: number
               stroke="#facc15" strokeWidth={5} strokeLinecap="round" />
           );
         })}
-      {level > 0 && <circle cx={center.x} cy={center.y - 8} r={level === 2 ? 58 : 44} fill="#fde047" opacity={level === 2 ? 0.45 : 0.2} />}
+      {level > 0 && <circle cx={center.x} cy={center.y - 8} r={level === 2 ? 62 : 42} fill="#fde047" opacity={level === 2 ? 0.5 : 0.12} />}
+      {level === 2 && (
+        <defs>
+          <radialGradient id="bulb-bright" cx="45%" cy="40%" r="65%">
+            <stop offset="0%" stopColor="#fff6b0" />
+            <stop offset="55%" stopColor="#ffd93b" />
+            <stop offset="100%" stopColor="#ffc21a" />
+          </radialGradient>
+        </defs>
+      )}
       <circle cx={center.x} cy={center.y - 8} r={34} fill={fill} stroke="#94a3b8" strokeWidth={3} />
       <rect x={center.x - 20} y={center.y + 22} width={40} height={16} rx={3} fill="#94a3b8" />
       {label(PART_NAMES.bulb, center.x, center.y + 92)}

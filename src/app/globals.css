@@ -323,6 +323,11 @@ body {
   animation: compass-nudge 0.9s ease-in-out infinite;
 }
 
+/* 반디 축하 장면이 떠 있는 동안에는 밝게 올라온 곳도 덮개 아래로 (모두 같이 어둡게) */
+body[data-celebrating] .spot-raised {
+  z-index: 0;
+}
+
 /* 확인 창: 배경은 서서히 어두워지고, 카드는 살짝 커지며 올라온다 */
 @keyframes modal-fade {
   from { opacity: 0; }

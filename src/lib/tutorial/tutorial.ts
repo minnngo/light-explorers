@@ -34,6 +34,8 @@ export interface CoachMark {
   /** 시범: 이 두 단자를 잇는 손가락 움직임 */
   terminals?: readonly [string, string];
   wires?: boolean;
+  /** wires일 때 이 단자 쌍을 잇는 전선만 반짝이게 (없으면 전선 전부) */
+  onlyWires?: readonly (readonly [string, string])[];
   switch?: boolean;
 }
 

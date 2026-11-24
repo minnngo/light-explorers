@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
-import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S2, S5 } from '@/data/strings';
+import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S2, S5, withoutMark } from '@/data/strings';
 import { canAdvanceWrapup, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
 import { useStore } from '@/lib/store/StoreContext';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
@@ -73,7 +73,7 @@ function ResultsStep() {
           return (
             <tr key={id} className="border-t">
               <th className="p-3 text-left">{S5.results.rows[id]}</th>
-              <td className="p-3">{p ? MISSION_STRINGS[id].predictChoices[p] : '-'}</td>
+              <td className="p-3">{p ? withoutMark(MISSION_STRINGS[id].predictChoices[p]) : '-'}</td>
               <td className="p-3">{MISSION_STRINGS[id].actualResult}</td>
             </tr>
           );

@@ -3,6 +3,7 @@
 // 규칙: reducer는 결정적이어야 한다. 시각(at), id 같은 값은 action에 담아서 보내고
 // reducer 안에서 Date.now()나 Math.random()을 부르지 않는다.
 // 그래야 3단계 실시간 동기화에서 같은 action을 모든 기기의 reducer에 넣었을 때 화면이 똑같아진다.
+import { CHALLENGE_HINT_COUNT } from '@/lib/flow/challenge';
 import { boardComponents, REQUIRED_LEVEL } from '@/data/boards';
 import { MISSION_ORDER, MISSIONS, nextMission } from '@/data/missions';
 import { S5 } from '@/data/strings';
@@ -55,6 +56,7 @@ export type Action =
   | { type: 'COMPLETE_MISSION'; at: string }
   | { type: 'HINT_SHOWN' }
   | { type: 'START_CHALLENGE' }
+  | { type: 'SHOW_CHALLENGE_HINT' }
   // S5
   | { type: 'UPDATE_FINAL'; patch: Partial<Pick<FinalRecord, 'groupThought' | 'revisitFan' | 'check' | 'selfEval' | 'toCharacter'>> }
   | { type: 'ANSWER_EXPLAIN'; part: PartKind; choice: ExplainChoice }
@@ -248,6 +250,13 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, missions: { ...state.missions, [id]: { ...m, hintCount: m.hintCount + 1 } } };
     }
 
+    case 'SHOW_CHALLENGE_HINT': {
+      // 도전 힌트는 정답을 바로 보여 주지 않고, 학생이 누를 때마다 하나씩 연다
+      const id = state.currentMission;
+      if (!id || state.missions[id].challenge !== 'active') return state;
+      const m = state.missions[id];
+      return { ...state, missions: { ...state.missions, [id]: { ...m, challengeHints: Math.min(CHALLENGE_HINT_COUNT, (m.challengeHints ?? 0) + 1) } } };
+    }
     case 'START_CHALLENGE': {
       const id = state.currentMission;
       if (!id || !MISSIONS[id].hasChallenge) return state;
