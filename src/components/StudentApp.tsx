@@ -1,5 +1,6 @@
 'use client';
 
+import { newId } from '@/lib/id';
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import { clearLocal, loadLocal, loadRoom, saveLocal, saveRoom } from '@/lib/store/persistence';
 import { type Action, createInitialState, reducer } from '@/lib/store/reducer';
@@ -136,7 +137,7 @@ export default function StudentApp() {
     const res = await fetch(`/api/groups/${group.id}`, { cache: 'no-store' }).catch(() => null);
     const saved = res?.ok ? ((await res.json().catch(() => null)) as AppState | null) : null;
     rawDispatch(saved && saved.groupId === group.id ? { type: 'HYDRATE', state: saved } : { type: 'RESET' });
-    setRoom({ code: group.roomCode, host: false, me: { id: crypto.randomUUID(), name: me.name } });
+    setRoom({ code: group.roomCode, host: false, me: { id: newId(), name: me.name } });
   }, []);
 
   const leaveRoom = useCallback(() => setRoom(null), []);
@@ -218,7 +219,7 @@ export default function StudentApp() {
   const [musicOwner, setMusicOwner] = useState(true);
   useEffect(() => {
     if (typeof BroadcastChannel === 'undefined') return;
-    const id = crypto.randomUUID();
+    const id = newId();
     const channel = new BroadcastChannel('light-explorers:music');
     const claim = () => {
       if (document.visibilityState !== 'visible') return;

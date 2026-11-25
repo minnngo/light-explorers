@@ -1,12 +1,13 @@
 // action 만들기. 시각(at)과 id처럼 매번 달라지는 값은 여기서만 만든다.
 // reducer는 이 값을 받아 쓰기만 하므로 결정적으로 남는다 (3단계 실시간 동기화의 전제).
+import { newId } from '@/lib/id';
 import type { BoardId, MissionId, TerminalId } from '@/lib/types';
 import type { Action } from './reducer';
 
 export const actions = {
   startExpedition: (groupName: string, safetyAgreed: boolean, roomCode: string | null = null): Action => ({
     type: 'START_EXPEDITION',
-    groupId: crypto.randomUUID(),
+    groupId: newId(),
     groupName,
     safetyAgreed,
     roomCode,
@@ -16,7 +17,7 @@ export const actions = {
   addWire: (board: BoardId, from: TerminalId, to: TerminalId): Action => ({
     type: 'ADD_WIRE',
     board,
-    wire: { id: crypto.randomUUID(), from, to },
+    wire: { id: newId(), from, to },
     at: Date.now(),
   }),
   removeWire: (board: BoardId, wireId: string): Action => ({ type: 'REMOVE_WIRE', board, wireId, at: Date.now() }),
