@@ -7,7 +7,7 @@ import { CHALLENGE_HINT_COUNT } from '@/lib/flow/challenge';
 import { boardComponents, REQUIRED_LEVEL } from '@/data/boards';
 import { MISSION_ORDER, MISSIONS, nextMission } from '@/data/missions';
 import { S5 } from '@/data/strings';
-import { canConfirm, canGoCompare, judgeBoard } from '@/lib/flow/missionFlow';
+import { allMissionsDone, canConfirm, canGoCompare, judgeBoard } from '@/lib/flow/missionFlow';
 import { canAdvanceIntro, canAdvanceWrapupRecord, INTRO_CUT_COUNT, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
 import type {
   AppState,
@@ -302,7 +302,9 @@ export function reducer(state: AppState, action: Action): AppState {
       return putWrapup(state, action.by, { selfEval: action.choice });
     case 'NEXT_WRAPUP_STEP': {
       const f = wrapupOf(state, action.by);
-      if (state.currentScreen !== 'S5' || !canAdvanceWrapupRecord(f, f.wrapupStep)) return state;
+      // 혼자 할 때는 마무리 화면에서만. 모둠으로 할 때는 각자 마무리에 들어가므로(모둠 화면은 지도) 세 미션을 마쳤으면 된다
+      const inWrapup = state.currentScreen === 'S5' || (action.by !== undefined && allMissionsDone(state));
+      if (!inWrapup || !canAdvanceWrapupRecord(f, f.wrapupStep)) return state;
       return putWrapup(state, action.by, { wrapupStep: Math.min(f.wrapupStep + 1, WRAPUP_STEP_COUNT - 1) });
     }
     case 'FINISH':

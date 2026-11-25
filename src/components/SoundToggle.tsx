@@ -10,12 +10,18 @@ import { useStore } from '@/lib/store/StoreContext';
 const ROOM_BAR_HEIGHT = 36;
 
 /** floatTop: 떠 있을 때 위에서 얼마나 내릴지 (미션 화면은 위쪽 줄 안에 맞춰 8) */
-export default function SoundToggle({ inline = false, floatTop = 16 }: { inline?: boolean; floatTop?: number }) {
+export default function SoundToggle({ inline = false, floatTop = 16, underBar }: {
+  inline?: boolean;
+  floatTop?: number;
+  /** 위쪽 모둠 줄 아래로 내릴지 (기본: 모둠으로 할 때) */
+  underBar?: boolean;
+}) {
   const { muted, setMuted, room } = useStore();
+  const belowBar = underBar ?? room !== null;
   const label = muted ? COMMON.muteOn : COMMON.muteOff;
   return (
     <button type="button" onClick={() => setMuted(!muted)} aria-label={label} aria-pressed={muted} title={label}
-      style={inline ? undefined : { top: (room ? ROOM_BAR_HEIGHT : 0) + floatTop }}
+      style={inline ? undefined : { top: (belowBar ? ROOM_BAR_HEIGHT : 0) + floatTop }}
       className={`flex size-11 shrink-0 items-center justify-center rounded-full bg-white/60 text-stone-700 shadow-sm outline-none backdrop-blur transition hover:bg-white/80 ${
         inline ? '' : 'fixed right-4 z-[55]'
       }`}>

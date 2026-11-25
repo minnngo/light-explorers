@@ -207,7 +207,7 @@ function ComparePanel() {
 
 /** ④ 확인하기: 내 예상 / 실제 결과, 한 줄 정리, 장소가 되살아나는 연출 */
 function ConfirmPanel() {
-  const { state, dispatch, muted } = useStore();
+  const { state, dispatch, muted, leaveMission } = useStore();
   const id = state.currentMission!;
   const record = state.missions[id];
   const text = MISSION_STRINGS[id];
@@ -252,9 +252,10 @@ function ConfirmPanel() {
       {MISSIONS[id].hasChallenge && !reviewing && <ChallengeBox />}
       {text.furtherLearning && <HelpToggle text={text.furtherLearning} label={COMMON.furtherLearning} />}
       {reviewing ? (
-        <Button onClick={() => dispatch({ type: 'LEAVE_MISSION' })}>{COMMON.backToMap}</Button>
+        <Button onClick={() => leaveMission()}>{COMMON.backToMap}</Button>
       ) : (
-        <Button onClick={() => dispatch(actions.completeMission())}>{COMMON.backToMap}</Button>
+        // 모둠으로 할 때는 나만 나오고, 마지막 사람이 나올 때 미션 완료로 기록된다
+        <Button onClick={() => leaveMission(true)}>{COMMON.backToMap}</Button>
       )}
     </>
   );

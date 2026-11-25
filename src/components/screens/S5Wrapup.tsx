@@ -2,12 +2,12 @@
 
 import { type ReactNode, useCallback, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
-import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S2, S5, withoutMark } from '@/data/strings';
+import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S5, withoutMark } from '@/data/strings';
 import { canAdvanceWrapupRecord, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
 import { type Action, wrapupOf } from '@/lib/store/reducer';
 import { useStore } from '@/lib/store/StoreContext';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
-import SharedTextArea, { SharedBlank } from '../SharedTextArea';
+import { SharedBlank } from '../SharedTextArea';
 import { Button, Choice, ConfirmDialog, Speech } from '../ui';
 import { VillagePanorama } from './Opening';
 
@@ -129,10 +129,8 @@ function ShareStep() {
 
 /** 3. 설명하기: 세 질문에 먼저 답한 뒤 정리가 나타난다. "직렬연결" 용어는 여기서 처음 나온다 */
 function ExplainStep() {
-  const { state } = useStore();
   const { f, send } = useMyWrapup();
   const answered = Object.values(f.explain).every((v) => v !== null);
-  const fan = state.intro.fanPredict;
   return (
     <section className={card}>
       <Speech speaker={CHARACTER}>{S5.explain.opener}</Speech>
@@ -155,13 +153,6 @@ function ExplainStep() {
       {answered && (
         <div className="pop-in flex flex-col gap-2 rounded-xl bg-amber-50 p-4">
           {S5.explain.summaries.map((s, i) => <p key={i}>✔ {s}</p>)}
-          {fan && (
-            <>
-              <p className="mt-2 font-bold">{S5.explain.revisit(S2.fanPredict.choices[fan])}</p>
-              <SharedTextArea field="revisitFan" lock={false} value={f.revisitFan} placeholder={COMMON.optional}
-                onChange={(e) => send({ type: 'UPDATE_FINAL', patch: { revisitFan: e.target.value } })} />
-            </>
-          )}
         </div>
       )}
     </section>
@@ -219,7 +210,7 @@ function MisconceptionStep() {
         return (
           <div key={item.key} className="flex flex-col gap-2 border-t border-stone-200 pt-3">
             <p>{item.text}</p>
-            <div className="flex gap-2">
+            <div className="flex items-center gap-2">
               {(['O', 'X'] as const).map((k) => (
                 <Choice key={k} mark={false} selected={chosen === k} disabled={result !== null}
                   aria-label={k === 'O' ? '○' : '×'} className="flex w-16 items-center justify-center"
@@ -230,7 +221,11 @@ function MisconceptionStep() {
             </div>
             {result && (
               <p className="pop-in rounded-xl bg-slate-50 p-3">
-                <b>{S5.misconception.answerIs(item.answer === 'O' ? '○' : '×')}</b> {item.explanation}
+                {/* 맞았으면 초록 "정답이에요.", 틀렸으면 빨강 "정답은 ×예요." */}
+                <b className={result === 'correct' ? 'text-emerald-700' : 'text-rose-600'}>
+                  {result === 'correct' ? S5.misconception.right : S5.misconception.answerIs(item.answer === 'O' ? '○' : '×')}
+                </b>{' '}
+                {item.explanation}
               </p>
             )}
           </div>

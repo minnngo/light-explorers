@@ -230,7 +230,6 @@ function wrapupRows(f: Omit<FinalRecord, 'students'>): [string, string][] {
         return `${S5.explain.questions[p].q.slice(0, 1)} ${v ? S5.explain.questions[p].choices[v] : V.empty}`;
       })
       .join(' · ')],
-    [L.revisitFan, text(f.revisitFan)],
     [L.check, f.check ? V.check[f.check] : V.empty],
     [L.misconception, oxLine(f.misconception)],
     [TEACHER.columns.selfEval, f.selfEval ? S5.selfEval.choices[f.selfEval] : V.empty],

@@ -18,9 +18,13 @@ export interface LiveValue {
   myVotes: Record<string, string>;
   /** 모두 동의 문제 하나에 내 답을 고른다 */
   vote: (field: string, value: string) => void;
+  /** 화면 상태는 건드리지 않고 내 모습만 알린다 (effect 안에서 써도 된다) */
+  announce: (patch: Partial<LivePresence>) => void;
 }
 
-const NOOP: LiveValue = { peers: [], myId: null, publish: () => {}, myEditing: null, myVotes: {}, vote: () => {} };
+const NOOP: LiveValue = {
+  peers: [], myId: null, publish: () => {}, myEditing: null, myVotes: {}, vote: () => {}, announce: () => {},
+};
 
 export const LiveContext = createContext<LiveValue>(NOOP);
 

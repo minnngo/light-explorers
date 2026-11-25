@@ -299,6 +299,15 @@ describe('마무리: 모둠으로 할 때는 각자 한다', () => {
   const minji = { id: 'a1', name: '민지' };
   const jia = { id: 'b2', name: '지아' };
 
+  it('모둠 화면이 지도여도(각자 마무리에 들어감) 세 미션을 마쳤으면 각자 다음으로 간다', () => {
+    const done = createInitialState();
+    for (const m of ['m1', 'm2', 'm3'] as const) done.missions[m] = { ...done.missions[m], status: 'done' };
+    const atMapDone: AppState = { ...done, currentScreen: 'S3' };
+    expect(play(atMapDone, { type: 'NEXT_WRAPUP_STEP', by: minji }).final.students?.a1.wrapupStep).toBe(1);
+    // 미션을 다 마치지 않았으면 안 된다
+    expect(play({ ...createInitialState(), currentScreen: 'S3' }, { type: 'NEXT_WRAPUP_STEP', by: minji }).final.students).toBeUndefined();
+  });
+
   it('학생마다 자기 단계로 넘어가고, 모둠 단계는 그대로다', () => {
     const s = play(atWrapup(), { type: 'NEXT_WRAPUP_STEP', by: minji });
     expect(s.final.students?.a1.wrapupStep).toBe(1);

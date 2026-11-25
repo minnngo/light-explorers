@@ -24,11 +24,13 @@ export interface LivePresence {
     fx?: number;
     fy?: number;
   } | null;
+  /** 처음 뜨는 회로 만들기 튜토리얼을 하는 중 (모둠은 모두 끝내야 함께 회로를 만들기 시작한다) */
+  tutoring: boolean;
   /** 미션 장소에서 모둠원을 부르는 중 ("모두 부르기") */
   call: { place: MissionId; at: number } | null;
 }
 
-export const EMPTY_PRESENCE: LivePresence = { board: null, editing: null, map: null, votes: {}, pointer: null, call: null };
+export const EMPTY_PRESENCE: LivePresence = { board: null, editing: null, map: null, votes: {}, pointer: null, tutoring: false, call: null };
 
 export interface LiveMessage extends LivePresence {
   by: Member;

@@ -11,9 +11,7 @@ import { MISSION_ORDER } from '@/data/missions';
 import { CHARACTER, COMMON, RESTART, ROOM, S3, SITUATION, WORLD } from '@/data/strings';
 import { PLACES, type Vec } from '@/data/world';
 import { allMissionsDone, revivedCount } from '@/lib/flow/missionFlow';
-import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
-import { useGroupChoice } from '../GroupChoice';
 import { type LivePeer, memberColor, presentMembers } from '@/lib/sync/live';
 import { useLive } from '@/lib/sync/LiveContext';
 import type { Member } from '@/lib/sync/roomSync';
@@ -35,7 +33,7 @@ const ROOM_BAR_HEIGHT = 36;
 export const darknessFor = (revived: number) => [0.6, 0.42, 0.25, 0.06][revived] ?? 0.06;
 
 export default function S3Map() {
-  const { state, dispatch, room, members, restart } = useStore();
+  const { state, room, members, restart, goWrapup, enterMission } = useStore();
   const { peers, publish } = useLive();
   const [confirmRestart, setConfirmRestart] = useState(false);
   // 처음 도착 인사를 들은 뒤 움직이는 방법 튜토리얼
@@ -55,11 +53,7 @@ export default function S3Map() {
   // 이야기 장면은 각자 읽고 각자 닫는다 (모둠으로 할 때는 이 기기에만 기록)
   const [seen, markSeen] = useSeenStories();
   const story = pendingStory(seen, status);
-  // 마무리로 가기: 모둠은 각자 누르고, 모두 누르면 다 같이 간다 (혼자 할 때는 바로)
-  const toWrapup = useGroupChoice<'go'>('toWrapup', null, () => dispatch({ type: 'GO_TO_WRAPUP' }));
-  const wrapupWaiting = toWrapup.tally && toWrapup.mine === 'go'
-    ? ROOM.waitFriends(toWrapup.tally.same, toWrapup.tally.votes.length)
-    : null;
+  // 마무리로 가기: 마무리는 각자 하는 활동이라 누른 사람만 넘어간다 (goWrapup이 혼자/모둠을 나눠 처리)
   const reviving = story && story !== 'arrive' ? (story.slice('after-'.length) as MissionId) : null;
 
   // 되살아나는 장면: 처음에는 이전 밝기, 조금 뒤 새 밝기로 서서히 밝아진다
@@ -161,14 +155,14 @@ export default function S3Map() {
         cancelLabel={RESTART.cancel} onOk={restart} onCancel={closeRestart} />
 
       {story && (
-        <StoryPanel storyKey={story} groupName={state.groupName} showWrapup={story === 'after-m3'} wrapupWaiting={wrapupWaiting}
+        <StoryPanel storyKey={story} groupName={state.groupName} showWrapup={story === 'after-m3'}
           onDone={() => {
             markSeen(story);
             if (story === 'arrive') setTutorial(true);
           }}
           onWrapup={() => {
             markSeen(story);
-            toWrapup.pick('go');
+            goWrapup();
           }} />
       )}
 
@@ -178,8 +172,8 @@ export default function S3Map() {
         <SituationPanel
           id={arrived}
           done={state.missions[arrived].status === 'done'}
-          onStart={() => dispatch(actions.openMission(arrived))}
-          onRetry={() => dispatch(actions.retryMission(arrived))}
+          onStart={() => enterMission(arrived)}
+          onRetry={() => enterMission(arrived, true)}
           onClose={closeSituation}
           gather={room ? gatherAt(arrived, room.me, members, peers) : null}
           onCall={() => {
@@ -220,8 +214,8 @@ export default function S3Map() {
       {/* 아래쪽: 마무리로 가기 버튼과 움직이는 방법 (이야기·튜토리얼 중에는 숨긴다) */}
       <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex flex-col items-center gap-3">
         {done && !story && (
-          <Button className="pointer-events-auto px-10 text-2xl" disabled={wrapupWaiting !== null} onClick={() => toWrapup.pick('go')}>
-            {wrapupWaiting ?? S3.toWrapup}
+          <Button className="pointer-events-auto px-10 text-2xl" onClick={goWrapup}>
+            {S3.toWrapup}
           </Button>
         )}
       </div>
@@ -283,8 +277,8 @@ export function pendingStory(seen: readonly StoryKey[], status: Record<MissionId
 }
 
 /** 반디의 이야기: 상자 없이 반디와 말풍선만 지도 위에 떠 있다 */
-function StoryPanel({ storyKey, groupName, showWrapup, wrapupWaiting, onDone, onWrapup }: {
-  storyKey: StoryKey; groupName: string; showWrapup: boolean; wrapupWaiting: string | null; onDone: () => void; onWrapup: () => void;
+function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
+  storyKey: StoryKey; groupName: string; showWrapup: boolean; onDone: () => void; onWrapup: () => void;
 }) {
   const line = WORLD.stories[storyKey];
   const text = typeof line === 'function' ? line(groupName) : line;
@@ -302,7 +296,7 @@ function StoryPanel({ storyKey, groupName, showWrapup, wrapupWaiting, onDone, on
         </div>
         <div className="relative flex justify-end">
           {showWrapup ? (
-            <Button onClick={onWrapup} disabled={wrapupWaiting !== null}>{wrapupWaiting ?? S3.toWrapup}</Button>
+            <Button onClick={onWrapup}>{S3.toWrapup}</Button>
           ) : (
             <Button onClick={onDone} autoFocus>{WORLD.ok}</Button>
           )}

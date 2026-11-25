@@ -5,23 +5,23 @@ import { REQUIRED_LEVEL } from '@/data/boards';
 import { MISSION_ORDER, MISSIONS } from '@/data/missions';
 import { COMMON, HINTS, MISSION_STRINGS, ROOM, TUTORIAL } from '@/data/strings';
 import { challengeBoardCoach } from '@/lib/flow/challenge';
-import { canGoCompare, currentResults, type MissionFocus, missionFocus } from '@/lib/flow/missionFlow';
+import { canGoCompare, currentResults, judgeBoard, type MissionFocus, missionFocus } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
 import { loadTutorialDone, saveTutorialDone } from '@/lib/store/persistence';
-import { isEditable } from '@/lib/store/reducer';
+import { type Action, createInitialState, isEditable, reducer } from '@/lib/store/reducer';
 import { useStore } from '@/lib/store/StoreContext';
-import { isLeader } from '@/lib/sync/live';
+import { isLeader, presentMembers } from '@/lib/sync/live';
 import { useLive } from '@/lib/sync/LiveContext';
 import { type BoardSnapshot, type CoachMark, coachFor, nextStep, stepDone, type TutorialStep } from '@/lib/tutorial/tutorial';
 import type { BoardId, BoardState, JudgeResult, MissionStep } from '@/lib/types';
 import CircuitBoard from '../circuit/CircuitBoard';
-import { useRecentNote } from '../RoomBar';
 import { useHint } from '../circuit/useHint';
 import MissionIntro from '../mission/MissionIntro';
 import MissionWorksheet from '../mission/MissionWorksheet';
 import LiveCursors from '../LiveCursors';
 import SoundToggle from '../SoundToggle';
 import { CloseButton, ProgressDots } from '../ui';
+import { FairyIcon } from '../village/Characters';
 
 const STEPS: MissionStep[] = ['predict', 'build', 'compare', 'confirm'];
 
@@ -31,7 +31,7 @@ const PILL =
 
 /** S4. 미션 화면 (3곳 공통 틀. 미션마다 다른 것은 data/missions.ts, data/strings.ts에서 온다) */
 export default function S4Mission() {
-  const { state, dispatch } = useStore();
+  const { state, leaveMission } = useStore();
   const id = state.currentMission!;
   const config = MISSIONS[id];
   const text = MISSION_STRINGS[id];
@@ -46,7 +46,34 @@ export default function S4Mission() {
   // 튜토리얼은 A 회로판에서 (모둠 함께하기에서도 같은 회로판을 함께 보며 배운다)
   const tutorialBoard: BoardId = 'A';
   // 자동으로 뜨는 건 미션 1(가로등)을 처음 만들 때만. 미션 2·3에서는 "연결 방법 다시 보기"로 직접 연다
-  const tutorial = useTutorial(building && !storyOpen, id === MISSION_ORDER[0], state.boards[tutorialBoard]);
+  // 튜토리얼은 "내가" 직접 한 조작으로만 넘어간다 (회로판은 모둠이 함께 써서, 친구 조작으로 넘어가 버리지 않게).
+  // 이 기기에서 튜토리얼 회로판에 한 조작을 전선 수·스위치 모양으로 센다
+  const [myOps, setMyOps] = useState<BoardSnapshot>({ wires: 0, switchClosed: false });
+  const onMyBoardAction = useCallback((board: BoardId, kind: 'add' | 'remove' | 'switch') => {
+    if (board !== tutorialBoard) return;
+    setMyOps((o) => kind === 'switch' ? { ...o, switchClosed: !o.switchClosed } : { ...o, wires: o.wires + (kind === 'add' ? 1 : -1) });
+  }, []);
+  const tutorial = useTutorial(building && !storyOpen, id === MISSION_ORDER[0], myOps);
+
+  // ───── 모둠으로 할 때: 튜토리얼은 각자 연습용 회로판에서, 모두 끝내야 함께 회로를 만든다 ─────
+  const { room, members } = useStore();
+  const { peers, announce } = useLive();
+  // 연습용 회로판 (이 기기에만 있다. 모둠 회로판과 섞이지 않고 기록에도 남지 않는다)
+  const practicing = room !== null && tutorial.step !== null;
+  const [practice, setPractice] = useState<BoardState | null>(null);
+  if (practicing && practice === null) setPractice(createInitialState().boards.A);
+  if (!practicing && practice !== null) setPractice(null);
+  const practiceAct = (action: Action) => setPractice((p) => p && reducer({ ...state, boards: { ...state.boards, A: p } }, action).boards.A);
+  // 처음 튜토리얼을 하는 중이라고 친구들에게 알린다
+  const learning = room !== null && tutorial.auto;
+  useEffect(() => {
+    announce({ tutoring: learning });
+  }, [learning, announce]);
+  useEffect(() => () => announce({ tutoring: false }), [announce]);
+  // 튜토리얼을 먼저 끝냈으면, 이 미션 안의 친구들이 모두 끝낼 때까지 기다린다
+  const learners = peers.filter((p) => p.tutoring);
+  const insideCount = room ? presentMembers(members, room.me).length : 1;
+  const waitingFriends = room !== null && building && !storyOpen && tutorial.step === null && learners.length > 0;
 
   // 지금 할 일이 있는 곳만 밝게, 나머지는 어둡게 (튜토리얼 중에는 회로판)
   const focus: MissionFocus | null = tutorial.step
@@ -83,7 +110,7 @@ export default function S4Mission() {
             </button>
           )}
           {/* 언제든 마을 지도로 나갈 수 있다. 하던 것은 그대로 남아 다시 들어오면 이어서 한다 */}
-          <button type="button" className={PILL} onClick={() => dispatch({ type: 'LEAVE_MISSION' })}>
+          <button type="button" className={PILL} onClick={() => leaveMission()}>
             <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2}
               strokeLinecap="round" strokeLinejoin="round" aria-hidden>
               <path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14" />
@@ -119,11 +146,23 @@ export default function S4Mission() {
 
       {storyOpen && <MissionIntro id={id} onDone={() => setStoryOpen(false)} />}
 
+      {/* 모둠: 튜토리얼을 먼저 끝낸 사람은 친구들이 모두 끝낼 때까지 뿌연 화면에서 기다린다 */}
+      {waitingFriends && (
+        <div role="status" className="modal-fade fixed inset-0 z-[45] flex items-center justify-center bg-white/45 p-4 backdrop-blur-md">
+          <div className="modal-rise flex max-w-md flex-col items-center gap-3 rounded-3xl bg-white/90 px-8 py-7 text-center shadow-xl">
+            <FairyIcon className="bob size-20" />
+            <p className="text-xl font-bold">{ROOM.waitTutorial}</p>
+            <p className="text-base text-stone-500">{ROOM.waitTutorialCount(insideCount - learners.length, insideCount)}</p>
+          </div>
+        </div>
+      )}
+
       <main data-cursor-anchor="mission" className="grid flex-1 gap-4 p-4 lg:grid-cols-2 xl:grid-cols-[1fr_1fr_400px]">
         {(['A', 'B'] as const).map((b) => {
           const practising = tutorial.step !== null && b === tutorialBoard;
           return (
-            <BoardPanel key={b} boardId={b} result={results[b]} dark={dark}
+            <BoardPanel key={b} boardId={b} result={practising && practice ? judgeBoard(config.part, b, practice) : results[b]} dark={dark}
+              practice={practising && practice ? { board: practice, act: practiceAct } : undefined}
               look={
                 tutorial.step
                   ? (practising ? `${RAISED} self-start pb-6` : 'rounded-2xl p-2')
@@ -134,6 +173,7 @@ export default function S4Mission() {
               coach={practising ? coachFor(tutorial.step!)
                 : spotlight?.task === 'challenge' && b === 'B' ? challengeBoardCoach(state.boards.B, results.B, record.challengeHints ?? 0) : undefined}
               hintsPaused={tutorial.step !== null}
+              onMyAction={onMyBoardAction}
               // 튜토리얼 카드는 밝게 드러난 회로판 바로 옆(넓은 화면) 또는 아래(좁은 화면)에 뜬다
               card={practising ? (
                 <TutorialCard step={tutorial.step!} onNext={tutorial.next} onSkip={tutorial.finish} />
@@ -155,18 +195,23 @@ export default function S4Mission() {
   );
 }
 
-function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
+function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card, onMyAction, practice }: {
   boardId: BoardId; result: JudgeResult; dark: boolean; look: string; coach?: CoachMark; hintsPaused: boolean; card?: ReactNode;
+  /** 모둠 튜토리얼: 이 기기에만 있는 연습용 회로판 */
+  practice?: { board: BoardState; act: (action: Action) => void };
+  /** 이 기기에서 한 회로판 조작 (튜토리얼이 내 조작으로만 넘어가게) */
+  onMyAction: (board: BoardId, kind: 'add' | 'remove' | 'switch') => void;
 }) {
   const { state, dispatch, muted, room, members } = useStore();
   const { peers, publish } = useLive();
   const id = state.currentMission!;
   const record = state.missions[id];
-  const board = state.boards[boardId];
+  const board = practice?.board ?? state.boards[boardId];
+  // 연습용 회로판에서 한 조작은 이 기기에만, 모둠 회로판 조작은 모둠 모두에게
+  const act = practice?.act ?? dispatch;
   const text = MISSION_STRINGS[id];
   // 모둠 함께하기에서도 누구나 두 회로판을 함께 조작한다
-  const editable = isEditable(state, boardId);
-  const note = useRecentNote(boardId);
+  const editable = practice ? true : isEditable(state, boardId);
   // 이 회로판 위에 있는 친구 커서
   const boardPeers = peers.flatMap((p) => (p.board?.id === boardId
     ? [{ id: p.member.id, name: p.member.name, color: p.color, x: p.board.x, y: p.board.y, from: p.board.from }]
@@ -182,7 +227,7 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
   const hint = useHint(board, result, record.step === 'build' && !hintsPaused, onHintShown);
 
   let observation: string | null = null;
-  if (record.step !== 'predict') {
+  if (record.step !== 'predict' && !practice) {
     if (result.level > 0 && result.level === REQUIRED_LEVEL[boardId]) observation = text.observation[boardId];
     if (result.reason === 'BUZZER_REVERSED' && board.switchClosed) observation = text.observation.extra ?? null;
     // 전동기가 반대로 도는 것은 이 차시의 관심(빠르기)이 아니라서 따로 알리지 않는다
@@ -200,13 +245,11 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
       <div className="flex flex-wrap items-center gap-2">
         {/* 1단계(한 기기): 모둠원이 두 회로를 나누어 만들도록 이름표를 단다 (명세서 7-1) */}
         <h2 className="text-lg font-bold">{boardId === 'A' ? COMMON.boardA : COMMON.boardB}</h2>
+        {practice && (
+          <span className="rounded-full bg-amber-100 px-2.5 py-0.5 text-sm font-bold text-amber-800">{ROOM.practiceBoard}</span>
+        )}
       </div>
       <div className={`relative ${editable ? '' : 'opacity-90'}`}>
-          {note && (
-            <p role="status" className="pop-in absolute left-2 top-2 z-10 rounded-full bg-sky-900 px-3 py-1 text-sm text-white">
-              {ROOM.did(note.by.name, ROOM.actions[note.type] ?? '')}
-            </p>
-          )}
           <CircuitBoard
             boardId={boardId}
             part={MISSIONS[id].part}
@@ -216,12 +259,21 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
             dark={dark}
             muted={muted}
             keepRinging={record.status !== 'done' && (record.step === 'build' || record.challenge === 'active')}
-            onAddWire={(from, to) => dispatch(actions.addWire(boardId, from, to))}
-            onRemoveWire={(wireId) => dispatch(actions.removeWire(boardId, wireId))}
-            onToggleSwitch={() => dispatch(actions.toggleSwitch(boardId))}
+            onAddWire={(from, to) => {
+              act(actions.addWire(boardId, from, to));
+              onMyAction(boardId, 'add');
+            }}
+            onRemoveWire={(wireId) => {
+              act(actions.removeWire(boardId, wireId));
+              onMyAction(boardId, 'remove');
+            }}
+            onToggleSwitch={() => {
+              act(actions.toggleSwitch(boardId));
+              onMyAction(boardId, 'switch');
+            }}
             coach={editable ? coach : undefined}
-            peers={room ? boardPeers : undefined}
-            onPointerInfo={room ? (p) => publish({ board: p && { id: boardId, ...p } }) : undefined}
+            peers={room && !practice ? boardPeers : undefined}
+            onPointerInfo={room && !practice ? (p) => publish({ board: p && { id: boardId, ...p } }) : undefined}
           />
       </div>
       <p className="min-h-7 text-center font-semibold text-amber-800">{observation}</p>
@@ -239,13 +291,11 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
  * 튜토리얼 진행. 학생이 회로판에서 실제로 해 보면(전선 잇기·지우기·스위치) 다음 단계로 넘어간다.
  * 본 적이 있는지는 기기마다 따로 기록한다 (함께하기에서도 각자 자기 회로판으로 배운다).
  */
-function useTutorial(building: boolean, autoStart: boolean, board: BoardState) {
-  const snapshot: BoardSnapshot = { wires: board.wires.length, switchClosed: board.switchClosed };
-  const fresh = (b: boolean): TutorialState => ({
-    step: b && autoStart && !loadTutorialDone() ? 'connect' : null,
-    baseline: snapshot,
-    building: b,
-  });
+function useTutorial(building: boolean, autoStart: boolean, snapshot: BoardSnapshot) {
+  const fresh = (b: boolean): TutorialState => {
+    const auto = b && autoStart && !loadTutorialDone();
+    return { step: auto ? 'connect' : null, baseline: snapshot, building: b, auto };
+  };
   const [t, setT] = useState<TutorialState>(() => fresh(building));
 
   // 렌더링 중에 바로 맞춘다 (effect 대신):
@@ -259,12 +309,14 @@ function useTutorial(building: boolean, autoStart: boolean, board: BoardState) {
   const go = (step: TutorialStep | null) => setT({ ...next, step, baseline: snapshot });
   return {
     step: next.step,
+    /** 처음 자동으로 뜬 튜토리얼인지 ("다시 보기"로 연 것은 false) */
+    auto: next.step !== null && next.auto,
     next: () => next.step && go(nextStep(next.step)),
     finish: () => {
       saveTutorialDone();
-      go(null);
+      setT({ ...next, step: null, baseline: snapshot, auto: false });
     },
-    restart: () => go('connect'),
+    restart: () => setT({ ...next, step: 'connect', baseline: snapshot, auto: false }),
   };
 }
 
@@ -273,6 +325,8 @@ interface TutorialState {
   /** 지금 단계를 시작할 때의 회로판 */
   baseline: BoardSnapshot;
   building: boolean;
+  /** 처음 자동으로 뜬 튜토리얼 (모둠은 모두 이걸 끝내야 함께 회로를 만든다) */
+  auto: boolean;
 }
 
 /** 회로 만드는 방법: 한 단계씩 떠 있는 카드 (마을 움직이기 튜토리얼과 같은 모양). 회로판에서 직접 해 보면 다음으로 넘어간다 */

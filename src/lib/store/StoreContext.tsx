@@ -2,17 +2,8 @@
 
 import { createContext, type Dispatch, useContext } from 'react';
 import type { Member, RoomInfo } from '@/lib/sync/roomSync';
-import type { AppState, BoardId } from '@/lib/types';
+import type { AppState, MissionId } from '@/lib/types';
 import type { Action } from './reducer';
-
-/** 다른 기기에서 한 조작 (3단계). 이름과 함께 잠깐 보여 준다 */
-export interface RemoteNote {
-  by: Member;
-  type: Action['type'];
-  /** 회로판 조작이면 어느 회로판인지 */
-  board: BoardId | null;
-  at: number;
-}
 
 export interface StoreValue {
   state: AppState;
@@ -27,10 +18,18 @@ export interface StoreValue {
   connection: 'connecting' | 'online' | 'offline';
   /** 방 코드로 들어와 첫 상태를 기다리는 중 */
   waitingForRoom: boolean;
-  remoteNote: RemoteNote | null;
   /** 선생님이 만든 모둠에 들어가기 (서버에 저장된 모둠 상태로 시작하고, 같은 모둠 친구들과 실시간으로 맞춘다) */
   joinGroup: (group: ClassGroupInfo, me: { name: string }) => Promise<void>;
   leaveRoom: () => void;
+  /**
+   * 마무리로 가기. 마무리는 각자 하는 활동이라, 모둠으로 할 때는 누른 기기만 마무리 화면으로 간다
+   * (모둠의 화면 기록은 지도에 그대로 둔다). 혼자 할 때는 화면을 마무리로 바꾼다.
+   */
+  goWrapup: () => void;
+  /** 미션 들어가기 (retry: 완료한 미션을 처음부터). 모둠으로 할 때는 한 명이 누르면 모두 같이 들어간다 */
+  enterMission: (id: MissionId, retry?: boolean) => void;
+  /** 미션에서 지도로 나가기 (complete: 확인까지 마치고 "지도로 돌아가기"). 모둠으로 할 때는 모두 같이 나온다 */
+  leaveMission: (complete?: boolean) => void;
   /** 이 기기의 기록을 지우고 처음부터 (다른 기기로 보내지 않음) */
   restart: () => void;
 }

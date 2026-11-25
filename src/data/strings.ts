@@ -69,28 +69,10 @@ export const ROOM = {
   called: '친구들을 불렀어요',
   calling: (name: string, place: string) => `${name} 친구가 ${place}에서 기다려요`,
   goTogether: '함께 가기',
-  waitFriends: (n: number, all: number) => `친구를 기다리는 중 (${n}/${all}명)`,
+  waitTutorial: '친구들이 회로 연결 방법을 익히고 있어요',
+  waitTutorialCount: (done: number, all: number) => `${done}/${all}명 끝냈어요. 모두 끝나면 함께 회로를 만들어요.`,
+  practiceBoard: '연습용 회로판 (나만 보여요)',
   notHere: '오는 중',
-  did: (name: string, what: string) => `${name}: ${what}`,
-  actions: {
-    ADD_WIRE: '전선을 이었어요',
-    REMOVE_WIRE: '전선을 지웠어요',
-    TOGGLE_SWITCH: '스위치를 눌렀어요',
-    SET_PREDICTION: '예상을 정했어요',
-    GO_COMPARE: '비교하러 갔어요',
-    BACK_TO_BUILD: '다시 해 보기를 눌렀어요',
-    SET_COMPARE: '○표를 골랐어요',
-    GRADE_COMPARE: '확인하기를 눌렀어요',
-    SEE_RESULT: '결과 보기를 눌렀어요',
-    CONFIRM: '다음으로 넘겼어요',
-    COMPLETE_MISSION: '지도로 돌아갔어요',
-    OPEN_MISSION: '미션을 열었어요',
-    START_CHALLENGE: '도전을 시작했어요',
-    SHOW_CHALLENGE_HINT: '도전 힌트를 열었어요',
-    NEXT_INTRO_CUT: '다음으로 넘겼어요',
-    PREV_INTRO_CUT: '이전으로 돌아갔어요',
-    NEXT_WRAPUP_STEP: '다음으로 넘겼어요',
-  } as Partial<Record<string, string>>,
 };
 
 export const RESTART = {
@@ -464,8 +446,6 @@ export const S5 = {
       '전지 2개를 직렬연결하면 전지 1개를 연결할 때보다 전기 에너지가 더 많이 공급돼요.',
       '직렬연결한 전지의 개수를 늘릴수록 전구를 더 밝게 할 수 있고, 버저로 더 큰 소리를 내거나 전동기를 더 빠르게 돌릴 수 있어요.',
     ],
-    revisit: (choice: string) =>
-      `처음에 손 선풍기는 "${choice}"라고 예상했어요. 지금 생각은 어떤가요?`,
   },
   check: {
     before: '전지 1개를 연결한 전기 회로보다 전지 2개를 직렬연결한 전기 회로에서 전구의 밝기가 더 (',
@@ -475,6 +455,7 @@ export const S5 = {
   },
   misconception: {
     guide: '○ 또는 ×를 골라 보세요.',
+    right: '정답이에요.',
     answerIs: (mark: string) => `정답은 ${mark}예요.`,
     items: [
       {
@@ -597,7 +578,6 @@ export const TEACHER = {
     wrapup: '마무리',
     groupThought: '생각 나누기',
     explain: '설명하기 답',
-    revisitFan: '처음 예상 다시 보기',
     check: '확인해요',
     misconception: '오개념 점검',
     toCharacter: '이야기 인물에게',
