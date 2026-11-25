@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { AppState, BoardId, Wire } from '@/lib/types';
+import { S5 } from '@/data/strings';
 import { missionFocus } from '@/lib/flow/missionFlow';
+import { canAdvanceWrapup } from '@/lib/flow/screenFlow';
 import { type Action, createInitialState, reducer } from './reducer';
 
 const play = (state: AppState, ...actions: Action[]) => actions.reduce(reducer, state);
@@ -281,5 +283,43 @@ describe('S5 마무리', () => {
     const base = { ...createInitialState(), currentScreen: 'S5' as const, wrapupStep: 3 };
     expect(play(base, { type: 'UPDATE_FINAL', patch: { check: 'darker' } }, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(3);
     expect(play(base, { type: 'UPDATE_FINAL', patch: { check: 'brighter' } }, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(4);
+  });
+});
+
+describe('마무리: 모둠으로 할 때 오개념 점검·스스로 평가는 학생마다', () => {
+  const atO_X = (): AppState => ({ ...createInitialState(), currentScreen: 'S5', wrapupStep: 4 });
+  const minji = { id: 'a1', name: '민지' };
+  const jia = { id: 'b2', name: '지아' };
+
+  it('학생마다 따로 기록하고, 처음 고른 답만 남긴다', () => {
+    const s = play(
+      atO_X(),
+      { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'O', by: minji },
+      { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'X', by: minji },
+      { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'X', by: jia },
+    );
+    const answer: string = S5.misconception.items.find((i) => i.key === 'q1')!.answer;
+    expect(s.final.students?.a1.misconception.q1).toBe(answer === 'O' ? 'correct' : 'wrong');
+    expect(s.final.students?.b2.misconception.q1).toBe(answer === 'X' ? 'correct' : 'wrong');
+    expect(s.final.misconception.q1).toBeNull(); // 모둠 기록은 비워 둔다
+  });
+
+  it('지금 들어와 있는 모두가 세 문항을 다 풀어야 다음으로 간다', () => {
+    const all = (by: typeof minji): Action[] => (['q1', 'q2', 'q3'] as const)
+      .map((key) => ({ type: 'ANSWER_MISCONCEPTION', key, choice: 'O', by }));
+    const one = play(atO_X(), ...all(minji));
+    expect(canAdvanceWrapup(one, ['a1', 'b2'])).toBe(false);
+    expect(canAdvanceWrapup(play(one, ...all(jia)), ['a1', 'b2'])).toBe(true);
+  });
+
+  it('스스로 평가도 각자 고른다', () => {
+    const s = play(
+      { ...atO_X(), wrapupStep: 5 },
+      { type: 'ANSWER_SELF_EVAL', choice: 'good', by: minji },
+      { type: 'ANSWER_SELF_EVAL', choice: 'needHelp', by: jia },
+    );
+    expect(s.final.students?.a1.selfEval).toBe('good');
+    expect(s.final.students?.b2.selfEval).toBe('needHelp');
+    expect(s.final.selfEval).toBeNull();
   });
 });

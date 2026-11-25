@@ -2,9 +2,10 @@
 
 import { type ReactNode, useCallback, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
-import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S2, S5, withoutMark } from '@/data/strings';
+import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, ROOM, S2, S5, withoutMark } from '@/data/strings';
 import { canAdvanceWrapup, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
 import { useStore } from '@/lib/store/StoreContext';
+import { memberColor, presentMembers } from '@/lib/sync/live';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
 import SharedTextArea from '../SharedTextArea';
 import { Button, Choice, ConfirmDialog, Speech } from '../ui';
@@ -13,8 +14,11 @@ import { VillagePanorama } from './Opening';
 
 /** S5. 마무리 7단계 (지도서 마무리 7분). 한 화면에 한 단계씩 */
 export default function S5Wrapup() {
-  const { state, dispatch, restart } = useStore();
+  const { state, dispatch, restart, room, members } = useStore();
   const [confirmRestart, setConfirmRestart] = useState(false);
+  // 모둠으로 할 때: 각자 하는 단계(오개념 점검·스스로 평가)는 지금 들어와 있는 모두가 답해야 넘어간다
+  const present = room ? presentMembers(members, room.me).map((m) => m.id) : undefined;
+  const canNext = canAdvanceWrapup(state, present);
   const closeRestart = useCallback(() => setConfirmRestart(false), []);
 
   if (state.finished) {
@@ -55,9 +59,12 @@ export default function S5Wrapup() {
         <span className="text-slate-500">{step + 1} / {WRAPUP_STEP_COUNT}</span>
       </header>
       {panels[step]}
+      {room && !canNext && (step === 4 || step === 5) && (
+        <p role="status" className="-mb-3 self-end text-sm font-semibold text-stone-500">{ROOM.allMustAnswer}</p>
+      )}
       <Button
         className="self-end text-xl"
-        disabled={!canAdvanceWrapup(state)}
+        disabled={!canNext}
         onClick={() => dispatch({ type: isLast ? 'FINISH' : 'NEXT_WRAPUP_STEP' })}
       >
         {isLast ? S5.finish.button : COMMON.next}
@@ -180,33 +187,75 @@ function CheckStep() {
   );
 }
 
-/** 5. 오개념 점검: 고른 직후 정답과 해설. 점수는 보여 주지 않고 교사용 기록에만 남긴다 */
+/** 고른 답: 기록에는 맞음/틀림만 있으므로 정답에서 거꾸로 찾는다 */
+const choiceOf = (result: 'correct' | 'wrong' | null, answer: OX): OX | null =>
+  result === null ? null : result === 'correct' ? answer : answer === 'O' ? 'X' : 'O';
+
+/** ○·× 그림 (글꼴마다 ○·× 크기와 높이가 달라서 같은 크기 그림으로) */
+function OXMark({ k, className = 'size-6' }: { k: OX; className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" className={className} fill="none" stroke="currentColor" strokeWidth={2.6}
+      strokeLinecap="round" aria-hidden>
+      {k === 'O' ? <circle cx={12} cy={12} r={7.5} /> : <path d="M5.5 5.5l13 13M18.5 5.5l-13 13" />}
+    </svg>
+  );
+}
+
+/**
+ * 5. 오개념 점검: 고른 직후 정답과 해설. 점수는 보여 주지 않고 교사용 기록에만 남긴다.
+ * 모둠으로 할 때는 각자 푼다. 친구 답은 "답했어요"로만 보이다가, 모두 답하면 정답과 모두의 답이 함께 나온다.
+ */
 function MisconceptionStep() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, room, members } = useStore();
+  const people = room ? presentMembers(members, room.me) : [];
+  const studentOf = (id: string) => state.final.students?.[id];
+  const mine = room ? studentOf(room.me.id)?.misconception : state.final.misconception;
   return (
     <section className={card}>
       <p className="font-bold">{S5.misconception.guide}</p>
       {S5.misconception.items.map((item) => {
-        const result = state.final.misconception[item.key];
-        const chosen: OX | null = result === null ? null : result === 'correct' ? item.answer : item.answer === 'O' ? 'X' : 'O';
+        const result = mine?.[item.key] ?? null;
+        const chosen = choiceOf(result, item.answer);
+        const revealed = room
+          ? people.every((p) => (studentOf(p.id)?.misconception[item.key] ?? null) !== null)
+          : result !== null;
         return (
           <div key={item.key} className="flex flex-col gap-2 border-t border-stone-200 pt-3">
             <p>{item.text}</p>
-            <div className="flex gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               {(['O', 'X'] as const).map((k) => (
                 <Choice key={k} mark={false} selected={chosen === k} disabled={result !== null}
                   aria-label={k === 'O' ? '○' : '×'} className="flex w-16 items-center justify-center"
-                  onClick={() => dispatch({ type: 'ANSWER_MISCONCEPTION', key: item.key, choice: k })}>
-                  {/* 글꼴마다 ○·× 크기와 높이가 달라서 같은 크기 그림으로 가운데에 */}
-                  <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={2.6}
-                    strokeLinecap="round" aria-hidden>
-                    {k === 'O' ? <circle cx={12} cy={12} r={7.5} /> : <path d="M5.5 5.5l13 13M18.5 5.5l-13 13" />}
-                  </svg>
+                  onClick={() => dispatch({ type: 'ANSWER_MISCONCEPTION', key: item.key, choice: k,
+                    ...(room ? { by: { id: room.me.id, name: room.me.name } } : {}) })}>
+                  <OXMark k={k} />
                 </Choice>
               ))}
+              {/* 모둠: 누가 답했는지 (정답이 나오기 전에는 무엇을 골랐는지 보이지 않는다) */}
+              {room && people.length > 1 && (
+                <ul className="ml-2 flex flex-wrap gap-1.5">
+                  {people.map((p) => {
+                    const r = studentOf(p.id)?.misconception[item.key] ?? null;
+                    const pick = revealed ? choiceOf(r, item.answer) : null;
+                    return (
+                      <li key={p.id} className={`flex items-center gap-1 rounded-full py-0.5 pl-1 pr-2.5 text-sm font-semibold ${
+                        r !== null ? 'bg-stone-100 text-stone-700' : 'text-stone-400'
+                      }`}>
+                        <span className="flex size-5 items-center justify-center rounded-full text-white"
+                          style={{ background: memberColor(p.id), opacity: r !== null ? 1 : 0.4 }} aria-hidden>
+                          {pick && <OXMark k={pick} className="size-3.5" />}
+                        </span>
+                        {p.name}
+                        {!revealed && <span className="font-normal">· {r !== null ? ROOM.answered : ROOM.solving}</span>}
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
             </div>
-            {result && (
-              <p className="rounded-xl bg-slate-50 p-3">
+            {result !== null && !revealed && <p className="text-sm font-semibold text-stone-500">{ROOM.waitOthers}</p>}
+            {revealed && (
+              <p className="pop-in rounded-xl bg-slate-50 p-3">
                 <b>{S5.misconception.answerIs(item.answer === 'O' ? '○' : '×')}</b> {item.explanation}
               </p>
             )}
@@ -217,18 +266,25 @@ function MisconceptionStep() {
   );
 }
 
-/** 6. 스스로 평가 */
+/** 6. 스스로 평가: 모둠으로 할 때는 각자 고르고, 친구가 고른 것은 보이지 않는다 */
 function SelfEvalStep() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, room, members } = useStore();
+  const people = room ? presentMembers(members, room.me) : [];
+  const mine = room ? state.final.students?.[room.me.id]?.selfEval ?? null : state.final.selfEval;
+  const chose = people.filter((p) => (state.final.students?.[p.id]?.selfEval ?? null) !== null).length;
   return (
     <section className={card}>
       <p className="font-bold">{S5.selfEval.question}</p>
       {(Object.keys(S5.selfEval.choices) as NonNullable<FinalRecord['selfEval']>[]).map((k) => (
-        <Choice key={k} selected={state.final.selfEval === k}
-          onClick={() => dispatch({ type: 'UPDATE_FINAL', patch: { selfEval: k } })}>
+        <Choice key={k} selected={mine === k}
+          onClick={() => dispatch({ type: 'ANSWER_SELF_EVAL', choice: k,
+            ...(room ? { by: { id: room.me.id, name: room.me.name } } : {}) })}>
           {S5.selfEval.choices[k]}
         </Choice>
       ))}
+      {room && people.length > 1 && (
+        <p role="status" className="text-sm font-semibold text-stone-500">{ROOM.selfEvalCount(chose, people.length)}</p>
+      )}
     </section>
   );
 }

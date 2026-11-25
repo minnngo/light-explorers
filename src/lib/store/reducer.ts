@@ -24,6 +24,7 @@ import type {
   PartKind,
   PredictionChoice,
   ScreenId,
+  StudentFinal,
   StoryKey,
   Wire,
 } from '@/lib/types';
@@ -61,7 +62,8 @@ export type Action =
   // S5
   | { type: 'UPDATE_FINAL'; patch: Partial<Pick<FinalRecord, 'groupThought' | 'revisitFan' | 'check' | 'selfEval' | 'toCharacter'>> }
   | { type: 'ANSWER_EXPLAIN'; part: PartKind; choice: ExplainChoice }
-  | { type: 'ANSWER_MISCONCEPTION'; key: MisconceptionKey; choice: OX }
+  | { type: 'ANSWER_MISCONCEPTION'; key: MisconceptionKey; choice: OX; by?: StudentRef }
+  | { type: 'ANSWER_SELF_EVAL'; choice: NonNullable<FinalRecord['selfEval']>; by?: StudentRef }
   | { type: 'NEXT_WRAPUP_STEP' }
   | { type: 'FINISH' }
   // 저장·동기화
@@ -276,14 +278,23 @@ export function reducer(state: AppState, action: Action): AppState {
       return { ...state, final: { ...state.final, explain: { ...state.final.explain, [action.part]: action.choice } } };
     case 'ANSWER_MISCONCEPTION': {
       // 고른 직후 정답과 해설을 보여 주므로, 처음 고른 답만 기록한다
-      if (state.final.misconception[action.key] !== null) return state;
       const item = S5.misconception.items.find((i) => i.key === action.key)!;
       const result = item.answer === action.choice ? 'correct' : 'wrong';
+      if (action.by) {
+        // 모둠으로 할 때: 학생마다 따로
+        const me = studentOf(state.final, action.by);
+        if (me.misconception[action.key] !== null) return state;
+        return withStudent(state, action.by.id, { ...me, misconception: { ...me.misconception, [action.key]: result } });
+      }
+      if (state.final.misconception[action.key] !== null) return state;
       return {
         ...state,
         final: { ...state.final, misconception: { ...state.final.misconception, [action.key]: result } },
       };
     }
+    case 'ANSWER_SELF_EVAL':
+      if (action.by) return withStudent(state, action.by.id, { ...studentOf(state.final, action.by), selfEval: action.choice });
+      return { ...state, final: { ...state.final, selfEval: action.choice } };
     case 'NEXT_WRAPUP_STEP':
       if (state.currentScreen !== 'S5' || !canAdvanceWrapup(state)) return state;
       return { ...state, wrapupStep: Math.min(state.wrapupStep + 1, WRAPUP_STEP_COUNT - 1) };
@@ -298,6 +309,20 @@ export function reducer(state: AppState, action: Action): AppState {
 }
 
 // ───────────── 도우미 ─────────────
+
+/** 모둠으로 할 때 마무리 기록을 남기는 학생 */
+export interface StudentRef {
+  id: string;
+  name: string;
+}
+
+function studentOf(final: FinalRecord, by: StudentRef): StudentFinal {
+  return final.students?.[by.id] ?? { name: by.name, misconception: { q1: null, q2: null, q3: null }, selfEval: null };
+}
+
+function withStudent(state: AppState, id: string, student: StudentFinal): AppState {
+  return { ...state, final: { ...state.final, students: { ...state.final.students, [id]: student } } };
+}
 
 function goTo(state: AppState, screen: ScreenId): AppState {
   return { ...state, currentScreen: screen };

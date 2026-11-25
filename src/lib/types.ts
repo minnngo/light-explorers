@@ -123,6 +123,17 @@ export interface FinalRecord {
   misconception: Record<MisconceptionKey, 'correct' | 'wrong' | null>;
   selfEval: 'good' | 'needHelp' | 'needPractice' | null;
   toCharacter: string;
+  /**
+   * 모둠으로 할 때: 오개념 점검과 스스로 평가는 학생마다 따로 (기기 id별).
+   * 혼자 할 때는 비어 있고 위의 misconception·selfEval을 쓴다.
+   */
+  students?: Record<string, StudentFinal>;
+}
+
+export interface StudentFinal {
+  name: string;
+  misconception: Record<MisconceptionKey, 'correct' | 'wrong' | null>;
+  selfEval: FinalRecord['selfEval'];
 }
 
 export interface AppState {

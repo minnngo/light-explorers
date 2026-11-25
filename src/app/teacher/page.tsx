@@ -76,13 +76,14 @@ export default function TeacherPage() {
         <>
           <section className="rounded-2xl bg-white p-4 shadow">
             <h2 className="font-bold">{TEACHER.mostMissedTitle}</h2>
+            <p className="text-sm text-slate-500">{TEACHER.missedNote}</p>
             {data.mostMissed.length === 0 ? (
               <p className="text-slate-500">{TEACHER.noMissed}</p>
             ) : (
               <ul>
                 {data.mostMissed.map((k) => (
                   <li key={k}>
-                    {S5.misconception.items.find((i) => i.key === k)?.text} — <b>{data.misconceptionWrong[k]}모둠</b>
+                    {S5.misconception.items.find((i) => i.key === k)?.text} — <b>{TEACHER.missedCount(data.misconceptionWrong[k])}</b>
                   </li>
                 ))}
               </ul>
@@ -122,7 +123,11 @@ export default function TeacherPage() {
                       </td>
                     ))}
                     <td className="p-2">{g.wroteCount}/{g.writableCount}</td>
-                    <td className="p-2">{g.selfEval ? S5.selfEval.choices[g.selfEval] : V.empty}</td>
+                    <td className="whitespace-pre-line p-2">
+                      {g.students.length > 0
+                        ? g.students.map((st) => `${st.name} ${st.selfEval ? S5.selfEval.choices[st.selfEval] : V.empty}`).join('\n')
+                        : g.selfEval ? S5.selfEval.choices[g.selfEval] : V.empty}
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -178,15 +183,27 @@ function GroupDetails({ g }: { g: GroupSummary }) {
             .join(' · ')],
           [L.revisitFan, text(g.final.revisitFan)],
           [L.check, g.final.check ? V.check[g.final.check] : V.empty],
-          [L.misconception, (['q1', 'q2', 'q3'] as const)
-            .map((k, i) => `${i + 1}번 ${g.final.misconception[k] ? V[g.final.misconception[k]!] : V.empty}`)
-            .join(' · ')],
-          [TEACHER.columns.selfEval, g.final.selfEval ? S5.selfEval.choices[g.final.selfEval] : V.empty],
+          ...(g.students.length > 0
+            // 모둠으로 한 곳: 학생마다 한 줄씩
+            ? [
+              [L.misconception, g.students.map((st) => `${st.name}: ${oxLine(st.misconception)}`).join('\n')],
+              [TEACHER.columns.selfEval, g.students
+                .map((st) => `${st.name}: ${st.selfEval ? S5.selfEval.choices[st.selfEval] : V.empty}`).join('\n')],
+            ] as [string, string][]
+            : [
+              [L.misconception, oxLine(g.final.misconception)],
+              [TEACHER.columns.selfEval, g.final.selfEval ? S5.selfEval.choices[g.final.selfEval] : V.empty],
+            ] as [string, string][]),
           [L.toCharacter, text(g.final.toCharacter)],
         ]} />
       </div>
     </details>
   );
+}
+
+/** 오개념 점검 세 문항: "1번 맞음 · 2번 틀림 · 3번 -" */
+function oxLine(m: Record<'q1' | 'q2' | 'q3', 'correct' | 'wrong' | null>): string {
+  return (['q1', 'q2', 'q3'] as const).map((k, i) => `${i + 1}번 ${m[k] ? V[m[k]!] : V.empty}`).join(' · ');
 }
 
 function Dl({ title, rows }: { title: string; rows: [string, string][] }) {
