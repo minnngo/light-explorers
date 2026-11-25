@@ -50,6 +50,8 @@ interface Props {
   onMove?: (p: Vec) => void;
   /** 모둠 함께하기: 친구 캐릭터 */
   others?: MapPeer[];
+  /** 모둠 함께하기: 내 캐릭터 위 이름표 (내 색) */
+  me?: { name: string; color: string };
   /** 모둠 함께하기("함께 가기"): key가 바뀌면 이 자리로 순간 이동하고, 장소라면 도착을 알린다 */
   jumpTo?: { to: Vec; key: number } | null;
 }
@@ -63,7 +65,7 @@ export interface MapPeer {
 }
 
 export default function VillageWorld({
-  status, target, paused, reviving, darkness, view, onArrive, practice = false, resetKey = 0, onMove, others, jumpTo = null,
+  status, target, paused, reviving, darkness, view, onArrive, practice = false, resetKey = 0, onMove, others, me, jumpTo = null,
 }: Props) {
   const start = useMemo(() => startPosition(status, SPAWN), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [pos, setPos] = useState<Vec>(start);
@@ -283,11 +285,7 @@ export default function VillageWorld({
               <ellipse cx={0} cy={0} rx={36} ry={10} fill={o.color} opacity={0.25} />
               <ellipse cx={0} cy={0} rx={36} ry={10} fill="none" stroke={o.color} strokeWidth={3} opacity={0.9} />
               <Explorer />
-              <g transform="translate(0 -168)">
-                <rect x={-(o.name.length * 9 + 14)} y={-17} width={(o.name.length * 9 + 14) * 2} height={34} rx={17} fill={o.color}
-                  stroke="#fff" strokeWidth={3} />
-                <text y={7} textAnchor="middle" fontSize={20} fontWeight={800} fill="#fff">{o.name}</text>
-              </g>
+              <NameTag name={o.name} color={o.color} />
             </g>
           </g>
         ))}
@@ -307,11 +305,23 @@ export default function VillageWorld({
             <Explorer walking={moving} />
           </g>
           {showCompass && <CompassArrow angle={pointer} />}
+          {me && <NameTag name={me.name} color={me.color} />}
         </g>
       </svg>
 
       {!paused && <Joystick onChange={(v) => (joy.current = v)} />}
     </div>
+  );
+}
+
+/** 캐릭터 머리 위 이름표 (모둠 함께하기) */
+function NameTag({ name, color }: { name: string; color: string }) {
+  const half = name.length * 9 + 14;
+  return (
+    <g transform="translate(0 -168)">
+      <rect x={-half} y={-17} width={half * 2} height={34} rx={17} fill={color} stroke="#fff" strokeWidth={3} />
+      <text y={7} textAnchor="middle" fontSize={20} fontWeight={800} fill="#fff">{name}</text>
+    </g>
   );
 }
 

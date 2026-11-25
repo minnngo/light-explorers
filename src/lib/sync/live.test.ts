@@ -12,14 +12,14 @@ describe('모두 동의', () => {
   it('들어와 있는 모둠원이 모두 같은 답을 골라야 정해진다', () => {
     const members = [minsu, jia, dohyun];
     const field = 'predict-streetlight';
-    const peers = [peer(jia, { vote: { field, value: 'a' } }), peer(dohyun, { vote: { field, value: 'b' } })];
+    const peers = [peer(jia, { votes: { [field]: 'a' } }), peer(dohyun, { votes: { [field]: 'b' } })];
     expect(tallyVotes(field, minsu, 'a', peers, members)).toMatchObject({ agreed: null, same: 2 });
-    peers[1] = peer(dohyun, { vote: { field, value: 'a' } });
+    peers[1] = peer(dohyun, { votes: { [field]: 'a' } });
     expect(tallyVotes(field, minsu, 'a', peers, members)).toMatchObject({ agreed: 'a', same: 3 });
   });
 
   it('아직 고르지 않은 친구가 있거나 다른 문제의 표는 세지 않는다', () => {
-    const peers = [peer(jia, { vote: { field: 'predict-fan', value: 'a' } })];
+    const peers = [peer(jia, { votes: { 'predict-fan': 'a' } })];
     expect(tallyVotes('predict-streetlight', minsu, 'a', peers, [minsu, jia]).agreed).toBeNull();
   });
 

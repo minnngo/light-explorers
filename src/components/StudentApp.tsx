@@ -54,6 +54,7 @@ export default function StudentApp() {
   // 실시간 존재감 (커서·끄는 전선·쓰는 중): 친구들 모습과, 내 모습을 보내는 통로
   const [peerMap, setPeerMap] = useState<Record<string, LivePeer>>({});
   const [myEditing, setMyEditing] = useState<string | null>(null);
+  const [myVotes, setMyVotes] = useState<Record<string, string>>({});
   const liveRef = useRef<{
     send: ((m: LiveMessage) => void) | null; me: Member | null; mine: LivePresence; lastSent: number;
     timer: ReturnType<typeof setTimeout> | null;
@@ -94,7 +95,7 @@ export default function StudentApp() {
     transport.onLive((msg) => {
       if (msg.by.id === room.me.id) return;
       const peer: LivePeer = {
-        board: msg.board, editing: msg.editing, map: msg.map, vote: msg.vote ?? null, call: msg.call ?? null,
+        board: msg.board, editing: msg.editing, map: msg.map, votes: msg.votes ?? {}, pointer: msg.pointer ?? null, call: msg.call ?? null,
         member: msg.by, color: memberColor(msg.by.id), at: Date.now(),
       };
       setPeerMap((prev) => ({ ...prev, [msg.by.id]: peer }));
@@ -147,6 +148,7 @@ export default function StudentApp() {
     const live = liveRef.current;
     live.mine = { ...live.mine, ...patch };
     if ('editing' in patch) setMyEditing(patch.editing ?? null);
+    if (patch.votes) setMyVotes(patch.votes);
     const flush = () => {
       live.timer = null;
       live.lastSent = Date.now();
@@ -157,14 +159,18 @@ export default function StudentApp() {
     else live.timer ??= setTimeout(flush, wait);
   }, []);
 
+  const vote = useCallback<LiveValue['vote']>((field, value) => {
+    publish({ votes: { ...liveRef.current.mine.votes, [field]: value } });
+  }, [publish]);
+
   // 방을 나간 친구(presence에서 사라짐)는 바로 지운다
   const peers = useMemo(() => {
     const list = Object.values(peerMap);
     return members.length === 0 ? list : list.filter((p) => members.some((m) => m.id === p.member.id));
   }, [peerMap, members]);
   const liveValue = useMemo<LiveValue>(
-    () => ({ peers, myId: room?.me.id ?? null, publish, myEditing }),
-    [peers, room, publish, myEditing],
+    () => ({ peers, myId: room?.me.id ?? null, publish, myEditing, myVotes, vote }),
+    [peers, room, publish, myEditing, myVotes, vote],
   );
 
   const restart = useCallback(() => {

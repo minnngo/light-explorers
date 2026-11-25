@@ -89,6 +89,8 @@ export interface MissionRecord {
   built: Record<BoardId, boolean>;
   compare: CompareChoice | null;
   explanation: string;
+  /** ④ 확인: 성공 축하 창을 닫고 결과를 봤는지 (모둠 모두의 화면이 같이 넘어간다) */
+  celebrated?: boolean;
   /** ③에서 확인하기를 눌러 답을 맞춰 봤는지 (그 뒤로는 고칠 수 없다. 모둠 모두에게 같이 보인다) */
   graded?: boolean;
   hintCount: number;
@@ -115,7 +117,10 @@ export type OX = 'O' | 'X';
 export type MisconceptionKey = 'q1' | 'q2' | 'q3';
 
 export interface FinalRecord {
+  /** 함께 생각 나누기: 빈칸을 채운 문장 (선생님 화면에 그대로 보인다) */
   groupThought: string;
+  /** 함께 생각 나누기의 빈칸 세 개 (전구 / 버저 / 전동기). groupThought는 이것으로 문장을 만든다 */
+  shareBlanks?: [string, string, string];
   explain: Record<PartKind, ExplainChoice | null>;
   revisitFan: string;
   check: 'brighter' | 'darker' | null;
@@ -124,16 +129,17 @@ export interface FinalRecord {
   selfEval: 'good' | 'needHelp' | 'needPractice' | null;
   toCharacter: string;
   /**
-   * 모둠으로 할 때: 오개념 점검과 스스로 평가는 학생마다 따로 (기기 id별).
-   * 혼자 할 때는 비어 있고 위의 misconception·selfEval을 쓴다.
+   * 모둠으로 할 때: 마무리는 학생마다 따로 한다 (기기 id별).
+   * 혼자 할 때는 비어 있고 위의 기록과 AppState.wrapupStep·finished를 쓴다.
    */
   students?: Record<string, StudentFinal>;
 }
 
-export interface StudentFinal {
+/** 모둠으로 할 때 학생 한 명의 마무리 (마무리는 각자 한다: 자기 단계, 자기 답, 자기 마치기) */
+export interface StudentFinal extends Omit<FinalRecord, 'students'> {
   name: string;
-  misconception: Record<MisconceptionKey, 'correct' | 'wrong' | null>;
-  selfEval: FinalRecord['selfEval'];
+  wrapupStep: number;
+  finished: boolean;
 }
 
 export interface AppState {

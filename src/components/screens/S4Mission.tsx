@@ -19,6 +19,7 @@ import { useRecentNote } from '../RoomBar';
 import { useHint } from '../circuit/useHint';
 import MissionIntro from '../mission/MissionIntro';
 import MissionWorksheet from '../mission/MissionWorksheet';
+import LiveCursors from '../LiveCursors';
 import SoundToggle from '../SoundToggle';
 import { CloseButton, ProgressDots } from '../ui';
 
@@ -70,7 +71,7 @@ export default function S4Mission() {
 
   return (
     <div className="flex min-h-screen flex-col">
-      <header className="flex flex-wrap items-center gap-3 border-b border-stone-200 bg-white/70 px-4 py-2 backdrop-blur">
+      <header data-cursor-anchor="header" className="flex flex-wrap items-center gap-3 border-b border-stone-200 bg-white/70 px-4 py-2 backdrop-blur">
         <h1 className="text-xl font-bold">{COMMON.missionTitle(MISSION_ORDER.indexOf(id) + 1, text.title)}</h1>
         <Stepper current={record.step} done={record.status === 'done'} />
         {/* 오른쪽 위: 연결 방법 다시 보기(만들기 단계) · 지도 · 어둡게 보기 · 소리 (모두 같은 알약 모양) */}
@@ -105,6 +106,8 @@ export default function S4Mission() {
         </div>
       </header>
       <SoundToggle floatTop={9} />
+      {/* 모둠 함께하기: 미션 화면 어디서든 친구 커서가 보인다 */}
+      <LiveCursors screen={`S4-${id}`} />
 
 
       {/* 스포트라이트: 화면 전체를 어둡게 덮고, 지금 할 곳(z-40)만 그 위로 밝게 드러난다.
@@ -116,7 +119,7 @@ export default function S4Mission() {
 
       {storyOpen && <MissionIntro id={id} onDone={() => setStoryOpen(false)} />}
 
-      <main className="grid flex-1 gap-4 p-4 lg:grid-cols-2 xl:grid-cols-[1fr_1fr_400px]">
+      <main data-cursor-anchor="mission" className="grid flex-1 gap-4 p-4 lg:grid-cols-2 xl:grid-cols-[1fr_1fr_400px]">
         {(['A', 'B'] as const).map((b) => {
           const practising = tutorial.step !== null && b === tutorialBoard;
           return (

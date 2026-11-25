@@ -13,6 +13,7 @@ import { PLACES, type Vec } from '@/data/world';
 import { allMissionsDone, revivedCount } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
+import { useGroupChoice } from '../GroupChoice';
 import { type LivePeer, memberColor, presentMembers } from '@/lib/sync/live';
 import { useLive } from '@/lib/sync/LiveContext';
 import type { Member } from '@/lib/sync/roomSync';
@@ -51,7 +52,14 @@ export default function S3Map() {
   const done = allMissionsDone(state);
   const [s1, s2, s3] = [state.missions.m1.status, state.missions.m2.status, state.missions.m3.status];
   const status = useMemo(() => ({ m1: s1, m2: s2, m3: s3 }), [s1, s2, s3]);
-  const story = pendingStory(state.storySeen ?? [], status);
+  // 이야기 장면은 각자 읽고 각자 닫는다 (모둠으로 할 때는 이 기기에만 기록)
+  const [seen, markSeen] = useSeenStories();
+  const story = pendingStory(seen, status);
+  // 마무리로 가기: 모둠은 각자 누르고, 모두 누르면 다 같이 간다 (혼자 할 때는 바로)
+  const toWrapup = useGroupChoice<'go'>('toWrapup', null, () => dispatch({ type: 'GO_TO_WRAPUP' }));
+  const wrapupWaiting = toWrapup.tally && toWrapup.mine === 'go'
+    ? ROOM.waitFriends(toWrapup.tally.same, toWrapup.tally.votes.length)
+    : null;
   const reviving = story && story !== 'arrive' ? (story.slice('after-'.length) as MissionId) : null;
 
   // 되살아나는 장면: 처음에는 이전 밝기, 조금 뒤 새 밝기로 서서히 밝아진다
@@ -114,6 +122,7 @@ export default function S3Map() {
           resetKey={practiceRound}
           onMove={room ? onMove : undefined}
           others={room ? others : undefined}
+          me={room ? { name: room.me.name, color: memberColor(room.me.id) } : undefined}
           jumpTo={jump}
         />
       </div>
@@ -152,14 +161,14 @@ export default function S3Map() {
         cancelLabel={RESTART.cancel} onOk={restart} onCancel={closeRestart} />
 
       {story && (
-        <StoryPanel storyKey={story} groupName={state.groupName} showWrapup={story === 'after-m3'}
+        <StoryPanel storyKey={story} groupName={state.groupName} showWrapup={story === 'after-m3'} wrapupWaiting={wrapupWaiting}
           onDone={() => {
-            dispatch({ type: 'SEE_STORY', key: story });
+            markSeen(story);
             if (story === 'arrive') setTutorial(true);
           }}
           onWrapup={() => {
-            dispatch({ type: 'SEE_STORY', key: story });
-            dispatch({ type: 'GO_TO_WRAPUP' });
+            markSeen(story);
+            toWrapup.pick('go');
           }} />
       )}
 
@@ -183,17 +192,19 @@ export default function S3Map() {
 
       {/* 친구가 미션 장소에서 부르면: 함께 가기 */}
       {!story && caller?.call && (
+        // 지도의 다른 버튼들과 같은 반투명 알약 모양
         <div role="status"
-          className="pop-in absolute left-1/2 top-20 z-30 flex -translate-x-1/2 items-center gap-3 rounded-full bg-white/90 py-2 pl-3 pr-2 shadow-lg backdrop-blur">
-          <span className="size-4 shrink-0 rounded-full" style={{ background: caller.color }} aria-hidden />
-          <span className="font-bold text-stone-700">{ROOM.calling(caller.member.name, S3.places[caller.call.place])}</span>
+          className="pop-in absolute left-1/2 top-20 z-30 flex -translate-x-1/2 items-center gap-3 whitespace-nowrap rounded-full bg-white/75 py-2 pl-5 pr-2 text-lg font-bold text-stone-800 shadow-md backdrop-blur">
+          {ROOM.calling(caller.member.name, S3.places[caller.call.place])}
           <button type="button" onClick={() => setJump({ to: PLACES[caller.call!.place], key: (jump?.key ?? 0) + 1 })}
-            className="min-h-10 rounded-full bg-amber-500 px-4 font-bold text-white outline-none transition hover:bg-amber-600">
+            className="min-h-11 rounded-full bg-amber-500 px-5 text-lg font-bold text-white outline-none transition hover:bg-amber-600">
             {ROOM.goTogether}
           </button>
           <button type="button" aria-label={WORLD.close} onClick={() => setDismissedCall(caller.call!.at)}
-            className="flex size-9 items-center justify-center rounded-full text-stone-400 outline-none hover:text-stone-700">
-            ✕
+            className="flex size-10 items-center justify-center rounded-full text-stone-500 outline-none transition hover:bg-white/70 hover:text-stone-800">
+            <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.2} strokeLinecap="round" aria-hidden>
+              <path d="M6 6l12 12M18 6L6 18" />
+            </svg>
           </button>
         </div>
       )}
@@ -209,8 +220,8 @@ export default function S3Map() {
       {/* 아래쪽: 마무리로 가기 버튼과 움직이는 방법 (이야기·튜토리얼 중에는 숨긴다) */}
       <div className="pointer-events-none absolute inset-x-0 bottom-4 z-20 flex flex-col items-center gap-3">
         {done && !story && (
-          <Button className="pointer-events-auto px-10 text-2xl" onClick={() => dispatch({ type: 'GO_TO_WRAPUP' })}>
-            {S3.toWrapup}
+          <Button className="pointer-events-auto px-10 text-2xl" disabled={wrapupWaiting !== null} onClick={() => toWrapup.pick('go')}>
+            {wrapupWaiting ?? S3.toWrapup}
           </Button>
         )}
       </div>
@@ -237,6 +248,33 @@ export default function S3Map() {
   );
 }
 
+/**
+ * 이미 본 이야기 장면. 혼자 할 때는 학습 기록(storySeen)에,
+ * 모둠으로 할 때는 각자 읽고 닫도록 이 기기에만 기록한다 (한 명이 닫아도 친구 화면의 이야기는 그대로).
+ */
+function useSeenStories(): [StoryKey[], (key: StoryKey) => void] {
+  const { state, dispatch, room } = useStore();
+  const storageKey = room ? `light-explorers:story-seen:v1:${state.groupId}:${room.me.id}` : null;
+  const [local, setLocal] = useState<StoryKey[]>(() => {
+    if (!storageKey) return [];
+    try {
+      return JSON.parse(window.localStorage.getItem(storageKey) ?? '[]') as StoryKey[];
+    } catch {
+      return [];
+    }
+  });
+  if (!storageKey) return [state.storySeen ?? [], (key) => dispatch({ type: 'SEE_STORY', key })];
+  // 예전에 모둠 기록에 남은 것(이 방식 전에 본 이야기)도 본 것으로 친다
+  const seen = [...(state.storySeen ?? []), ...local];
+  return [seen, (key) => {
+    const next = local.includes(key) ? local : [...local, key];
+    setLocal(next);
+    try {
+      window.localStorage.setItem(storageKey, JSON.stringify(next));
+    } catch {}
+  }];
+}
+
 /** 아직 안 본 이야기 장면: 처음 도착 → 미션을 마친 순서대로 */
 export function pendingStory(seen: readonly StoryKey[], status: Record<MissionId, string>): StoryKey | null {
   if (!seen.includes('arrive')) return 'arrive';
@@ -245,8 +283,8 @@ export function pendingStory(seen: readonly StoryKey[], status: Record<MissionId
 }
 
 /** 반디의 이야기: 상자 없이 반디와 말풍선만 지도 위에 떠 있다 */
-function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
-  storyKey: StoryKey; groupName: string; showWrapup: boolean; onDone: () => void; onWrapup: () => void;
+function StoryPanel({ storyKey, groupName, showWrapup, wrapupWaiting, onDone, onWrapup }: {
+  storyKey: StoryKey; groupName: string; showWrapup: boolean; wrapupWaiting: string | null; onDone: () => void; onWrapup: () => void;
 }) {
   const line = WORLD.stories[storyKey];
   const text = typeof line === 'function' ? line(groupName) : line;
@@ -264,7 +302,7 @@ function StoryPanel({ storyKey, groupName, showWrapup, onDone, onWrapup }: {
         </div>
         <div className="relative flex justify-end">
           {showWrapup ? (
-            <Button onClick={onWrapup}>{S3.toWrapup}</Button>
+            <Button onClick={onWrapup} disabled={wrapupWaiting !== null}>{wrapupWaiting ?? S3.toWrapup}</Button>
           ) : (
             <Button onClick={onDone} autoFocus>{WORLD.ok}</Button>
           )}
@@ -367,17 +405,18 @@ function SituationPanel({ id, done, onStart, onRetry, onClose, gather, onCall, c
                   </li>
                 ))}
               </ul>
-              <div className="flex items-center justify-between gap-2">
-                <p role="status" className={`text-sm font-semibold ${gather.ready ? 'text-[#4f7d62]' : 'text-stone-500'}`}>
-                  {gather.ready ? ROOM.gathered : ROOM.gatherNeed(gather.members.filter((m) => m.here).length, gather.members.length)}
-                </p>
-                {!gather.ready && (
+              {/* 아직 다 모이지 않았을 때만: 몇 명 모였는지와 모두 부르기 */}
+              {!gather.ready && (
+                <div className="flex items-center justify-between gap-2">
+                  <p role="status" className="text-sm font-semibold text-stone-500">
+                    {ROOM.gatherNeed(gather.members.filter((m) => m.here).length, gather.members.length)}
+                  </p>
                   <button type="button" onClick={onCall} disabled={calling}
                     className="min-h-9 shrink-0 rounded-full border border-amber-300 bg-amber-50 px-4 text-sm font-bold text-amber-800 outline-none transition hover:bg-amber-100 disabled:border-transparent disabled:bg-transparent disabled:text-stone-400">
                     {calling ? ROOM.called : ROOM.callAll}
                   </button>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           )}
           {done ? (

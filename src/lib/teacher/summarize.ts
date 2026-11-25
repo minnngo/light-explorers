@@ -1,6 +1,7 @@
 // 교사용 화면 집계 (명세서 11-2). 점수나 상·중·하를 매기지 않고, 교사가 판단할 근거만 모은다.
 import { MISSION_ORDER } from '@/data/missions';
 import { revivedCount } from '@/lib/flow/missionFlow';
+import { studentOf } from '@/lib/store/reducer';
 import type { AppState, MisconceptionKey, MissionId, MissionRecord, MissionStep, ScreenId, StudentFinal } from '@/lib/types';
 
 /** 미션 하나에서 교사가 볼 근거 (11-1 학습지 기록 항목) */
@@ -80,7 +81,8 @@ export function summarize(rows: { state: AppState; updatedAt: string }[]): Class
     groupThought: state.final.groupThought,
     misconception: state.final.misconception,
     selfEval: state.final.selfEval,
-    students: Object.values(state.final.students ?? {}),
+    // 예전 모양 기록(오개념·스스로 평가만 있던 때)도 빈 칸을 채워서 읽는다
+    students: Object.entries(state.final.students ?? {}).map(([id, st]) => studentOf(state.final, { id, name: st?.name ?? '' })),
     ...writing(state),
     finished: state.finished,
     updatedAt,

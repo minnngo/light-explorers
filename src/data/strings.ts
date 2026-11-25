@@ -52,7 +52,7 @@ export const ROOM = {
   noGroups: '선생님이 아직 모둠을 만들지 않았어요. 잠시 뒤 다시 불러와 보세요.',
   groupsFailed: '모둠 목록을 불러오지 못했어요. 다시 불러와 보세요.',
   reloadGroups: '다시 불러오기',
-  myName: '내 이름 (모둠 친구들에게 보여요)',
+  myName: '내 이름을 써 주세요.',
   myNamePlaceholder: '예) 민수',
   enterGroup: '모둠에 들어가기',
   waiting: '모둠 화면을 불러오고 있어요…',
@@ -64,18 +64,12 @@ export const ROOM = {
   membersLabel: '지금 함께하는 모둠원',
   writing: (name: string) => `${name} 쓰는 중…`,
   agreeNeed: (same: number, all: number) => `모둠원 모두 같은 답을 골라야 정할 수 있어요 (${same}/${all}명)`,
-  agreed: '모두 같은 답을 골랐어요!',
   gatherNeed: (here: number, all: number) => `모둠원이 모두 모이면 시작할 수 있어요 (${here}/${all}명)`,
-  gathered: '모두 모였어요!',
-  waitOthers: '친구들이 모두 답하면 정답이 함께 나와요',
-  answered: '답했어요',
-  solving: '푸는 중',
-  selfEvalCount: (n: number, all: number) => `${n}/${all}명이 골랐어요 · 친구가 고른 것은 보이지 않아요`,
-  allMustAnswer: '모둠원이 모두 답하면 다음으로 갈 수 있어요',
   callAll: '모두 부르기',
   called: '친구들을 불렀어요',
   calling: (name: string, place: string) => `${name} 친구가 ${place}에서 기다려요`,
   goTogether: '함께 가기',
+  waitFriends: (n: number, all: number) => `친구를 기다리는 중 (${n}/${all}명)`,
   notHere: '오는 중',
   did: (name: string, what: string) => `${name}: ${what}`,
   actions: {
@@ -87,6 +81,7 @@ export const ROOM = {
     BACK_TO_BUILD: '다시 해 보기를 눌렀어요',
     SET_COMPARE: '○표를 골랐어요',
     GRADE_COMPARE: '확인하기를 눌렀어요',
+    SEE_RESULT: '결과 보기를 눌렀어요',
     CONFIRM: '다음으로 넘겼어요',
     COMPLETE_MISSION: '지도로 돌아갔어요',
     OPEN_MISSION: '미션을 열었어요',
@@ -522,6 +517,14 @@ export const S5 = {
  * criteria(상·중·하)는 명세서 11-2의 "보는 내용"으로 만든 임시 문장이다.
  * TODO: 지도서 4차시 평가 문장 그대로 바꿔 넣기 (팀 확인 필요)
  */
+/** 마지막 글자에 받침이 있는지 (을/를 고르기). 한글이 아니면 숫자 읽기로 본다: 0·1·3·6·7·8은 받침 있음 */
+function hasBatchim(word: string): boolean {
+  const c = word.trim().slice(-1);
+  const code = c.charCodeAt(0) - 0xac00;
+  if (code >= 0 && code <= 11171) return code % 28 !== 0;
+  return '013678'.includes(c);
+}
+
 export const TEACHER = {
   title: '교사용 화면',
   pinPlaceholder: '교사 비밀번호',
@@ -538,7 +541,10 @@ export const TEACHER = {
   setupName: (n: number) => `${n}모둠`,
   setupEmpty: '아직 만든 모둠이 없어요.',
   setupDelete: (name: string) => `${name} 지우기`,
-  setupDeleteConfirm: (name: string) => `${name}을(를) 지울까요? 이 모둠의 기록도 함께 지워져요.`,
+  setupDeleteTitle: (name: string) => `${name}${hasBatchim(name) ? '을' : '를'} 지울까요?`,
+  setupDeleteBody: '이 모둠의 기록도 함께 지워지고,\n학생 화면의 모둠 목록에서도 사라져요.',
+  setupDeleteOk: '지우기',
+  setupDeleteCancel: '취소',
   columns: { group: '모둠', where: '지금 위치', revived: '되살린 곳', hints: '힌트/시도', selfEval: '스스로 평가', wrote: '쓴 글' },
   details: '자세히 보기',
   progressTitle: '모둠별 진행',
@@ -588,7 +594,8 @@ export const TEACHER = {
     compare: '○표 비교',
     explanation: '모둠 이유',
     challenge: '도전(같은 극끼리)',
-    groupThought: '함께 생각 나누기',
+    wrapup: '마무리',
+    groupThought: '생각 나누기',
     explain: '설명하기 답',
     revisitFan: '처음 예상 다시 보기',
     check: '확인해요',

@@ -77,7 +77,7 @@ export default function S1Entry() {
         <section className="flex flex-col gap-4 rounded-2xl bg-white p-5">
           <GroupPicker selected={group} onSelect={setGroup} />
           <label className="flex flex-col gap-2">
-            <span className="font-bold">{ROOM.myName}</span>
+            <span className="text-lg font-bold">{ROOM.myName}</span>
             <input value={myName} onChange={(e) => setMyName(e.target.value)} placeholder={ROOM.myNamePlaceholder}
               maxLength={10} className={input} />
           </label>
@@ -134,7 +134,7 @@ function GroupPicker({ selected, onSelect }: { selected: ClassGroupInfo | null; 
   return (
     <div className="flex flex-col gap-2">
       <div className="flex items-center justify-between">
-        <span className="font-bold">{ROOM.pickGroup}</span>
+        <span className="text-lg font-bold">{ROOM.pickGroup}</span>
         <button type="button" onClick={() => setReload((n) => n + 1)}
           className="rounded-full px-2 py-1 text-sm font-semibold text-stone-500 underline underline-offset-2 outline-none hover:text-stone-800">
           {ROOM.reloadGroups}

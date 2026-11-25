@@ -5,15 +5,14 @@
 import { type Ref, useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { MISSIONS } from '@/data/missions';
-import { CHALLENGE, CHARACTER, COMMON, MISSION_STRINGS, ROOM, withoutMark } from '@/data/strings';
+import { CHALLENGE, CHARACTER, COMMON, MISSION_STRINGS, withoutMark } from '@/data/strings';
 import { challengeStep } from '@/lib/flow/challenge';
 import { canConfirm, canGoCompare, checklist, currentResults, MIN_EXPLANATION_LENGTH } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
-import { memberColor, tallyVotes } from '@/lib/sync/live';
-import { useLive } from '@/lib/sync/LiveContext';
 import type { CompareChoice, PredictionChoice } from '@/lib/types';
 import { playSuccess } from '@/media/sound';
+import { useGroupChoice, VoterDots } from '../GroupChoice';
 import SharedTextArea from '../SharedTextArea';
 import { Button, Choice, CloseButton } from '../ui';
 import { FairyIcon } from '../village/Characters';
@@ -22,7 +21,7 @@ export default function MissionWorksheet({ className = '', ref }: { className?: 
   const { state } = useStore();
   const step = state.missions[state.currentMission!].step;
   return (
-    <aside ref={ref} className={`flex scroll-mt-24 flex-col gap-4 rounded-2xl bg-white p-4 shadow ${className}`}>
+    <aside ref={ref} data-cursor-anchor="worksheet" className={`flex scroll-mt-24 flex-col gap-4 rounded-2xl bg-white p-4 shadow ${className}`}>
       {step === 'predict' && <PredictPanel />}
       {step === 'build' && <BuildPanel />}
       {step === 'compare' && <ComparePanel />}
@@ -36,19 +35,11 @@ export default function MissionWorksheet({ className = '', ref }: { className?: 
  * 모둠 함께하기에서는 각자 고른 답이 색 점으로 보이고, 모두 같은 답을 골라야 정할 수 있다.
  */
 function PredictPanel() {
-  const { state, dispatch, room, members } = useStore();
-  const { peers, publish } = useLive();
+  const { state, dispatch } = useStore();
   const text = MISSION_STRINGS[state.currentMission!];
+  // 혼자 할 때는 고른 것을 이 화면에만 두었다가 "정했어요"로 기록한다. 모둠은 모두 같은 답이어야 정할 수 있다
   const [picked, setPicked] = useState<PredictionChoice | null>(null);
-  const field = `predict-${state.currentMission}`;
-  const tally = room ? tallyVotes(field, room.me, picked, peers, members) : null;
-  const choice = tally ? (tally.agreed as PredictionChoice | null) : picked;
-  const pick = (k: PredictionChoice) => {
-    setPicked(k);
-    if (room) publish({ vote: { field, value: k } });
-  };
-  // 정하고 나면(또는 화면을 떠나면) 내 표는 거둔다
-  useEffect(() => () => publish({ vote: null }), [publish]);
+  const choice = useGroupChoice<PredictionChoice>(`predict-${state.currentMission}`, picked, setPicked, { auto: false });
   return (
     <div className="modal-rise flex flex-col gap-4">
       <h2 className="text-xl font-bold leading-snug">{text.predictQuestion}</h2>
@@ -57,9 +48,9 @@ function PredictPanel() {
           const full = text.predictChoices[k];
           // "(가) 전지 2개를…" → 배지 "가" + 본문
           const m = /^\((.)\)\s*(.*)$/.exec(full);
-          const selected = picked === k;
+          const selected = choice.mine === k;
           return (
-            <button key={k} type="button" aria-pressed={selected} aria-label={full} onClick={() => pick(k)}
+            <button key={k} type="button" aria-pressed={selected} aria-label={full} onClick={() => choice.pick(k)}
               className={`flex items-baseline gap-2 rounded-2xl px-4 py-3 text-left outline-none transition ${
                 selected ? 'bg-amber-100 ring-2 ring-amber-500' : 'bg-[#f6efdf] hover:bg-amber-50 hover:ring-2 hover:ring-amber-300'
               }`}>
@@ -67,30 +58,14 @@ function PredictPanel() {
                 {m ? m[1] : k}
               </span>
               <span className={`flex-1 ${selected ? 'font-bold' : ''}`}>{m ? m[2] : full}</span>
-              {/* 이 답을 고른 모둠원 (색 점, 이름은 마우스를 올리면) */}
-              {tally && (
-                <span className="flex shrink-0 -space-x-1 self-center">
-                  {tally.votes.filter((v) => v.value === k).map((v) => (
-                    <span key={v.member.id} title={v.member.name}
-                      className="pop-in flex size-6 items-center justify-center rounded-full text-xs font-bold text-white ring-2 ring-white"
-                      style={{ background: memberColor(v.member.id) }}>
-                      {v.member.name.slice(0, 1)}
-                    </span>
-                  ))}
-                </span>
-              )}
+              <VoterDots tally={choice.tally} value={k} />
             </button>
           );
         })}
       </div>
-      <Button disabled={!choice} onClick={() => choice && dispatch({ type: 'SET_PREDICTION', choice })}>
+      <Button disabled={!choice.agreed} onClick={() => choice.agreed && dispatch({ type: 'SET_PREDICTION', choice: choice.agreed })}>
         {text.predictConfirm}
       </Button>
-      {tally && tally.votes.length > 1 && (
-        <p role="status" className={`-mt-2 text-center text-sm font-semibold ${tally.agreed ? 'text-[#4f7d62]' : 'text-stone-500'}`}>
-          {tally.agreed ? ROOM.agreed : ROOM.agreeNeed(tally.same, tally.votes.length)}
-        </p>
-      )}
     </div>
   );
 }
@@ -147,13 +122,16 @@ function BuildPanel() {
 
 /** ③ 비교하기와 이유 쓰기: ○표 + 이유 10글자 이상이어야 확인하기 */
 function ComparePanel() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, room } = useStore();
   const record = state.missions[state.currentMission!];
   const text = MISSION_STRINGS[state.currentMission!];
   const length = record.explanation.trim().length;
   // 채점: 확인하기를 누르면 이 화면에서 먼저 답을 맞춰 보고(고칠 수 없음), "다음"으로 ④ 확인에 간다.
   // 모둠 함께하기에서도 한 명이 누르면 모두의 화면에 같이 뜬다
   const graded = record.graded ?? false;
+  // ○표: 모둠은 모두 같은 답을 골라야 정해진다
+  const compare = useGroupChoice<CompareChoice>(`compare-${state.currentMission}`, record.compare,
+    (choice) => dispatch({ type: 'SET_COMPARE', choice }));
   const correct = MISSIONS[state.currentMission!].correctCompare;
   const right = record.compare === correct;
   return (
@@ -164,10 +142,11 @@ function ComparePanel() {
         {(['less', 'more'] as CompareChoice[]).map((k, i) => (
           <span key={k}>
             {i > 0 && ' / '}
-            <Choice className={`mx-1 inline-block ${graded && k === correct ? '!ring-2 !ring-red-500' : ''}`}
-              selected={record.compare === k} disabled={graded}
-              onClick={() => dispatch({ type: 'SET_COMPARE', choice: k })}>
+            <Choice className={`mx-1 inline-flex items-center ${graded && k === correct ? '!ring-2 !ring-red-500' : ''}`}
+              selected={room && !graded ? compare.mine === k : record.compare === k} disabled={graded}
+              onClick={() => compare.pick(k)}>
               {text.compareChoices[k]}
+              {!graded && <VoterDots tally={compare.tally} value={k} />}
             </Choice>
           </span>
         ))}
@@ -215,7 +194,8 @@ function ComparePanel() {
             <Button variant="secondary" onClick={() => dispatch(actions.backToBuild())}>
               {text.retry}
             </Button>
-            <Button className="flex-1" disabled={!canConfirm(record)} onClick={() => dispatch({ type: 'GRADE_COMPARE' })}>
+            <Button className="flex-1" disabled={!canConfirm(record) || (compare.tally !== null && !compare.agreed)}
+              onClick={() => dispatch({ type: 'GRADE_COMPARE' })}>
               {text.confirmButton}
             </Button>
           </>
@@ -237,7 +217,11 @@ function ConfirmPanel() {
   useEffect(() => {
     if (!muted && !reviewing) playSuccess();
   }, [muted, reviewing]);
-  const [celebrate, setCelebrate] = useState(!reviewing && (record.challenge ?? 'none') === 'none');
+  // 성공 축하 창: 한 명이 "결과 보기"를 누르면 모둠 모두의 화면에서 같이 닫힌다 (공유 기록 celebrated)
+  const celebrate = !reviewing && !record.celebrated && (record.challenge ?? 'none') === 'none';
+  const setCelebrate = (open: boolean) => {
+    if (!open) dispatch({ type: 'SEE_RESULT' });
+  };
 
   return (
     <>

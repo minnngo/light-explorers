@@ -88,6 +88,7 @@ export function ConfirmDialog({
   cancelLabel,
   onOk,
   onCancel,
+  danger = false,
 }: {
   open: boolean;
   title: string;
@@ -96,6 +97,8 @@ export function ConfirmDialog({
   cancelLabel: string;
   onOk: () => void;
   onCancel: () => void;
+  /** 지우기처럼 되돌릴 수 없는 일: 확인 버튼을 빨갛게 */
+  danger?: boolean;
 }) {
   const cancelRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
@@ -122,7 +125,9 @@ export function ConfirmDialog({
             {cancelLabel}
           </button>
           <button type="button" onClick={onOk}
-            className="min-h-11 rounded-2xl bg-amber-700 font-bold text-white outline-none transition hover:bg-amber-800">
+            className={`min-h-11 rounded-2xl font-bold text-white outline-none transition ${
+              danger ? 'bg-rose-600 hover:bg-rose-700' : 'bg-amber-700 hover:bg-amber-800'
+            }`}>
             {okLabel}
           </button>
         </div>

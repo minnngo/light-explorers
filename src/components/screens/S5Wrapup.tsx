@@ -2,26 +2,37 @@
 
 import { type ReactNode, useCallback, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
-import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, ROOM, S2, S5, withoutMark } from '@/data/strings';
-import { canAdvanceWrapup, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
+import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S2, S5, withoutMark } from '@/data/strings';
+import { canAdvanceWrapupRecord, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
+import { type Action, wrapupOf } from '@/lib/store/reducer';
 import { useStore } from '@/lib/store/StoreContext';
-import { memberColor, presentMembers } from '@/lib/sync/live';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
-import SharedTextArea from '../SharedTextArea';
+import SharedTextArea, { SharedBlank } from '../SharedTextArea';
 import { Button, Choice, ConfirmDialog, Speech } from '../ui';
 import { VillagePanorama } from './Opening';
 
+/**
+ * 마무리는 각자 한다. 모둠으로 할 때는 내 기록(학생별)에, 혼자 할 때는 모둠 기록에 남긴다.
+ * f: 내 마무리 기록, send: 마무리 동작을 "나"의 것으로 보낸다
+ */
+function useMyWrapup() {
+  const { state, dispatch, room } = useStore();
+  const by = room ? { id: room.me.id, name: room.me.name } : undefined;
+  const f = wrapupOf(state, by);
+  const send = (action: WrapupAction) => dispatch({ ...action, ...(by ? { by } : {}) } as Action);
+  return { f, send };
+}
 
-/** S5. 마무리 7단계 (지도서 마무리 7분). 한 화면에 한 단계씩 */
+type WrapupAction = Extract<Action, { by?: unknown }> extends infer A ? A extends Action ? Omit<A, 'by'> : never : never;
+
+/** S5. 마무리 7단계 (지도서 마무리 7분). 한 화면에 한 단계씩. 모둠으로 할 때도 각자 자기 속도로 한다 */
 export default function S5Wrapup() {
-  const { state, dispatch, restart, room, members } = useStore();
+  const { restart } = useStore();
+  const { f, send } = useMyWrapup();
   const [confirmRestart, setConfirmRestart] = useState(false);
-  // 모둠으로 할 때: 각자 하는 단계(오개념 점검·스스로 평가)는 지금 들어와 있는 모두가 답해야 넘어간다
-  const present = room ? presentMembers(members, room.me).map((m) => m.id) : undefined;
-  const canNext = canAdvanceWrapup(state, present);
   const closeRestart = useCallback(() => setConfirmRestart(false), []);
 
-  if (state.finished) {
+  if (f.finished) {
     return (
       <Ending title={S5.finish.done}>
         {/* 같은 기기를 다음 모둠이 쓸 수 있게 (선생님용, 눈에 덜 띄게) */}
@@ -35,7 +46,7 @@ export default function S5Wrapup() {
     );
   }
 
-  const step = state.wrapupStep;
+  const step = f.wrapupStep;
   const isLast = step === WRAPUP_STEP_COUNT - 1;
   const panels = [<ResultsStep key={0} />, <ShareStep key={1} />, <ExplainStep key={2} />, <CheckStep key={3} />,
     <MisconceptionStep key={4} />, <SelfEvalStep key={5} />];
@@ -44,7 +55,7 @@ export default function S5Wrapup() {
   if (isLast) {
     return (
       <Ending title={S5.finish.title} text={S5.finish.text}>
-        <button type="button" onClick={() => dispatch({ type: 'FINISH' })}
+        <button type="button" onClick={() => send({ type: 'FINISH' })}
           className="modal-rise pulse-cta min-h-14 rounded-full bg-amber-500 px-10 text-xl font-black text-white shadow-lg outline-none transition hover:bg-amber-600">
           {S5.finish.button}
         </button>
@@ -59,15 +70,9 @@ export default function S5Wrapup() {
         <span className="text-slate-500">{step + 1} / {WRAPUP_STEP_COUNT}</span>
       </header>
       {panels[step]}
-      {room && !canNext && (step === 4 || step === 5) && (
-        <p role="status" className="-mb-3 self-end text-sm font-semibold text-stone-500">{ROOM.allMustAnswer}</p>
-      )}
-      <Button
-        className="self-end text-xl"
-        disabled={!canNext}
-        onClick={() => dispatch({ type: isLast ? 'FINISH' : 'NEXT_WRAPUP_STEP' })}
-      >
-        {isLast ? S5.finish.button : COMMON.next}
+      <Button className="self-end text-xl" disabled={!canAdvanceWrapupRecord(f, step)}
+        onClick={() => send({ type: 'NEXT_WRAPUP_STEP' })}>
+        {COMMON.next}
       </Button>
     </main>
   );
@@ -75,7 +80,7 @@ export default function S5Wrapup() {
 
 const card = 'flex flex-col gap-3 rounded-2xl bg-white p-5 shadow';
 
-/** 1. 결과 모아 보기: 미션별 내 예상 / 실제 결과 자동 채움 */
+/** 1. 결과 모아 보기: 미션별 우리 예상 / 실제 결과 자동 채움 (미션은 모둠이 함께 했다) */
 function ResultsStep() {
   const { state } = useStore();
   return (
@@ -99,33 +104,34 @@ function ResultsStep() {
   );
 }
 
-/** 2. 함께 생각을 나누기 */
+/** 2. 생각 나누기: 문장 틀의 빈칸 세 개(전구·버저·전동기)에 바로 쓴다 */
 function ShareStep() {
-  const { state, dispatch } = useStore();
+  const { f, send } = useMyWrapup();
+  const blanks = f.shareBlanks ?? ['', '', ''];
+  const parts = S5.share.frame.split('( )');
   return (
     <section className={card}>
       <p className="font-bold">{S5.share.guide}</p>
-      {/* 문장 틀의 ( ) 자리를 길쭉한 빈칸으로 보여 준다 */}
-      <p className="rounded-xl bg-stone-100/70 p-3 leading-loose text-stone-600">
-        {S5.share.frame.split('( )').map((part, i, all) => (
+      <p className="rounded-xl bg-stone-100/70 px-4 py-3 leading-[2.6] text-stone-700">
+        {parts.map((part, i) => (
           <span key={i}>
             {part}
-            {i < all.length - 1 && (
-              <span aria-label="빈칸" className="mx-1 inline-block h-7 w-28 rounded-lg bg-amber-100 align-middle ring-2 ring-amber-300" />
+            {i < parts.length - 1 && (
+              <SharedBlank field={`share-${i}`} lock={false} value={blanks[i]} maxLength={20} aria-label={`빈칸 ${i + 1}`}
+                onChange={(e) => send({ type: 'SET_SHARE_BLANK', index: i as 0 | 1 | 2, text: e.target.value })} />
             )}
           </span>
         ))}
       </p>
-      <SharedTextArea field="groupThought" value={state.final.groupThought}
-        onChange={(e) => dispatch({ type: 'UPDATE_FINAL', patch: { groupThought: e.target.value } })} />
     </section>
   );
 }
 
 /** 3. 설명하기: 세 질문에 먼저 답한 뒤 정리가 나타난다. "직렬연결" 용어는 여기서 처음 나온다 */
 function ExplainStep() {
-  const { state, dispatch } = useStore();
-  const answered = Object.values(state.final.explain).every((v) => v !== null);
+  const { state } = useStore();
+  const { f, send } = useMyWrapup();
+  const answered = Object.values(f.explain).every((v) => v !== null);
   const fan = state.intro.fanPredict;
   return (
     <section className={card}>
@@ -137,8 +143,8 @@ function ExplainStep() {
             <p className="font-bold">{q.q}</p>
             <div className="flex flex-wrap gap-2">
               {(['more', 'less', 'same'] as const).map((k) => (
-                <Choice key={k} selected={state.final.explain[part] === k}
-                  onClick={() => dispatch({ type: 'ANSWER_EXPLAIN', part, choice: k })}>
+                <Choice key={k} selected={f.explain[part] === k}
+                  onClick={() => send({ type: 'ANSWER_EXPLAIN', part, choice: k })}>
                   {q.choices[k]}
                 </Choice>
               ))}
@@ -152,8 +158,8 @@ function ExplainStep() {
           {fan && (
             <>
               <p className="mt-2 font-bold">{S5.explain.revisit(S2.fanPredict.choices[fan])}</p>
-              <SharedTextArea field="revisitFan" value={state.final.revisitFan} placeholder={COMMON.optional}
-                onChange={(e) => dispatch({ type: 'UPDATE_FINAL', patch: { revisitFan: e.target.value } })} />
+              <SharedTextArea field="revisitFan" lock={false} value={f.revisitFan} placeholder={COMMON.optional}
+                onChange={(e) => send({ type: 'UPDATE_FINAL', patch: { revisitFan: e.target.value } })} />
             </>
           )}
         </div>
@@ -164,8 +170,8 @@ function ExplainStep() {
 
 /** 4. 확인해요 */
 function CheckStep() {
-  const { state, dispatch } = useStore();
-  const check = state.final.check;
+  const { f, send } = useMyWrapup();
+  const check = f.check;
   return (
     <section className={card}>
       <p className="leading-relaxed">
@@ -174,7 +180,7 @@ function CheckStep() {
           <span key={k}>
             {i > 0 && ' / '}
             <Choice className="mx-1 inline-block" selected={check === k}
-              onClick={() => dispatch({ type: 'UPDATE_FINAL', patch: { check: k } })}>
+              onClick={() => send({ type: 'UPDATE_FINAL', patch: { check: k } })}>
               {S5.check.choices[k]}
             </Choice>
           </span>
@@ -201,60 +207,28 @@ function OXMark({ k, className = 'size-6' }: { k: OX; className?: string }) {
   );
 }
 
-/**
- * 5. 오개념 점검: 고른 직후 정답과 해설. 점수는 보여 주지 않고 교사용 기록에만 남긴다.
- * 모둠으로 할 때는 각자 푼다. 친구 답은 "답했어요"로만 보이다가, 모두 답하면 정답과 모두의 답이 함께 나온다.
- */
+/** 5. 오개념 점검: 고른 직후 정답과 해설. 점수는 보여 주지 않고 교사용 기록에만 남긴다 */
 function MisconceptionStep() {
-  const { state, dispatch, room, members } = useStore();
-  const people = room ? presentMembers(members, room.me) : [];
-  const studentOf = (id: string) => state.final.students?.[id];
-  const mine = room ? studentOf(room.me.id)?.misconception : state.final.misconception;
+  const { f, send } = useMyWrapup();
   return (
     <section className={card}>
       <p className="font-bold">{S5.misconception.guide}</p>
       {S5.misconception.items.map((item) => {
-        const result = mine?.[item.key] ?? null;
+        const result = f.misconception[item.key];
         const chosen = choiceOf(result, item.answer);
-        const revealed = room
-          ? people.every((p) => (studentOf(p.id)?.misconception[item.key] ?? null) !== null)
-          : result !== null;
         return (
           <div key={item.key} className="flex flex-col gap-2 border-t border-stone-200 pt-3">
             <p>{item.text}</p>
-            <div className="flex flex-wrap items-center gap-2">
+            <div className="flex gap-2">
               {(['O', 'X'] as const).map((k) => (
                 <Choice key={k} mark={false} selected={chosen === k} disabled={result !== null}
                   aria-label={k === 'O' ? '○' : '×'} className="flex w-16 items-center justify-center"
-                  onClick={() => dispatch({ type: 'ANSWER_MISCONCEPTION', key: item.key, choice: k,
-                    ...(room ? { by: { id: room.me.id, name: room.me.name } } : {}) })}>
+                  onClick={() => send({ type: 'ANSWER_MISCONCEPTION', key: item.key, choice: k })}>
                   <OXMark k={k} />
                 </Choice>
               ))}
-              {/* 모둠: 누가 답했는지 (정답이 나오기 전에는 무엇을 골랐는지 보이지 않는다) */}
-              {room && people.length > 1 && (
-                <ul className="ml-2 flex flex-wrap gap-1.5">
-                  {people.map((p) => {
-                    const r = studentOf(p.id)?.misconception[item.key] ?? null;
-                    const pick = revealed ? choiceOf(r, item.answer) : null;
-                    return (
-                      <li key={p.id} className={`flex items-center gap-1 rounded-full py-0.5 pl-1 pr-2.5 text-sm font-semibold ${
-                        r !== null ? 'bg-stone-100 text-stone-700' : 'text-stone-400'
-                      }`}>
-                        <span className="flex size-5 items-center justify-center rounded-full text-white"
-                          style={{ background: memberColor(p.id), opacity: r !== null ? 1 : 0.4 }} aria-hidden>
-                          {pick && <OXMark k={pick} className="size-3.5" />}
-                        </span>
-                        {p.name}
-                        {!revealed && <span className="font-normal">· {r !== null ? ROOM.answered : ROOM.solving}</span>}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
             </div>
-            {result !== null && !revealed && <p className="text-sm font-semibold text-stone-500">{ROOM.waitOthers}</p>}
-            {revealed && (
+            {result && (
               <p className="pop-in rounded-xl bg-slate-50 p-3">
                 <b>{S5.misconception.answerIs(item.answer === 'O' ? '○' : '×')}</b> {item.explanation}
               </p>
@@ -266,25 +240,17 @@ function MisconceptionStep() {
   );
 }
 
-/** 6. 스스로 평가: 모둠으로 할 때는 각자 고르고, 친구가 고른 것은 보이지 않는다 */
+/** 6. 스스로 평가 */
 function SelfEvalStep() {
-  const { state, dispatch, room, members } = useStore();
-  const people = room ? presentMembers(members, room.me) : [];
-  const mine = room ? state.final.students?.[room.me.id]?.selfEval ?? null : state.final.selfEval;
-  const chose = people.filter((p) => (state.final.students?.[p.id]?.selfEval ?? null) !== null).length;
+  const { f, send } = useMyWrapup();
   return (
     <section className={card}>
       <p className="font-bold">{S5.selfEval.question}</p>
       {(Object.keys(S5.selfEval.choices) as NonNullable<FinalRecord['selfEval']>[]).map((k) => (
-        <Choice key={k} selected={mine === k}
-          onClick={() => dispatch({ type: 'ANSWER_SELF_EVAL', choice: k,
-            ...(room ? { by: { id: room.me.id, name: room.me.name } } : {}) })}>
+        <Choice key={k} selected={f.selfEval === k} onClick={() => send({ type: 'ANSWER_SELF_EVAL', choice: k })}>
           {S5.selfEval.choices[k]}
         </Choice>
       ))}
-      {room && people.length > 1 && (
-        <p role="status" className="text-sm font-semibold text-stone-500">{ROOM.selfEvalCount(chose, people.length)}</p>
-      )}
     </section>
   );
 }

@@ -41,3 +41,18 @@ describe('모둠 이름 순서', () => {
     expect([...names].sort(byGroupName((n) => n))).toEqual(['1모둠', '2모둠', '3모둠', '4모둠', '10모둠']);
   });
 });
+
+describe('예전 모양 학생 기록', () => {
+  it('오개념·스스로 평가만 있던 학생 기록도 빈 칸을 채워서 읽는다', () => {
+    const s = createInitialState();
+    const old = {
+      ...s, groupId: 'g', groupName: '1모둠',
+      final: { ...s.final, students: { a: { name: '민지', misconception: { q1: 'correct', q2: null, q3: null }, selfEval: 'good' } } },
+    } as unknown as AppState;
+    const st = summarize([{ state: old, updatedAt: 'x' }]).groups[0].students[0];
+    expect(st.name).toBe('민지');
+    expect(st.misconception.q1).toBe('correct');
+    expect(st.explain).toEqual({ bulb: null, buzzer: null, motor: null });
+    expect(st.groupThought).toBe('');
+  });
+});

@@ -166,6 +166,14 @@ const FINISH_M1: Action[] = [
   { type: 'CONFIRM' },
 ];
 
+describe('성공 축하 창', () => {
+  it('결과 보기를 누르면 모둠 기록에 남아 모두의 화면에서 같이 닫힌다', () => {
+    const s = play(atMap(), ...FINISH_M1);
+    expect(s.missions.m1.celebrated).toBeUndefined();
+    expect(play(s, { type: 'SEE_RESULT' }).missions.m1.celebrated).toBe(true);
+  });
+});
+
 describe('완료한 미션 다시 보기 (명세서 7-1 하단 "지도로 돌아가기")', () => {
   it('완료한 미션을 다시 열면 완료할 때의 회로판이 보이고 조작은 막힌다', () => {
     const done = play(atMap(), ...FINISH_M1, { type: 'COMPLETE_MISSION', at: 't1' });
@@ -286,40 +294,55 @@ describe('S5 마무리', () => {
   });
 });
 
-describe('마무리: 모둠으로 할 때 오개념 점검·스스로 평가는 학생마다', () => {
-  const atO_X = (): AppState => ({ ...createInitialState(), currentScreen: 'S5', wrapupStep: 4 });
+describe('마무리: 모둠으로 할 때는 각자 한다', () => {
+  const atWrapup = (step = 0): AppState => ({ ...createInitialState(), currentScreen: 'S5', wrapupStep: step });
   const minji = { id: 'a1', name: '민지' };
   const jia = { id: 'b2', name: '지아' };
 
-  it('학생마다 따로 기록하고, 처음 고른 답만 남긴다', () => {
+  it('학생마다 자기 단계로 넘어가고, 모둠 단계는 그대로다', () => {
+    const s = play(atWrapup(), { type: 'NEXT_WRAPUP_STEP', by: minji });
+    expect(s.final.students?.a1.wrapupStep).toBe(1);
+    expect(s.final.students?.b2).toBeUndefined();
+    expect(s.wrapupStep).toBe(0);
+  });
+
+  it('빈칸·고르기·O/X·스스로 평가를 학생마다 따로 기록한다 (O/X는 처음 고른 답만)', () => {
     const s = play(
-      atO_X(),
+      atWrapup(1),
+      { type: 'SET_SHARE_BLANK', index: 0, text: '더 밝아요', by: minji },
+      { type: 'ANSWER_EXPLAIN', part: 'bulb', choice: 'more', by: jia },
       { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'O', by: minji },
       { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'X', by: minji },
-      { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'X', by: jia },
-    );
-    const answer: string = S5.misconception.items.find((i) => i.key === 'q1')!.answer;
-    expect(s.final.students?.a1.misconception.q1).toBe(answer === 'O' ? 'correct' : 'wrong');
-    expect(s.final.students?.b2.misconception.q1).toBe(answer === 'X' ? 'correct' : 'wrong');
-    expect(s.final.misconception.q1).toBeNull(); // 모둠 기록은 비워 둔다
-  });
-
-  it('지금 들어와 있는 모두가 세 문항을 다 풀어야 다음으로 간다', () => {
-    const all = (by: typeof minji): Action[] => (['q1', 'q2', 'q3'] as const)
-      .map((key) => ({ type: 'ANSWER_MISCONCEPTION', key, choice: 'O', by }));
-    const one = play(atO_X(), ...all(minji));
-    expect(canAdvanceWrapup(one, ['a1', 'b2'])).toBe(false);
-    expect(canAdvanceWrapup(play(one, ...all(jia)), ['a1', 'b2'])).toBe(true);
-  });
-
-  it('스스로 평가도 각자 고른다', () => {
-    const s = play(
-      { ...atO_X(), wrapupStep: 5 },
-      { type: 'ANSWER_SELF_EVAL', choice: 'good', by: minji },
       { type: 'ANSWER_SELF_EVAL', choice: 'needHelp', by: jia },
     );
-    expect(s.final.students?.a1.selfEval).toBe('good');
+    const answer: string = S5.misconception.items.find((i) => i.key === 'q1')!.answer;
+    expect(s.final.students?.a1.shareBlanks?.[0]).toBe('더 밝아요');
+    expect(s.final.students?.a1.misconception.q1).toBe(answer === 'O' ? 'correct' : 'wrong');
+    expect(s.final.students?.b2.explain.bulb).toBe('more');
     expect(s.final.students?.b2.selfEval).toBe('needHelp');
-    expect(s.final.selfEval).toBeNull();
+    // 모둠 기록은 비워 둔다
+    expect(s.final.shareBlanks).toBeUndefined();
+    expect(s.final.misconception.q1).toBeNull();
+  });
+
+  it('조건을 채워야 그 학생만 다음으로 가고, 마치기도 각자 한다', () => {
+    const blocked = play(atWrapup(), { type: 'NEXT_WRAPUP_STEP', by: minji }, { type: 'NEXT_WRAPUP_STEP', by: minji });
+    expect(blocked.final.students?.a1.wrapupStep).toBe(1); // 빈칸을 안 채워서 1에서 멈춘다
+    const last = play(atWrapup(), { type: 'FINISH', by: jia });
+    expect(last.final.students?.b2?.finished ?? false).toBe(false); // 마지막 단계가 아니면 마칠 수 없다
+  });
+});
+
+describe('함께 생각 나누기: 빈칸 세 개', () => {
+  const atShare = (): AppState => ({ ...createInitialState(), currentScreen: 'S5', wrapupStep: 1 });
+
+  it('빈칸을 쓰면 빈칸을 채운 문장이 만들어지고, 세 칸을 다 써야 다음으로 간다', () => {
+    const two = play(atShare(), { type: 'SET_SHARE_BLANK', index: 0, text: '더 밝아요' },
+      { type: 'SET_SHARE_BLANK', index: 1, text: '소리가 커요' });
+    expect(two.final.groupThought).toContain('전구는 (더 밝아요), 버저는 (소리가 커요), 날개 달린 전동기는 ( ).');
+    expect(canAdvanceWrapup(two)).toBe(false);
+    const all = play(two, { type: 'SET_SHARE_BLANK', index: 2, text: '빨리 돌아요' });
+    expect(all.final.groupThought).toContain('전동기는 (빨리 돌아요).');
+    expect(canAdvanceWrapup(all)).toBe(true);
   });
 });

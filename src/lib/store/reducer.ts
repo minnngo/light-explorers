@@ -8,7 +8,7 @@ import { boardComponents, REQUIRED_LEVEL } from '@/data/boards';
 import { MISSION_ORDER, MISSIONS, nextMission } from '@/data/missions';
 import { S5 } from '@/data/strings';
 import { canConfirm, canGoCompare, judgeBoard } from '@/lib/flow/missionFlow';
-import { canAdvanceIntro, canAdvanceWrapup, INTRO_CUT_COUNT, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
+import { canAdvanceIntro, canAdvanceWrapupRecord, INTRO_CUT_COUNT, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
 import type {
   AppState,
   BoardId,
@@ -42,6 +42,7 @@ export type Action =
   | { type: 'OPEN_MISSION'; mission: MissionId; at: number }
   | { type: 'LEAVE_MISSION' }
   | { type: 'GRADE_COMPARE' }
+  | { type: 'SEE_RESULT' }
   | { type: 'RETRY_MISSION'; mission: MissionId; at: number }
   | { type: 'GO_TO_WRAPUP' }
   | { type: 'SEE_STORY'; key: StoryKey }
@@ -60,12 +61,13 @@ export type Action =
   | { type: 'START_CHALLENGE' }
   | { type: 'SHOW_CHALLENGE_HINT' }
   // S5
-  | { type: 'UPDATE_FINAL'; patch: Partial<Pick<FinalRecord, 'groupThought' | 'revisitFan' | 'check' | 'selfEval' | 'toCharacter'>> }
-  | { type: 'ANSWER_EXPLAIN'; part: PartKind; choice: ExplainChoice }
+  | { type: 'SET_SHARE_BLANK'; index: 0 | 1 | 2; text: string; by?: StudentRef }
+  | { type: 'UPDATE_FINAL'; patch: Partial<Pick<FinalRecord, 'groupThought' | 'revisitFan' | 'check' | 'selfEval' | 'toCharacter'>>; by?: StudentRef }
+  | { type: 'ANSWER_EXPLAIN'; part: PartKind; choice: ExplainChoice; by?: StudentRef }
   | { type: 'ANSWER_MISCONCEPTION'; key: MisconceptionKey; choice: OX; by?: StudentRef }
   | { type: 'ANSWER_SELF_EVAL'; choice: NonNullable<FinalRecord['selfEval']>; by?: StudentRef }
-  | { type: 'NEXT_WRAPUP_STEP' }
-  | { type: 'FINISH' }
+  | { type: 'NEXT_WRAPUP_STEP'; by?: StudentRef }
+  | { type: 'FINISH'; by?: StudentRef }
   // 저장·동기화
   | { type: 'HYDRATE'; state: AppState }
   | { type: 'RESET' };
@@ -232,6 +234,9 @@ export function reducer(state: AppState, action: Action): AppState {
       return updateMission(state, 'compare', (m) => (m.graded ? m : { ...m, compare: action.choice }));
     case 'SET_EXPLANATION':
       return updateMission(state, 'compare', (m) => (m.graded ? m : { ...m, explanation: action.text }));
+    case 'SEE_RESULT':
+      // 성공 축하 창의 "결과 보기": 모둠 모두의 화면이 확인 화면으로 넘어간다
+      return updateMission(state, 'confirm', (m) => (m.celebrated ? m : { ...m, celebrated: true }));
     case 'GRADE_COMPARE':
       // 확인하기: 답을 맞춰 본다. 그 뒤로는 고를 것과 이유를 바꿀 수 없다
       return updateMission(state, 'compare', (m) => (canConfirm(m) ? { ...m, graded: true } : m));
@@ -272,34 +277,36 @@ export function reducer(state: AppState, action: Action): AppState {
     }
 
     // ───── S5 ─────
+    // ───── S5 마무리: 혼자 할 때는 모둠 기록에, 모둠으로 할 때는 그 학생(by) 기록에 ─────
     case 'UPDATE_FINAL':
-      return { ...state, final: { ...state.final, ...action.patch } };
-    case 'ANSWER_EXPLAIN':
-      return { ...state, final: { ...state.final, explain: { ...state.final.explain, [action.part]: action.choice } } };
+      return putWrapup(state, action.by, action.patch);
+    case 'SET_SHARE_BLANK': {
+      // 빈칸 하나를 쓰면, 빈칸을 채운 문장도 같이 만들어 둔다 (선생님 화면용)
+      const blanks = [...(wrapupOf(state, action.by).shareBlanks ?? ['', '', ''])] as [string, string, string];
+      blanks[action.index] = action.text;
+      return putWrapup(state, action.by, { shareBlanks: blanks, groupThought: fillShareFrame(blanks) });
+    }
+    case 'ANSWER_EXPLAIN': {
+      const f = wrapupOf(state, action.by);
+      return putWrapup(state, action.by, { explain: { ...f.explain, [action.part]: action.choice } });
+    }
     case 'ANSWER_MISCONCEPTION': {
       // 고른 직후 정답과 해설을 보여 주므로, 처음 고른 답만 기록한다
+      const f = wrapupOf(state, action.by);
+      if (f.misconception[action.key] !== null) return state;
       const item = S5.misconception.items.find((i) => i.key === action.key)!;
       const result = item.answer === action.choice ? 'correct' : 'wrong';
-      if (action.by) {
-        // 모둠으로 할 때: 학생마다 따로
-        const me = studentOf(state.final, action.by);
-        if (me.misconception[action.key] !== null) return state;
-        return withStudent(state, action.by.id, { ...me, misconception: { ...me.misconception, [action.key]: result } });
-      }
-      if (state.final.misconception[action.key] !== null) return state;
-      return {
-        ...state,
-        final: { ...state.final, misconception: { ...state.final.misconception, [action.key]: result } },
-      };
+      return putWrapup(state, action.by, { misconception: { ...f.misconception, [action.key]: result } });
     }
     case 'ANSWER_SELF_EVAL':
-      if (action.by) return withStudent(state, action.by.id, { ...studentOf(state.final, action.by), selfEval: action.choice });
-      return { ...state, final: { ...state.final, selfEval: action.choice } };
-    case 'NEXT_WRAPUP_STEP':
-      if (state.currentScreen !== 'S5' || !canAdvanceWrapup(state)) return state;
-      return { ...state, wrapupStep: Math.min(state.wrapupStep + 1, WRAPUP_STEP_COUNT - 1) };
+      return putWrapup(state, action.by, { selfEval: action.choice });
+    case 'NEXT_WRAPUP_STEP': {
+      const f = wrapupOf(state, action.by);
+      if (state.currentScreen !== 'S5' || !canAdvanceWrapupRecord(f, f.wrapupStep)) return state;
+      return putWrapup(state, action.by, { wrapupStep: Math.min(f.wrapupStep + 1, WRAPUP_STEP_COUNT - 1) });
+    }
     case 'FINISH':
-      return state.wrapupStep === WRAPUP_STEP_COUNT - 1 ? { ...state, finished: true } : state;
+      return wrapupOf(state, action.by).wrapupStep === WRAPUP_STEP_COUNT - 1 ? putWrapup(state, action.by, { finished: true }) : state;
 
     case 'HYDRATE':
       return action.state;
@@ -310,18 +317,50 @@ export function reducer(state: AppState, action: Action): AppState {
 
 // ───────────── 도우미 ─────────────
 
+/** 함께 생각 나누기 문장 틀의 ( )를 빈칸 글로 채운다. 하나도 안 썼으면 빈 문자열 */
+export function fillShareFrame(blanks: readonly string[]): string {
+  if (blanks.every((b) => !b.trim())) return '';
+  let i = 0;
+  return S5.share.frame.replace(/\( \)/g, () => {
+    const t = blanks[i++]?.trim();
+    return t ? `(${t})` : '( )';
+  });
+}
+
 /** 모둠으로 할 때 마무리 기록을 남기는 학생 */
 export interface StudentRef {
   id: string;
   name: string;
 }
 
-function studentOf(final: FinalRecord, by: StudentRef): StudentFinal {
-  return final.students?.[by.id] ?? { name: by.name, misconception: { q1: null, q2: null, q3: null }, selfEval: null };
+/** 학생 한 명의 마무리 기록 (아직 없으면 빈 기록. 예전 기록에 없던 칸은 빈 값으로 채운다) */
+export function studentOf(final: FinalRecord, by: StudentRef): StudentFinal {
+  const empty: Omit<FinalRecord, 'students'> = createInitialState().final;
+  return { ...empty, wrapupStep: 0, finished: false, ...final.students?.[by.id], name: final.students?.[by.id]?.name ?? by.name };
 }
 
-function withStudent(state: AppState, id: string, student: StudentFinal): AppState {
-  return { ...state, final: { ...state.final, students: { ...state.final.students, [id]: student } } };
+/** 마무리 기록: 모둠으로 할 때는 그 학생 것, 혼자 할 때는 모둠 것(단계·마침은 AppState에 있다) */
+export function wrapupOf(state: AppState, by?: StudentRef): StudentFinal {
+  if (by) return studentOf(state.final, by);
+  return { ...state.final, name: state.groupName, wrapupStep: state.wrapupStep, finished: state.finished };
+}
+
+function putWrapup(state: AppState, by: StudentRef | undefined, patch: Partial<StudentFinal>): AppState {
+  if (by) {
+    const student = { ...studentOf(state.final, by), ...patch };
+    return { ...state, final: { ...state.final, students: { ...state.final.students, [by.id]: student } } };
+  }
+  const { wrapupStep, finished } = patch;
+  const rest: Partial<StudentFinal> = { ...patch };
+  delete rest.wrapupStep;
+  delete rest.finished;
+  delete rest.name;
+  return {
+    ...state,
+    final: { ...state.final, ...rest },
+    ...(wrapupStep !== undefined ? { wrapupStep } : {}),
+    ...(finished !== undefined ? { finished } : {}),
+  };
 }
 
 function goTo(state: AppState, screen: ScreenId): AppState {

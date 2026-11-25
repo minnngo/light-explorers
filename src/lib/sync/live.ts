@@ -10,13 +10,25 @@ export interface LivePresence {
   editing: string | null;
   /** 마을 지도 위 내 캐릭터 위치 */
   map: { x: number; y: number } | null;
-  /** 모두 동의해야 정하는 문제에서 내가 고른 답 (예: 미션 예상) */
-  vote: { field: string; value: string } | null;
+  /** 모두 동의해야 정하는 문제에서 내가 고른 답 (문제마다. 한 화면에 문제가 여럿일 수 있다) */
+  votes: Record<string, string>;
+  /** 화면 위 내 커서: 어느 화면의 어느 영역(data-cursor-anchor) 몇 % 지점인지 (화면 크기가 달라도 같은 곳을 가리키게) */
+  pointer: {
+    screen: string;
+    anchor: string;
+    /** 영역 안 비율 */
+    ax: number;
+    ay: number;
+    /** 커서 아래 요소까지의 길과 그 요소 안 비율 (길을 찾으면 이것으로 더 정확하게) */
+    path?: string;
+    fx?: number;
+    fy?: number;
+  } | null;
   /** 미션 장소에서 모둠원을 부르는 중 ("모두 부르기") */
   call: { place: MissionId; at: number } | null;
 }
 
-export const EMPTY_PRESENCE: LivePresence = { board: null, editing: null, map: null, vote: null, call: null };
+export const EMPTY_PRESENCE: LivePresence = { board: null, editing: null, map: null, votes: {}, pointer: null, call: null };
 
 export interface LiveMessage extends LivePresence {
   by: Member;
@@ -75,8 +87,8 @@ export interface VoteTally {
 export function tallyVotes(field: string, me: Member, myValue: string | null, peers: LivePeer[], members: Member[]): VoteTally {
   const votes = presentMembers(members, me).map((member) => {
     if (member.id === me.id) return { member, value: myValue };
-    const vote = peers.find((p) => p.member.id === member.id)?.vote;
-    return { member, value: vote && vote.field === field ? vote.value : null };
+    const value = peers.find((p) => p.member.id === member.id)?.votes[field];
+    return { member, value: value ?? null };
   });
   const counts = new Map<string, number>();
   for (const v of votes) if (v.value !== null) counts.set(v.value, (counts.get(v.value) ?? 0) + 1);

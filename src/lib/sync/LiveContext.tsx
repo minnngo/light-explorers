@@ -14,9 +14,13 @@ export interface LiveValue {
   publish: (patch: Partial<LivePresence>) => void;
   /** 지금 내가 쓰고 있는 칸 */
   myEditing: string | null;
+  /** 모두 동의 문제에서 내가 고른 답 (문제마다) */
+  myVotes: Record<string, string>;
+  /** 모두 동의 문제 하나에 내 답을 고른다 */
+  vote: (field: string, value: string) => void;
 }
 
-const NOOP: LiveValue = { peers: [], myId: null, publish: () => {}, myEditing: null };
+const NOOP: LiveValue = { peers: [], myId: null, publish: () => {}, myEditing: null, myVotes: {}, vote: () => {} };
 
 export const LiveContext = createContext<LiveValue>(NOOP);
 

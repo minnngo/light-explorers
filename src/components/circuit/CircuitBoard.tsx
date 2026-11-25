@@ -141,6 +141,7 @@ export default function CircuitBoard(props: Props) {
       onPointerLeave={() => props.onPointerInfo?.(null)}
       role="group"
       aria-label={`회로판 ${boardId}`}
+      data-cursor-anchor={`board-${boardId}`}
     >
       {layout.map((c) => (
         <PartDrawing key={c.component.id} layout={c} result={result} dark={dark} switchClosed={board.switchClosed}
@@ -209,33 +210,15 @@ export default function CircuitBoard(props: Props) {
 
       {props.coach && <Coach coach={props.coach} layout={layout} terminals={terminals} />}
 
-      {/* 친구들: 끌고 있는 전선(친구 색 점선)과 이름표 달린 커서 */}
+      {/* 친구가 끌고 있는 전선 (친구 색 점선). 친구 커서는 화면 전체에 겹친 LiveCursors가 그린다 */}
       {props.peers?.map((p) => {
         const from = p.from ? terminals.get(p.from) : undefined;
-        return (
-          <g key={p.id} pointerEvents="none">
-            {from && (
-              <line x1={from.x} y1={from.y} x2={p.x} y2={p.y} stroke={p.color} strokeWidth={5} strokeDasharray="8 6"
-                strokeLinecap="round" opacity={0.85} />
-            )}
-            <PeerCursor name={p.name} color={p.color} x={p.x} y={p.y} />
-          </g>
-        );
+        return from ? (
+          <line key={p.id} x1={from.x} y1={from.y} x2={p.x} y2={p.y} stroke={p.color} strokeWidth={5} strokeDasharray="8 6"
+            strokeLinecap="round" opacity={0.85} pointerEvents="none" />
+        ) : null;
       })}
     </svg>
-  );
-}
-
-/** 친구 커서: 친구 색 화살표와 이름표. 부드럽게 따라가도록 위치를 CSS transform으로 옮긴다 */
-function PeerCursor({ name, color, x, y }: { name: string; color: string; x: number; y: number }) {
-  const tagWidth = name.length * 11 + 14;
-  return (
-    <g style={{ transform: `translate(${x}px, ${y}px)`, transition: 'transform 90ms linear' }}>
-      <path d="M0 0 L0 17 L4.6 13 L8 19.6 L10.8 18.3 L7.5 11.8 L13.6 11.8 Z" fill={color} stroke="#fff" strokeWidth={1.6}
-        strokeLinejoin="round" />
-      <rect x={11} y={17} width={tagWidth} height={18} rx={9} fill={color} />
-      <text x={11 + tagWidth / 2} y={29.5} textAnchor="middle" fontSize={11.5} fontWeight={700} fill="#fff">{name}</text>
-    </g>
   );
 }
 

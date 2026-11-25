@@ -2,11 +2,12 @@
 
 // 교사용 화면 (2단계): 조별 진행, 도움 횟수, 많이 틀린 오개념 문항, 모둠별 근거 자료.
 // 판정(상·중·하)은 교사가 한다. 이 화면은 근거 자료와 지도서 평가 요소를 참고로만 보여 준다 (명세서 11-2).
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
 import { COMMON, MISSION_STRINGS, S2, S3, S5, TEACHER } from '@/data/strings';
+import { ConfirmDialog } from '@/components/ui';
 import type { ClassSummary, GroupSummary } from '@/lib/teacher/summarize';
-import type { PartKind } from '@/lib/types';
+import type { FinalRecord, PartKind } from '@/lib/types';
 
 const REFRESH_MS = 10_000;
 const STEP_NAMES = { predict: '① 예상', build: '② 만들기', compare: '③ 비교·이유', confirm: '④ 확인' } as const;
@@ -209,32 +210,32 @@ function GroupDetails({ g }: { g: GroupSummary }) {
           );
         })}
 
-        <Dl title={S5.stepTitles.slice(1).join(' · ')} rows={[
-          [L.groupThought, text(g.final.groupThought)],
-          [L.explain, (Object.keys(g.final.explain) as PartKind[])
-            .map((p) => {
-              const v = g.final.explain[p];
-              return `${S5.explain.questions[p].q.slice(0, 1)} ${v ? S5.explain.questions[p].choices[v] : V.empty}`;
-            })
-            .join(' · ')],
-          [L.revisitFan, text(g.final.revisitFan)],
-          [L.check, g.final.check ? V.check[g.final.check] : V.empty],
-          ...(g.students.length > 0
-            // 모둠으로 한 곳: 학생마다 한 줄씩
-            ? [
-              [L.misconception, g.students.map((st) => `${st.name}: ${oxLine(st.misconception)}`).join('\n')],
-              [TEACHER.columns.selfEval, g.students
-                .map((st) => `${st.name}: ${st.selfEval ? S5.selfEval.choices[st.selfEval] : V.empty}`).join('\n')],
-            ] as [string, string][]
-            : [
-              [L.misconception, oxLine(g.final.misconception)],
-              [TEACHER.columns.selfEval, g.final.selfEval ? S5.selfEval.choices[g.final.selfEval] : V.empty],
-            ] as [string, string][]),
-          [L.toCharacter, text(g.final.toCharacter)],
-        ]} />
+        {/* 마무리: 혼자 한 모둠은 모둠 기록 하나, 모둠으로 한 곳은 학생마다 (마무리는 각자 한다) */}
+        {g.students.length > 0
+          ? g.students.map((st) => <Dl key={st.name} title={`${L.wrapup} · ${st.name}`} rows={wrapupRows(st)} />)
+          : <Dl title={L.wrapup} rows={wrapupRows(g.final)} />}
       </div>
     </details>
   );
+}
+
+/** 마무리 기록 한 사람(또는 모둠) 분 */
+function wrapupRows(f: Omit<FinalRecord, 'students'>): [string, string][] {
+  const text = (t: string) => (t.trim() ? t : V.empty);
+  return [
+    [L.groupThought, text(f.groupThought)],
+    [L.explain, (Object.keys(f.explain) as PartKind[])
+      .map((p) => {
+        const v = f.explain[p];
+        return `${S5.explain.questions[p].q.slice(0, 1)} ${v ? S5.explain.questions[p].choices[v] : V.empty}`;
+      })
+      .join(' · ')],
+    [L.revisitFan, text(f.revisitFan)],
+    [L.check, f.check ? V.check[f.check] : V.empty],
+    [L.misconception, oxLine(f.misconception)],
+    [TEACHER.columns.selfEval, f.selfEval ? S5.selfEval.choices[f.selfEval] : V.empty],
+    [L.toCharacter, text(f.toCharacter)],
+  ];
 }
 
 /** 오개념 점검 세 문항: "1번 맞음 · 2번 틀림 · 3번 -" */
@@ -336,8 +337,12 @@ function GroupSetup({ pin }: { pin: string }) {
     setBusy(false);
   };
 
+  // 지우기 확인 창 (브라우저 기본 확인창 대신 앱 모양 창)
+  const [confirming, setConfirming] = useState<ClassGroupRow | null>(null);
+  const closeConfirm = useCallback(() => setConfirming(null), []);
+
   const remove = async (g: ClassGroupRow) => {
-    if (!window.confirm(TEACHER.setupDeleteConfirm(g.name))) return;
+    setConfirming(null);
     setBusy(true);
     setMessage(null);
     try {
@@ -370,7 +375,7 @@ function GroupSetup({ pin }: { pin: string }) {
           {groups.map((g) => (
             <li key={g.id} className="flex items-center gap-1 rounded-full bg-stone-100 py-1 pl-3 pr-1 text-sm font-semibold">
               {g.name}
-              <button type="button" disabled={busy} aria-label={TEACHER.setupDelete(g.name)} onClick={() => void remove(g)}
+              <button type="button" disabled={busy} aria-label={TEACHER.setupDelete(g.name)} onClick={() => setConfirming(g)}
                 className="flex size-7 items-center justify-center rounded-full text-stone-400 outline-none hover:bg-white hover:text-rose-600">
                 ✕
               </button>
@@ -378,6 +383,10 @@ function GroupSetup({ pin }: { pin: string }) {
           ))}
         </ul>
       ))}
+      <ConfirmDialog open={confirming !== null} danger
+        title={confirming ? TEACHER.setupDeleteTitle(confirming.name) : ''} body={TEACHER.setupDeleteBody}
+        okLabel={TEACHER.setupDeleteOk} cancelLabel={TEACHER.setupDeleteCancel}
+        onOk={() => confirming && void remove(confirming)} onCancel={closeConfirm} />
     </Card>
   );
 }
