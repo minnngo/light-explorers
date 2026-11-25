@@ -6,7 +6,8 @@ import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S2, S5, withoutMark } from
 import { canAdvanceWrapup, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
 import { useStore } from '@/lib/store/StoreContext';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
-import { Button, Choice, ConfirmDialog, Speech, TextArea } from '../ui';
+import SharedTextArea from '../SharedTextArea';
+import { Button, Choice, ConfirmDialog, Speech } from '../ui';
 import { VillagePanorama } from './Opening';
 
 
@@ -108,7 +109,7 @@ function ShareStep() {
           </span>
         ))}
       </p>
-      <TextArea value={state.final.groupThought}
+      <SharedTextArea field="groupThought" value={state.final.groupThought}
         onChange={(e) => dispatch({ type: 'UPDATE_FINAL', patch: { groupThought: e.target.value } })} />
     </section>
   );
@@ -144,7 +145,7 @@ function ExplainStep() {
           {fan && (
             <>
               <p className="mt-2 font-bold">{S5.explain.revisit(S2.fanPredict.choices[fan])}</p>
-              <TextArea value={state.final.revisitFan} placeholder={COMMON.optional}
+              <SharedTextArea field="revisitFan" value={state.final.revisitFan} placeholder={COMMON.optional}
                 onChange={(e) => dispatch({ type: 'UPDATE_FINAL', patch: { revisitFan: e.target.value } })} />
             </>
           )}

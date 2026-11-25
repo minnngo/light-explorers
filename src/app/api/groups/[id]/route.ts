@@ -1,3 +1,4 @@
+// GET /api/groups/:id  선생님이 만든 모둠의 지금 상태 (모둠에 들어올 때 여기서 시작한다)
 // PUT /api/groups/:id  모둠 학습 기록 스냅샷 저장 (2단계)
 import type { NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
@@ -5,6 +6,22 @@ import type { AppState } from '@/lib/types';
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const MAX_BYTES = 100_000;
+
+export async function GET(_request: NextRequest, ctx: RouteContext<'/api/groups/[id]'>) {
+  const supabase = getServerSupabase();
+  if (!supabase) return Response.json({ error: '서버 저장이 설정되지 않았습니다.' }, { status: 503 });
+  const { id } = await ctx.params;
+  if (!UUID.test(id)) return Response.json({ error: '잘못된 모둠 id' }, { status: 400 });
+  const { data, error } = await supabase
+    .from('group_sessions')
+    .select('state')
+    .eq('id', id)
+    .filter('state->>classGroup', 'eq', 'true')
+    .maybeSingle();
+  if (error) return Response.json({ error: error.message }, { status: 500 });
+  if (!data) return Response.json({ error: '모둠을 찾지 못했습니다.' }, { status: 404 });
+  return Response.json(data.state, { headers: { 'Cache-Control': 'no-store' } });
+}
 
 export async function PUT(request: NextRequest, ctx: RouteContext<'/api/groups/[id]'>) {
   const supabase = getServerSupabase();

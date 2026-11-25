@@ -89,6 +89,8 @@ export interface MissionRecord {
   built: Record<BoardId, boolean>;
   compare: CompareChoice | null;
   explanation: string;
+  /** ③에서 확인하기를 눌러 답을 맞춰 봤는지 (그 뒤로는 고칠 수 없다. 모둠 모두에게 같이 보인다) */
+  graded?: boolean;
   hintCount: number;
   /** 전선을 잇거나 지운 횟수 */
   attempts: number;
@@ -129,6 +131,8 @@ export interface AppState {
   groupName: string;
   /** 3단계: 여러 기기로 함께할 때의 방 코드. 한 기기로 하면 null */
   roomCode?: string | null;
+  /** 선생님이 교사용 화면에서 미리 만든 모둠 (학생은 목록에서 골라 들어온다) */
+  classGroup?: boolean;
   currentScreen: ScreenId;
   introCut: number;
   /** 마을(S3)에서 이미 본 이야기 장면: 'arrive', 'after-m1', 'after-m2', 'after-m3' */

@@ -8,20 +8,24 @@
 //  - 세 곳 모두 되살리면 "마무리로 가기"
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
-import { CHARACTER, COMMON, RESTART, S3, SITUATION, WORLD } from '@/data/strings';
+import { CHARACTER, COMMON, RESTART, ROOM, S3, SITUATION, WORLD } from '@/data/strings';
+import { PLACES, type Vec } from '@/data/world';
 import { allMissionsDone, revivedCount } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
+import { type LivePeer, memberColor, presentMembers } from '@/lib/sync/live';
+import { useLive } from '@/lib/sync/LiveContext';
+import type { Member } from '@/lib/sync/roomSync';
 import type { MissionId, StoryKey } from '@/lib/types';
 import { playOpen } from '@/media/sound';
-import { nextTarget } from '@/lib/world/movement';
+import { nextTarget, placeAt } from '@/lib/world/movement';
 import { Button, ConfirmDialog } from '../ui';
 import { FairyIcon } from '../village/Characters';
 import MoveTutorial from '../village/MoveTutorial';
 import { LockMark } from '../village/Props';
 import SoundToggle from '../SoundToggle';
 import SituationScene from '../village/SituationScene';
-import VillageWorld, { type WorldView } from '../village/VillageWorld';
+import VillageWorld, { type MapPeer, type WorldView } from '../village/VillageWorld';
 
 /** 함께하기 중에는 화면 맨 위에 방 코드 띠(RoomBar)가 있다 */
 const ROOM_BAR_HEIGHT = 36;
@@ -30,7 +34,8 @@ const ROOM_BAR_HEIGHT = 36;
 export const darknessFor = (revived: number) => [0.6, 0.42, 0.25, 0.06][revived] ?? 0.06;
 
 export default function S3Map() {
-  const { state, dispatch, room, restart } = useStore();
+  const { state, dispatch, room, members, restart } = useStore();
+  const { peers, publish } = useLive();
   const [confirmRestart, setConfirmRestart] = useState(false);
   // 처음 도착 인사를 들은 뒤 움직이는 방법 튜토리얼
   const [tutorial, setTutorial] = useState(false);
@@ -70,6 +75,28 @@ export default function S3Map() {
     if (!locked) setArrived(id);
   };
 
+  // ───── 모둠 함께하기: 친구 캐릭터, 모이기, 모두 부르기 ─────
+  const onMove = useCallback((p: Vec) => {
+    publish({ map: { x: Math.round(p.x), y: Math.round(p.y) } });
+  }, [publish]);
+  // 지도를 떠나면(미션에 들어가면) 내 캐릭터와 부르기를 거둔다
+  useEffect(() => () => publish({ map: null, call: null }), [publish]);
+  const others: MapPeer[] = peers.flatMap((p) => (p.map
+    ? [{ id: p.member.id, name: p.member.name, color: p.color, x: p.map.x, y: p.map.y }]
+    : []));
+  const [myCall, setMyCall] = useState(false);
+  const closeSituation = () => {
+    setArrived(null);
+    setMyCall(false);
+    publish({ call: null });
+  };
+  // 함께 가기: 부른 친구가 있는 장소로 바로 간다
+  const [jump, setJump] = useState<{ to: Vec; key: number } | null>(null);
+  const [dismissedCall, setDismissedCall] = useState<number | null>(null);
+  const caller = room && !arrived
+    ? peers.find((p) => p.call && p.call.at !== dismissedCall && status[p.call.place] !== 'locked')
+    : undefined;
+
   return (
     // 지도가 화면 전체를 채우고, 제목·버튼·안내는 그 위에 떠 있다
     <main className="relative w-full overflow-hidden bg-[#3f5a4c]"
@@ -85,6 +112,9 @@ export default function S3Map() {
           onArrive={onArrive}
           practice={tutorial}
           resetKey={practiceRound}
+          onMove={room ? onMove : undefined}
+          others={room ? others : undefined}
+          jumpTo={jump}
         />
       </div>
 
@@ -141,8 +171,31 @@ export default function S3Map() {
           done={state.missions[arrived].status === 'done'}
           onStart={() => dispatch(actions.openMission(arrived))}
           onRetry={() => dispatch(actions.retryMission(arrived))}
-          onClose={() => setArrived(null)}
+          onClose={closeSituation}
+          gather={room ? gatherAt(arrived, room.me, members, peers) : null}
+          onCall={() => {
+            setMyCall(true);
+            publish({ call: { place: arrived, at: Date.now() } });
+          }}
+          calling={myCall}
         />
+      )}
+
+      {/* 친구가 미션 장소에서 부르면: 함께 가기 */}
+      {!story && caller?.call && (
+        <div role="status"
+          className="pop-in absolute left-1/2 top-20 z-30 flex -translate-x-1/2 items-center gap-3 rounded-full bg-white/90 py-2 pl-3 pr-2 shadow-lg backdrop-blur">
+          <span className="size-4 shrink-0 rounded-full" style={{ background: caller.color }} aria-hidden />
+          <span className="font-bold text-stone-700">{ROOM.calling(caller.member.name, S3.places[caller.call.place])}</span>
+          <button type="button" onClick={() => setJump({ to: PLACES[caller.call!.place], key: (jump?.key ?? 0) + 1 })}
+            className="min-h-10 rounded-full bg-amber-500 px-4 font-bold text-white outline-none transition hover:bg-amber-600">
+            {ROOM.goTogether}
+          </button>
+          <button type="button" aria-label={WORLD.close} onClick={() => setDismissedCall(caller.call!.at)}
+            className="flex size-9 items-center justify-center rounded-full text-stone-400 outline-none hover:text-stone-700">
+            ✕
+          </button>
+        </div>
       )}
 
       {!story && !arrived && lockedMessage && (
@@ -246,11 +299,31 @@ interface SituationProps {
   onStart: () => void;
   onRetry: () => void;
   onClose: () => void;
+  /** 모둠 함께하기: 누가 이 장소에 와 있는지. 모두 모여야 시작할 수 있다 */
+  gather: Gather | null;
+  onCall: () => void;
+  calling: boolean;
+}
+
+interface Gather {
+  members: { member: Member; color: string; here: boolean }[];
+  ready: boolean;
+}
+
+/** 지금 들어와 있는 모둠원 중 이 장소에 와 있는 사람 (나는 이 창이 떠 있으니 와 있다) */
+function gatherAt(id: MissionId, me: Member, members: Member[], peers: LivePeer[]): Gather {
+  const list = presentMembers(members, me).map((member) => {
+    const peer = peers.find((p) => p.member.id === member.id);
+    const here = member.id === me.id || (peer?.map ? placeAt(peer.map) === id : false);
+    return { member, color: memberColor(member.id), here };
+  });
+  return { members: list, ready: list.every((m) => m.here) };
 }
 
 /** 미션 장소에 도착: 움직이는 상황 장면과 문제 상황·우리가 할 일 */
-function SituationPanel({ id, done, onStart, onRetry, onClose }: SituationProps) {
+function SituationPanel({ id, done, onStart, onRetry, onClose, gather, onCall, calling }: SituationProps) {
   const text = SITUATION[id];
+  const blocked = gather !== null && !gather.ready;
   useEffect(() => playOpen(), []); // 장소에 도착하면 "띠링"
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/50 p-4">
@@ -277,13 +350,43 @@ function SituationPanel({ id, done, onStart, onRetry, onClose }: SituationProps)
               </div>
             </dl>
           )}
+          {/* 모둠 함께하기: 모두 모여야 함께 들어간다 */}
+          {gather && gather.members.length > 1 && (
+            <div className="flex flex-col gap-2 rounded-2xl bg-stone-50 px-4 py-3">
+              <ul className="flex flex-wrap gap-2">
+                {gather.members.map(({ member, color, here }) => (
+                  <li key={member.id} className={`flex items-center gap-1.5 rounded-full py-1 pl-1.5 pr-3 text-sm font-bold transition ${
+                    here ? 'bg-white text-stone-700 shadow-sm' : 'text-stone-400'
+                  }`}>
+                    <span className={`flex size-5 items-center justify-center rounded-full text-[0.65rem] text-white ${here ? '' : 'opacity-40'}`}
+                      style={{ background: color }} aria-hidden>
+                      {here ? '✓' : ''}
+                    </span>
+                    {member.name}
+                    {!here && <span className="font-semibold">· {ROOM.notHere}</span>}
+                  </li>
+                ))}
+              </ul>
+              <div className="flex items-center justify-between gap-2">
+                <p role="status" className={`text-sm font-semibold ${gather.ready ? 'text-[#4f7d62]' : 'text-stone-500'}`}>
+                  {gather.ready ? ROOM.gathered : ROOM.gatherNeed(gather.members.filter((m) => m.here).length, gather.members.length)}
+                </p>
+                {!gather.ready && (
+                  <button type="button" onClick={onCall} disabled={calling}
+                    className="min-h-9 shrink-0 rounded-full border border-amber-300 bg-amber-50 px-4 text-sm font-bold text-amber-800 outline-none transition hover:bg-amber-100 disabled:border-transparent disabled:bg-transparent disabled:text-stone-400">
+                    {calling ? ROOM.called : ROOM.callAll}
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
           {done ? (
             <div className="flex gap-2">
-              <Button variant="secondary" className="flex-1" onClick={onRetry}>{WORLD.retry}</Button>
-              <Button className="flex-1" onClick={onStart} autoFocus>{WORLD.review}</Button>
+              <Button variant="secondary" className="flex-1" disabled={blocked} onClick={onRetry}>{WORLD.retry}</Button>
+              <Button className="flex-1" disabled={blocked} onClick={onStart} autoFocus>{WORLD.review}</Button>
             </div>
           ) : (
-            <Button onClick={onStart} autoFocus>{WORLD.startMission}</Button>
+            <Button disabled={blocked} onClick={onStart} autoFocus>{WORLD.startMission}</Button>
           )}
         </div>
       </div>

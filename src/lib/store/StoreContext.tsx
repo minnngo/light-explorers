@@ -1,7 +1,7 @@
 'use client';
 
 import { createContext, type Dispatch, useContext } from 'react';
-import type { Member, Role, RoomInfo } from '@/lib/sync/roomSync';
+import type { Member, RoomInfo } from '@/lib/sync/roomSync';
 import type { AppState, BoardId } from '@/lib/types';
 import type { Action } from './reducer';
 
@@ -28,12 +28,18 @@ export interface StoreValue {
   /** 방 코드로 들어와 첫 상태를 기다리는 중 */
   waitingForRoom: boolean;
   remoteNote: RemoteNote | null;
-  /** 새 모둠으로 방 만들기 (탐험 시작과 함께) */
-  createRoom: (groupName: string, safetyAgreed: boolean, me: { name: string; role: Role }) => void;
-  joinRoom: (code: string, me: { name: string; role: Role }) => void;
+  /** 선생님이 만든 모둠에 들어가기 (서버에 저장된 모둠 상태로 시작하고, 같은 모둠 친구들과 실시간으로 맞춘다) */
+  joinGroup: (group: ClassGroupInfo, me: { name: string }) => Promise<void>;
   leaveRoom: () => void;
   /** 이 기기의 기록을 지우고 처음부터 (다른 기기로 보내지 않음) */
   restart: () => void;
+}
+
+/** 학생 입장 화면의 모둠 목록 한 줄 */
+export interface ClassGroupInfo {
+  id: string;
+  name: string;
+  roomCode: string;
 }
 
 export const StoreContext = createContext<StoreValue | null>(null);
@@ -42,9 +48,4 @@ export function useStore(): StoreValue {
   const value = useContext(StoreContext);
   if (!value) throw new Error('useStore는 StudentApp 안에서만 쓸 수 있습니다.');
   return value;
-}
-
-/** 이 회로판을 이 기기에서 조작해도 되는지. 한 기기로 하면 둘 다, 함께하기에서는 내가 맡은 회로판만 */
-export function canOperateBoard(room: RoomInfo | null, board: BoardId): boolean {
-  return room === null || room.me.role === board;
 }

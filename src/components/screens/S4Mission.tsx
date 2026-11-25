@@ -9,11 +9,13 @@ import { canGoCompare, currentResults, type MissionFocus, missionFocus } from '@
 import { actions } from '@/lib/store/actions';
 import { loadTutorialDone, saveTutorialDone } from '@/lib/store/persistence';
 import { isEditable } from '@/lib/store/reducer';
-import { canOperateBoard, useStore } from '@/lib/store/StoreContext';
+import { useStore } from '@/lib/store/StoreContext';
+import { isLeader } from '@/lib/sync/live';
+import { useLive } from '@/lib/sync/LiveContext';
 import { type BoardSnapshot, type CoachMark, coachFor, nextStep, stepDone, type TutorialStep } from '@/lib/tutorial/tutorial';
 import type { BoardId, BoardState, JudgeResult, MissionStep } from '@/lib/types';
 import CircuitBoard from '../circuit/CircuitBoard';
-import { ownerNames, useRecentNote } from '../RoomBar';
+import { useRecentNote } from '../RoomBar';
 import { useHint } from '../circuit/useHint';
 import MissionIntro from '../mission/MissionIntro';
 import MissionWorksheet from '../mission/MissionWorksheet';
@@ -28,7 +30,7 @@ const PILL =
 
 /** S4. 미션 화면 (3곳 공통 틀. 미션마다 다른 것은 data/missions.ts, data/strings.ts에서 온다) */
 export default function S4Mission() {
-  const { state, dispatch, room } = useStore();
+  const { state, dispatch } = useStore();
   const id = state.currentMission!;
   const config = MISSIONS[id];
   const text = MISSION_STRINGS[id];
@@ -40,7 +42,8 @@ export default function S4Mission() {
 
   // 회로 만들기 튜토리얼: 이 기기에서 처음 ② 만들기에 들어오면 자동으로, 이후에는 "다시 보기"로
   const building = record.step === 'build' && record.status !== 'done';
-  const tutorialBoard: BoardId = room?.me.role ?? 'A';
+  // 튜토리얼은 A 회로판에서 (모둠 함께하기에서도 같은 회로판을 함께 보며 배운다)
+  const tutorialBoard: BoardId = 'A';
   // 자동으로 뜨는 건 미션 1(가로등)을 처음 만들 때만. 미션 2·3에서는 "연결 방법 다시 보기"로 직접 연다
   const tutorial = useTutorial(building && !storyOpen, id === MISSION_ORDER[0], state.boards[tutorialBoard]);
 
@@ -153,19 +156,24 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
   boardId: BoardId; result: JudgeResult; dark: boolean; look: string; coach?: CoachMark; hintsPaused: boolean; card?: ReactNode;
 }) {
   const { state, dispatch, muted, room, members } = useStore();
+  const { peers, publish } = useLive();
   const id = state.currentMission!;
   const record = state.missions[id];
   const board = state.boards[boardId];
   const text = MISSION_STRINGS[id];
-  // 3단계: 함께하기에서는 내가 맡은 회로판만 조작한다 (다른 회로판은 보기만)
-  const mine = canOperateBoard(room, boardId);
-  const editable = isEditable(state, boardId) && mine;
+  // 모둠 함께하기에서도 누구나 두 회로판을 함께 조작한다
+  const editable = isEditable(state, boardId);
   const note = useRecentNote(boardId);
+  // 이 회로판 위에 있는 친구 커서
+  const boardPeers = peers.flatMap((p) => (p.board?.id === boardId
+    ? [{ id: p.member.id, name: p.member.name, color: p.color, x: p.board.x, y: p.board.y, from: p.board.from }]
+    : []));
 
-  // 힌트 횟수는 그 회로판을 맡은 기기에서만 센다 (같은 힌트를 두 기기가 두 번 세지 않게)
+  // 힌트 횟수는 모둠에서 한 기기만 센다 (같은 힌트를 여러 기기가 여러 번 세지 않게)
+  const countsHints = room === null || isLeader(room, members);
   const onHintShown = useCallback(() => {
-    if (mine) dispatch({ type: 'HINT_SHOWN' });
-  }, [dispatch, mine]);
+    if (countsHints) dispatch({ type: 'HINT_SHOWN' });
+  }, [dispatch, countsHints]);
   // 힌트는 ② 만들기에서만 (8-1 도전 중에는 일부러 같은 극끼리 잇기 때문에 힌트를 주지 않는다)
   // 튜토리얼 중에는 힌트 말풍선이 겹치지 않게 멈춘다
   const hint = useHint(board, result, record.step === 'build' && !hintsPaused, onHintShown);
@@ -189,19 +197,6 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
       <div className="flex flex-wrap items-center gap-2">
         {/* 1단계(한 기기): 모둠원이 두 회로를 나누어 만들도록 이름표를 단다 (명세서 7-1) */}
         <h2 className="text-lg font-bold">{boardId === 'A' ? COMMON.boardA : COMMON.boardB}</h2>
-        {/* 함께하기에서만: 이 회로판을 맡은 사람 이름 (혼자 할 때는 보이지 않는다) */}
-        {room && (
-          // 이름만 (회로 이름은 바로 옆 제목에 있다). 내가 맡은 회로는 주황, 친구가 맡은 회로는 파랑
-          <span className={`flex items-center gap-1.5 rounded-full py-1 pl-2 pr-3 text-sm font-bold ring-1 ${
-            mine ? 'bg-amber-100 text-amber-800 ring-amber-300' : 'bg-sky-100 text-sky-800 ring-sky-300'
-          }`}>
-            <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
-              <circle cx={12} cy={8} r={4} />
-              <path d="M4 20c0-4 3.6-6.5 8-6.5s8 2.5 8 6.5z" />
-            </svg>
-            {ownerNames(members, boardId, room.me)}
-          </span>
-        )}
       </div>
       <div className={`relative ${editable ? '' : 'opacity-90'}`}>
           {note && (
@@ -222,6 +217,8 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card }: {
             onRemoveWire={(wireId) => dispatch(actions.removeWire(boardId, wireId))}
             onToggleSwitch={() => dispatch(actions.toggleSwitch(boardId))}
             coach={editable ? coach : undefined}
+            peers={room ? boardPeers : undefined}
+            onPointerInfo={room ? (p) => publish({ board: p && { id: boardId, ...p } }) : undefined}
           />
       </div>
       <p className="min-h-7 text-center font-semibold text-amber-800">{observation}</p>

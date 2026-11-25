@@ -1,17 +1,10 @@
 // GET /api/teacher/summary  교사용 조별 진행 집계 (2단계)
 // 헤더 x-teacher-pin 이 환경 변수 TEACHER_PIN 과 같아야 한다.
-import { timingSafeEqual } from 'node:crypto';
 import type { NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
+import { pinMatches } from '@/lib/teacher/pin';
 import { summarize } from '@/lib/teacher/summarize';
 import type { AppState } from '@/lib/types';
-
-function pinMatches(given: string | null, expected: string): boolean {
-  if (!given) return false;
-  const a = Buffer.from(given);
-  const b = Buffer.from(expected);
-  return a.length === b.length && timingSafeEqual(a, b);
-}
 
 export async function GET(request: NextRequest) {
   const pin = process.env.TEACHER_PIN;

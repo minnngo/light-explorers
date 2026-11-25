@@ -1,25 +1,30 @@
 'use client';
 
-// 3단계: 함께하기 중일 때 화면 맨 위에 방 코드, 회로 담당, 다른 친구가 방금 한 조작을 보여 준다.
+// 3단계: 모둠으로 할 때 화면 맨 위에 모둠 이름, 지금 들어와 있는 모둠원(커서와 같은 색), 다른 친구가 방금 한 조작을 보여 준다.
 import { useEffect, useState } from 'react';
 import { ROOM } from '@/data/strings';
 import { type RemoteNote, useStore } from '@/lib/store/StoreContext';
-import type { Member, Role } from '@/lib/sync/roomSync';
+import { memberColor, presentMembers } from '@/lib/sync/live';
 
 /** 다른 기기의 조작을 보여 주는 시간 */
 export const REMOTE_NOTE_MS = 3000;
 
 export default function RoomBar() {
-  const { room, members, connection } = useStore();
+  const { state, room, members, connection } = useStore();
   const note = useRecentNote(null);
   if (!room) return null;
 
   return (
     <div className="flex flex-wrap items-center gap-x-4 gap-y-1 bg-sky-900 px-4 py-1 text-base text-white">
-      <span className="font-bold tracking-wide">🔗 {ROOM.bar(room.code)}</span>
-      {(['A', 'B'] as const).map((role) => (
-        <span key={role}>{ROOM.roleOwner(role, ownerNames(members, role, room.me))}</span>
-      ))}
+      <span className="font-bold">{state.groupName}</span>
+      <ul className="flex flex-wrap items-center gap-1.5" aria-label={ROOM.membersLabel}>
+        {presentMembers(members, room.me).map((m) => (
+          <li key={m.id} className="flex items-center gap-1.5 rounded-full bg-white/15 py-0.5 pl-1.5 pr-2.5 text-sm font-semibold">
+            <span className="size-3 rounded-full ring-2 ring-white/70" style={{ background: memberColor(m.id) }} aria-hidden />
+            {m.id === room.me.id ? `${m.name}${ROOM.me}` : m.name}
+          </li>
+        ))}
+      </ul>
       {connection === 'connecting' && <span className="text-sky-200">{ROOM.connecting}</span>}
       {connection === 'offline' && <span className="font-bold text-amber-300">{ROOM.offline}</span>}
       {note && (
@@ -29,13 +34,6 @@ export default function RoomBar() {
       )}
     </div>
   );
-}
-
-/** 담당자 이름. 내 기기는 presence가 오기 전에도 보이도록 직접 넣는다 */
-export function ownerNames(members: Member[], role: Role, me: Member): string {
-  const list = members.some((m) => m.id === me.id) ? members : [...members, me];
-  const names = list.filter((m) => m.role === role).map((m) => (m.id === me.id ? `${m.name}${ROOM.me}` : m.name));
-  return names.length ? names.join(', ') : ROOM.nobody;
 }
 
 /**

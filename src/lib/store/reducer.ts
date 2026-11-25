@@ -40,6 +40,7 @@ export type Action =
   // S3
   | { type: 'OPEN_MISSION'; mission: MissionId; at: number }
   | { type: 'LEAVE_MISSION' }
+  | { type: 'GRADE_COMPARE' }
   | { type: 'RETRY_MISSION'; mission: MissionId; at: number }
   | { type: 'GO_TO_WRAPUP' }
   | { type: 'SEE_STORY'; key: StoryKey }
@@ -224,11 +225,14 @@ export function reducer(state: AppState, action: Action): AppState {
       if (!canGoCompare(state)) return state;
       return updateMission(state, 'build', (m) => ({ ...m, step: 'compare' }));
     case 'BACK_TO_BUILD':
-      return updateMission(state, 'compare', (m) => ({ ...m, step: 'build' }));
+      return updateMission(state, 'compare', (m) => (m.graded ? m : { ...m, step: 'build' }));
     case 'SET_COMPARE':
-      return updateMission(state, 'compare', (m) => ({ ...m, compare: action.choice }));
+      return updateMission(state, 'compare', (m) => (m.graded ? m : { ...m, compare: action.choice }));
     case 'SET_EXPLANATION':
-      return updateMission(state, 'compare', (m) => ({ ...m, explanation: action.text }));
+      return updateMission(state, 'compare', (m) => (m.graded ? m : { ...m, explanation: action.text }));
+    case 'GRADE_COMPARE':
+      // 확인하기: 답을 맞춰 본다. 그 뒤로는 고를 것과 이유를 바꿀 수 없다
+      return updateMission(state, 'compare', (m) => (canConfirm(m) ? { ...m, graded: true } : m));
     case 'CONFIRM':
       return updateMission(state, 'compare', (m) => (canConfirm(m) ? { ...m, step: 'confirm' } : m));
 

@@ -1,13 +1,17 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
-import { actions } from '@/lib/store/actions';
 import { clearLocal, loadLocal, loadRoom, saveLocal, saveRoom } from '@/lib/store/persistence';
 import { type Action, createInitialState, reducer } from '@/lib/store/reducer';
 import { type RemoteNote, StoreContext, type StoreValue } from '@/lib/store/StoreContext';
 import { createSupabaseTransport } from '@/lib/sync/realtime';
 import { scheduleRemoteSave } from '@/lib/sync/remoteSave';
-import { createRoomSync, generateRoomCode, type Member, type RoomInfo, type RoomSync } from '@/lib/sync/roomSync';
+import {
+  EMPTY_PRESENCE, LIVE_KEEPALIVE_MS, LIVE_SEND_MS, LIVE_STALE_MS, type LiveMessage, type LivePeer, type LivePresence, memberColor,
+} from '@/lib/sync/live';
+import { LiveContext, type LiveValue } from '@/lib/sync/LiveContext';
+import { createRoomSync, type Member, type RoomInfo, type RoomSync } from '@/lib/sync/roomSync';
+import type { AppState } from '@/lib/types';
 import { setMusicLevel } from '@/media/music';
 import { audio, playClick, setUiSoundMuted } from '@/media/sound';
 import RoomBar from './RoomBar';
@@ -46,6 +50,13 @@ export default function StudentApp() {
   const [waitingForRoom, setWaitingForRoom] = useState(false);
   const [remoteNote, setRemoteNote] = useState<RemoteNote | null>(null);
   const syncRef = useRef<RoomSync | null>(null);
+  // 실시간 존재감 (커서·끄는 전선·쓰는 중): 친구들 모습과, 내 모습을 보내는 통로
+  const [peerMap, setPeerMap] = useState<Record<string, LivePeer>>({});
+  const [myEditing, setMyEditing] = useState<string | null>(null);
+  const liveRef = useRef<{
+    send: ((m: LiveMessage) => void) | null; me: Member | null; mine: LivePresence; lastSent: number;
+    timer: ReturnType<typeof setTimeout> | null;
+  }>({ send: null, me: null, mine: EMPTY_PRESENCE, lastSent: 0, timer: null });
   const stateRef = useRef(state);
 
   useEffect(() => {
@@ -74,7 +85,38 @@ export default function StudentApp() {
       onWaiting: setWaitingForRoom,
     });
     syncRef.current = sync;
+
+    // 실시간 존재감: 친구 모습을 받고, 내 모습은 가끔 다시 알린다(늦게 들어온 친구를 위해). 오래 소식 없는 친구는 지운다
+    const live = liveRef.current;
+    live.send = transport.sendLive;
+    live.me = room.me;
+    transport.onLive((msg) => {
+      if (msg.by.id === room.me.id) return;
+      const peer: LivePeer = {
+        board: msg.board, editing: msg.editing, map: msg.map, vote: msg.vote ?? null, call: msg.call ?? null,
+        member: msg.by, color: memberColor(msg.by.id), at: Date.now(),
+      };
+      setPeerMap((prev) => ({ ...prev, [msg.by.id]: peer }));
+    });
+    const keepalive = setInterval(() => {
+      transport.sendLive({ ...live.mine, by: room.me, at: Date.now() });
+      const cutoff = Date.now() - LIVE_STALE_MS;
+      setPeerMap((prev) => {
+        const stale = Object.values(prev).filter((p) => p.at < cutoff);
+        if (stale.length === 0) return prev;
+        const next = { ...prev };
+        for (const p of stale) delete next[p.member.id];
+        return next;
+      });
+    }, LIVE_KEEPALIVE_MS);
+
     return () => {
+      clearInterval(keepalive);
+      if (live.timer) clearTimeout(live.timer);
+      live.timer = null;
+      live.send = null;
+      live.me = null;
+      setPeerMap({});
       sync.close();
       syncRef.current = null;
       setMembers([]);
@@ -89,18 +131,40 @@ export default function StudentApp() {
     syncRef.current?.broadcast(action);
   }, []);
 
-  const createRoom = useCallback<StoreValue['createRoom']>((groupName, safetyAgreed, me) => {
-    const code = generateRoomCode();
-    rawDispatch(actions.startExpedition(groupName, safetyAgreed, code));
-    setRoom({ code, host: true, me: { id: crypto.randomUUID(), ...me } });
-  }, []);
-
-  const joinRoom = useCallback<StoreValue['joinRoom']>((code, me) => {
-    rawDispatch({ type: 'RESET' }); // 이 기기에 남은 예전 기록 대신 방의 상태로 시작한다
-    setRoom({ code, host: false, me: { id: crypto.randomUUID(), ...me } });
+  const joinGroup = useCallback<StoreValue['joinGroup']>(async (group, me) => {
+    // 서버에 저장된 모둠 상태로 시작한다. 못 받으면 이 기기 기록을 비우고 친구 기기에서 상태를 받는다
+    const res = await fetch(`/api/groups/${group.id}`, { cache: 'no-store' }).catch(() => null);
+    const saved = res?.ok ? ((await res.json().catch(() => null)) as AppState | null) : null;
+    rawDispatch(saved && saved.groupId === group.id ? { type: 'HYDRATE', state: saved } : { type: 'RESET' });
+    setRoom({ code: group.roomCode, host: false, me: { id: crypto.randomUUID(), name: me.name } });
   }, []);
 
   const leaveRoom = useCallback(() => setRoom(null), []);
+
+  /** 내 모습 중 바뀐 부분을 알린다. 너무 자주 보내지 않게 모아서 보낸다 */
+  const publish = useCallback<LiveValue['publish']>((patch) => {
+    const live = liveRef.current;
+    live.mine = { ...live.mine, ...patch };
+    if ('editing' in patch) setMyEditing(patch.editing ?? null);
+    const flush = () => {
+      live.timer = null;
+      live.lastSent = Date.now();
+      if (live.send && live.me) live.send({ ...live.mine, by: live.me, at: live.lastSent });
+    };
+    const wait = LIVE_SEND_MS - (Date.now() - live.lastSent);
+    if (wait <= 0) flush();
+    else live.timer ??= setTimeout(flush, wait);
+  }, []);
+
+  // 방을 나간 친구(presence에서 사라짐)는 바로 지운다
+  const peers = useMemo(() => {
+    const list = Object.values(peerMap);
+    return members.length === 0 ? list : list.filter((p) => members.some((m) => m.id === p.member.id));
+  }, [peerMap, members]);
+  const liveValue = useMemo<LiveValue>(
+    () => ({ peers, myId: room?.me.id ?? null, publish, myEditing }),
+    [peers, room, publish, myEditing],
+  );
 
   const restart = useCallback(() => {
     setRoom(null);
@@ -123,12 +187,11 @@ export default function StudentApp() {
       connection,
       waitingForRoom: joining,
       remoteNote,
-      createRoom,
-      joinRoom,
+      joinGroup,
       leaveRoom,
       restart,
     }),
-    [state, dispatch, muted, setMuted, room, members, connection, joining, remoteNote, createRoom, joinRoom, leaveRoom, restart],
+    [state, dispatch, muted, setMuted, room, members, connection, joining, remoteNote, joinGroup, leaveRoom, restart],
   );
 
   const screen = joining ? 'S1' : state.currentScreen;
@@ -196,6 +259,7 @@ export default function StudentApp() {
 
   return (
     <StoreContext value={store}>
+      <LiveContext value={liveValue}>
       {room && <RoomBar />}
       {screen === 'S1' && <S1Entry />}
       {screen === 'S2' && <S2Intro />}
@@ -204,6 +268,7 @@ export default function StudentApp() {
       {screen === 'S5' && <S5Wrapup />}
       {/* 마을 지도는 위쪽 줄에, 미션 화면은 아래쪽 줄에 소리 버튼이 따로 있다 */}
       {screen !== 'S3' && screen !== 'S4' && <SoundToggle />}
+      </LiveContext>
     </StoreContext>
   );
 }

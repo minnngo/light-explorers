@@ -33,6 +33,19 @@ interface Props {
   onToggleSwitch: () => void;
   /** 튜토리얼: 반짝이며 가리킬 것 */
   coach?: CoachMark;
+  /** 모둠 함께하기: 같은 방 친구들의 커서와 끌고 있는 전선 */
+  peers?: BoardPeer[];
+  /** 모둠 함께하기: 내 포인터 위치(회로판 그림 좌표)와 끌고 있는 전선의 시작 단자. 회로판을 벗어나면 null */
+  onPointerInfo?: (p: { x: number; y: number; from: TerminalId | null } | null) => void;
+}
+
+export interface BoardPeer {
+  id: string;
+  name: string;
+  color: string;
+  x: number;
+  y: number;
+  from: TerminalId | null;
 }
 
 /** 두 단자를 잇는 전선 곡선 (전선과 튜토리얼 시범이 같은 모양을 쓴다) */
@@ -92,10 +105,12 @@ export default function CircuitBoard(props: Props) {
     }
     setPending(id);
     setCursor(toSvg(e));
+    props.onPointerInfo?.({ ...toSvg(e), from: id });
   };
 
   const onPointerMove = (e: ReactPointerEvent) => {
     if (cursor) setCursor(toSvg(e));
+    props.onPointerInfo?.({ ...toSvg(e), from: pending });
   };
 
   const onPointerUp = (e: ReactPointerEvent) => {
@@ -109,6 +124,7 @@ export default function CircuitBoard(props: Props) {
     }
     // 같은 단자에서 손을 떼면 "선택" 상태로 남겨 두고, 다음에 누른 단자와 잇는다
     setCursor(null);
+    props.onPointerInfo?.({ ...toSvg(e), from: target === pending ? pending : null });
   };
 
   const pendingPos = pending ? terminals.get(pending) : undefined;
@@ -122,6 +138,7 @@ export default function CircuitBoard(props: Props) {
       style={{ background: dark ? '#111827' : '#f4ecd8', transition: 'background 0.4s', cursor: pending ? 'pointer' : undefined }}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
+      onPointerLeave={() => props.onPointerInfo?.(null)}
       role="group"
       aria-label={`회로판 ${boardId}`}
     >
@@ -191,7 +208,34 @@ export default function CircuitBoard(props: Props) {
       ))}
 
       {props.coach && <Coach coach={props.coach} layout={layout} terminals={terminals} />}
+
+      {/* 친구들: 끌고 있는 전선(친구 색 점선)과 이름표 달린 커서 */}
+      {props.peers?.map((p) => {
+        const from = p.from ? terminals.get(p.from) : undefined;
+        return (
+          <g key={p.id} pointerEvents="none">
+            {from && (
+              <line x1={from.x} y1={from.y} x2={p.x} y2={p.y} stroke={p.color} strokeWidth={5} strokeDasharray="8 6"
+                strokeLinecap="round" opacity={0.85} />
+            )}
+            <PeerCursor name={p.name} color={p.color} x={p.x} y={p.y} />
+          </g>
+        );
+      })}
     </svg>
+  );
+}
+
+/** 친구 커서: 친구 색 화살표와 이름표. 부드럽게 따라가도록 위치를 CSS transform으로 옮긴다 */
+function PeerCursor({ name, color, x, y }: { name: string; color: string; x: number; y: number }) {
+  const tagWidth = name.length * 11 + 14;
+  return (
+    <g style={{ transform: `translate(${x}px, ${y}px)`, transition: 'transform 90ms linear' }}>
+      <path d="M0 0 L0 17 L4.6 13 L8 19.6 L10.8 18.3 L7.5 11.8 L13.6 11.8 Z" fill={color} stroke="#fff" strokeWidth={1.6}
+        strokeLinejoin="round" />
+      <rect x={11} y={17} width={tagWidth} height={18} rx={9} fill={color} />
+      <text x={11 + tagWidth / 2} y={29.5} textAnchor="middle" fontSize={11.5} fontWeight={700} fill="#fff">{name}</text>
+    </g>
   );
 }
 

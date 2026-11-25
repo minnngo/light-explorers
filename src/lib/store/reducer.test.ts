@@ -118,6 +118,37 @@ describe('미션 단계 진행 (명세서 7-2)', () => {
     expect(s.missions.m3.status).toBe('locked');
   });
 
+  it('확인하기로 답을 맞춰 보면(모둠 모두에게 같이 보인다) 고른 것과 이유를 바꿀 수 없다', () => {
+    const s = play(
+      atMap(),
+      { type: 'OPEN_MISSION', mission: 'm1', at: 0 },
+      { type: 'SET_PREDICTION', choice: 'a' },
+      ...BUILD_BOTH,
+      { type: 'GO_COMPARE' },
+      { type: 'SET_COMPARE', choice: 'more' },
+      { type: 'SET_EXPLANATION', text: '전지가 2개라서 전구가 더 밝았어요' },
+      { type: 'GRADE_COMPARE' },
+      { type: 'SET_COMPARE', choice: 'less' },
+      { type: 'SET_EXPLANATION', text: '바꾼 이유' },
+      { type: 'BACK_TO_BUILD', at: 50 },
+    );
+    expect(s.missions.m1).toMatchObject({ step: 'compare', graded: true, compare: 'more' });
+    expect(s.missions.m1.explanation).toBe('전지가 2개라서 전구가 더 밝았어요');
+  });
+
+  it('이유가 짧으면 확인하기(채점)도 되지 않는다', () => {
+    const s = play(
+      atMap(),
+      { type: 'OPEN_MISSION', mission: 'm1', at: 0 },
+      { type: 'SET_PREDICTION', choice: 'a' },
+      ...BUILD_BOTH,
+      { type: 'GO_COMPARE' },
+      { type: 'SET_COMPARE', choice: 'more' },
+      { type: 'GRADE_COMPARE' },
+    );
+    expect(s.missions.m1.graded).toBeUndefined();
+  });
+
   it('세 미션을 끝내기 전에는 마무리로 갈 수 없다', () => {
     expect(reducer(atMap(), { type: 'GO_TO_WRAPUP' }).currentScreen).toBe('S3');
   });

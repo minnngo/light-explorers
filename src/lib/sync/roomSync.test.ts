@@ -76,8 +76,8 @@ function device(bus: ReturnType<typeof createBus>, me: Member, host: boolean, in
   };
 }
 
-const minsu: Member = { id: 'd1', name: '민수', role: 'A' };
-const jia: Member = { id: 'd2', name: '지아', role: 'B' };
+const minsu: Member = { id: 'd1', name: '민수' };
+const jia: Member = { id: 'd2', name: '지아' };
 
 function startedState(): AppState {
   return reducer(createInitialState(), {
@@ -132,7 +132,7 @@ describe('roomSync (3단계 실시간 공동 조작)', () => {
     host.act({ type: 'ANSWER_RECALL', correct: true });
     guest.act({ type: 'NEXT_INTRO_CUT' });
     expect(guest.state).toEqual(host.state);
-    expect(host.remote.at(-1)).toMatchObject({ by: { name: '지아', role: 'B' }, action: { type: 'NEXT_INTRO_CUT' } });
+    expect(host.remote.at(-1)).toMatchObject({ by: { name: '지아' }, action: { type: 'NEXT_INTRO_CUT' } });
   });
 
   it('연결이 끊겨 놓친 조작은 호스트의 heartbeat로 다시 맞춰진다', () => {

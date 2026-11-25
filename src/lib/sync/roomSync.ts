@@ -5,24 +5,22 @@
 //     받은 기기는 그 action을 그대로 자기 reducer에 넣는다. reducer가 결정적(시각·id를 action에 담음)이라 화면이 같아진다.
 //  2) 늦게 들어온 기기(방 코드로 들어온 기기)는 "지금 상태를 보내 주세요(sync-request)"를 보내고,
 //     이미 탐험 중인 기기가 상태 전체(sync-state)를 보내 주면 그것으로 시작한다(HYDRATE).
-//  3) 연결이 잠깐 끊겨 action을 놓친 기기를 위해, 방을 만든 기기(host)가 주기적으로 상태 전체를 보낸다(heartbeat).
+//  3) 연결이 잠깐 끊겨 action을 놓친 기기를 위해, 한 기기가 주기적으로 상태 전체를 보낸다(heartbeat).
+//     보내는 기기: 방을 만든 기기(host). 선생님이 만든 모둠처럼 host가 없으면 지금 들어와 있는 기기 중 id가 가장 앞선 기기.
 //     받은 기기는 최근에 스스로 조작하지 않았을 때만 그 상태로 맞춘다 (방금 보낸 내 조작이 덮이지 않게).
 import type { Action } from '@/lib/store/reducer';
-import type { AppState, BoardId } from '@/lib/types';
-
-export type Role = BoardId;
+import type { AppState } from '@/lib/types';
 
 export interface Member {
   /** 기기 id (기기마다 한 번 만들어 보관) */
   id: string;
   name: string;
-  role: Role;
 }
 
 export interface RoomInfo {
   code: string;
   me: Member;
-  /** 방을 만든 기기 */
+  /** 방을 만든 기기 (선생님이 만든 모둠에서는 모두 false) */
   host: boolean;
 }
 
@@ -75,6 +73,9 @@ export function createRoomSync(opts: RoomSyncOptions): RoomSync {
   let lastLocalAt = -Infinity;
   let requestTimer: ReturnType<typeof setInterval> | null = null;
   let heartbeatTimer: ReturnType<typeof setInterval> | null = null;
+  let memberIds: string[] = [];
+  /** 상태를 맞춰 주는 기기인지 */
+  const leading = () => room.host || [...memberIds, room.me.id].sort()[0] === room.me.id;
 
   const hasExpedition = () => getState().groupId !== null;
   const sendState = (to: string | null) => {
@@ -118,7 +119,10 @@ export function createRoomSync(opts: RoomSyncOptions): RoomSync {
     }
   });
 
-  transport.onMembers((members) => opts.onMembers?.(members));
+  transport.onMembers((members) => {
+    memberIds = members.map((m) => m.id);
+    opts.onMembers?.(members);
+  });
 
   transport.onStatus((connected) => {
     opts.onStatus?.(connected);
@@ -134,7 +138,9 @@ export function createRoomSync(opts: RoomSyncOptions): RoomSync {
     }
   });
 
-  if (room.host) heartbeatTimer = setInterval(() => sendState(null), HEARTBEAT_MS);
+  heartbeatTimer = setInterval(() => {
+    if (!waiting && leading()) sendState(null);
+  }, HEARTBEAT_MS);
 
   return {
     broadcast: (action) => {

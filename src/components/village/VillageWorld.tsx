@@ -2,7 +2,7 @@
 
 // S3 마을 돌아다니기: 탐험대를 움직여 화살표를 따라가고, 장소에 도착하면 onArrive를 부른다.
 // 조작: 방향키/WASD, 가고 싶은 곳 누르기(마우스·터치), 화면 조이스틱.
-// 위치는 이 기기 화면에만 있다 (함께하기에서도 각자 돌아다니고, 미션을 열면 모두 함께 들어간다).
+// 위치는 기기마다 따로 움직인다. 모둠 함께하기에서는 내 위치를 친구들에게 알리고(onMove), 친구 캐릭터(others)도 함께 그린다.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PLACES, SPAWN, type Vec } from '@/data/world';
 import type { MissionId, MissionStatus } from '@/lib/types';
@@ -46,9 +46,25 @@ interface Props {
   practice?: boolean;
   /** 이 값이 바뀌면 탐험대를 처음 자리로 되돌린다 (연습이 끝났을 때) */
   resetKey?: number;
+  /** 모둠 함께하기: 내 위치가 바뀔 때마다 */
+  onMove?: (p: Vec) => void;
+  /** 모둠 함께하기: 친구 캐릭터 */
+  others?: MapPeer[];
+  /** 모둠 함께하기("함께 가기"): key가 바뀌면 이 자리로 순간 이동하고, 장소라면 도착을 알린다 */
+  jumpTo?: { to: Vec; key: number } | null;
 }
 
-export default function VillageWorld({ status, target, paused, reviving, darkness, view, onArrive, practice = false, resetKey = 0 }: Props) {
+export interface MapPeer {
+  id: string;
+  name: string;
+  color: string;
+  x: number;
+  y: number;
+}
+
+export default function VillageWorld({
+  status, target, paused, reviving, darkness, view, onArrive, practice = false, resetKey = 0, onMove, others, jumpTo = null,
+}: Props) {
   const start = useMemo(() => startPosition(status, SPAWN), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [pos, setPos] = useState<Vec>(start);
   const [moving, setMoving] = useState(false);
@@ -61,6 +77,11 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
   const pausedRef = useRef(paused);
   const practiceRef = useRef(practice);
   const onArriveRef = useRef(onArrive);
+  const onMoveRef = useRef(onMove);
+  useEffect(() => {
+    onMoveRef.current = onMove;
+    onMove?.(posRef.current); // 처음 자리도 알린다
+  }, [onMove]);
   const viewRef = useRef(view);
   const [zoom, setZoom] = useState<number>(view === 'near' ? NEAR.zoom : MAP.zoom);
   const zoomRef = useRef(zoom);
@@ -99,6 +120,25 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
     setPos(start);
     setMoving(false);
   }, [resetKey, start]);
+
+  // 함께 가기: 부른 친구가 있는 장소로 바로 옮겨 간다
+  const jumpKey = jumpTo?.key;
+  const jumpRef = useRef(jumpTo);
+  useEffect(() => {
+    jumpRef.current = jumpTo;
+  }, [jumpTo]);
+  useEffect(() => {
+    const jump = jumpRef.current;
+    if (jumpKey === undefined || !jump) return;
+    posRef.current = jump.to;
+    goal.current = null;
+    keys.current.clear();
+    const here = placeAt(jump.to);
+    inside.current = here;
+    setPos(jump.to);
+    onMoveRef.current?.(jump.to);
+    if (here) onArriveRef.current(here);
+  }, [jumpKey]);
 
   useEffect(() => {
     pausedRef.current = paused;
@@ -143,6 +183,7 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
           posRef.current = next;
           setPos(next);
           setMoving(true);
+          onMoveRef.current?.(next);
         } else {
           setMoving(false);
         }
@@ -234,6 +275,22 @@ export default function VillageWorld({ status, target, paused, reviving, darknes
         {target && !paused && (
           <DownArrow x={PLACES[target].x} y={PLACES[target].y - lerp(130, 100, t)} scale={lerp(1, 0.3, t)} />
         )}
+
+        {/* 모둠 친구들: 친구 색 빛 고리와 이름표 (부드럽게 따라가도록 위치를 CSS transform으로) */}
+        {others?.map((o) => (
+          <g key={o.id} style={{ transform: `translate(${o.x}px, ${o.y}px)`, transition: 'transform 140ms linear' }}>
+            <g transform={`scale(${size})`}>
+              <ellipse cx={0} cy={0} rx={36} ry={10} fill={o.color} opacity={0.25} />
+              <ellipse cx={0} cy={0} rx={36} ry={10} fill="none" stroke={o.color} strokeWidth={3} opacity={0.9} />
+              <Explorer />
+              <g transform="translate(0 -168)">
+                <rect x={-(o.name.length * 9 + 14)} y={-17} width={(o.name.length * 9 + 14) * 2} height={34} rx={17} fill={o.color}
+                  stroke="#fff" strokeWidth={3} />
+                <text y={7} textAnchor="middle" fontSize={20} fontWeight={800} fill="#fff">{o.name}</text>
+              </g>
+            </g>
+          </g>
+        ))}
 
         {/* 탐험대와 뒤따라 나는 반디 */}
         <g transform={`translate(${pos.x} ${pos.y}) scale(${size})`}>

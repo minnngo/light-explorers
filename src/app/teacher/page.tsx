@@ -71,6 +71,7 @@ export default function TeacherPage() {
         <p className="text-base text-slate-600">{TEACHER.refreshNote}</p>
       </header>
       {error && <p className="font-bold text-rose-700">{error}</p>}
+      <GroupSetup pin={activePin} />
       {data && (
         <>
           <section className="rounded-2xl bg-white p-4 shadow">
@@ -224,5 +225,108 @@ function Rubric() {
         ))}
       </div>
     </details>
+  );
+}
+
+interface ClassGroupRow {
+  id: string;
+  name: string;
+  roomCode: string;
+}
+
+/** 모둠 미리 만들기: 학생은 입장 화면의 "모둠으로 하기"에서 이 모둠을 골라 들어온다 */
+function GroupSetup({ pin }: { pin: string }) {
+  const [groups, setGroups] = useState<ClassGroupRow[] | null>(null);
+  const [count, setCount] = useState(6);
+  const [busy, setBusy] = useState(false);
+  const [message, setMessage] = useState<string | null>(null);
+
+  const call = async (method: 'GET' | 'POST' | 'DELETE', path = '/api/teacher/groups', body?: unknown) => {
+    const res = await fetch(path, {
+      method,
+      headers: { 'x-teacher-pin': pin, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      body: body ? JSON.stringify(body) : undefined,
+      cache: 'no-store',
+    }).catch(() => null);
+    if (!res) throw new Error('서버에 연결할 수 없어요.');
+    if (res.status === 204) return null;
+    const json = (await res.json().catch(() => ({}))) as { groups?: ClassGroupRow[]; error?: string };
+    if (!res.ok) throw new Error(json.error ?? `오류 ${res.status}`);
+    return json.groups ?? null;
+  };
+
+  useEffect(() => {
+    let cancelled = false;
+    call('GET')
+      .then((g) => !cancelled && setGroups(g ?? []))
+      .catch((e: Error) => !cancelled && setMessage(e.message));
+    return () => {
+      cancelled = true;
+    };
+  }, [pin]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const create = async () => {
+    setBusy(true);
+    setMessage(null);
+    // 이미 있는 모둠 다음 번호부터 (1모둠~6모둠이 있으면 7모둠부터)
+    const numbers = (groups ?? []).map((g) => Number.parseInt(g.name, 10)).filter((n) => Number.isFinite(n));
+    const start = Math.max(0, ...numbers) + 1;
+    const names = Array.from({ length: count }, (_, i) => TEACHER.setupName(start + i));
+    try {
+      setGroups(await call('POST', undefined, { names }));
+    } catch (e) {
+      setMessage((e as Error).message);
+    }
+    setBusy(false);
+  };
+
+  const remove = async (g: ClassGroupRow) => {
+    if (!window.confirm(TEACHER.setupDeleteConfirm(g.name))) return;
+    setBusy(true);
+    setMessage(null);
+    try {
+      await call('DELETE', `/api/teacher/groups/${g.id}`);
+      setGroups((list) => (list ?? []).filter((x) => x.id !== g.id));
+    } catch (e) {
+      setMessage((e as Error).message);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow">
+      <div className="flex flex-col gap-1">
+        <h2 className="font-bold">{TEACHER.setupTitle}</h2>
+        <p className="text-sm text-slate-600">{TEACHER.setupGuide}</p>
+      </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="flex items-center gap-2">
+          <span className="text-sm font-semibold">{TEACHER.setupCount}</span>
+          <input type="number" min={1} max={12} value={count}
+            onChange={(e) => setCount(Math.max(1, Math.min(12, Number(e.target.value) || 1)))}
+            className="min-h-10 w-20 rounded-xl border-2 px-3" />
+        </label>
+        <button type="button" disabled={busy} onClick={() => void create()}
+          className="min-h-10 rounded-xl bg-amber-700 px-4 font-bold text-white outline-none disabled:opacity-50">
+          {TEACHER.setupCreate}
+        </button>
+      </div>
+      {message && <p className="font-bold text-rose-700">{message}</p>}
+      {groups && (groups.length === 0 ? (
+        <p className="text-slate-500">{TEACHER.setupEmpty}</p>
+      ) : (
+        <ul className="flex flex-wrap gap-2">
+          {groups.map((g) => (
+            <li key={g.id} className="flex items-center gap-1 rounded-full bg-stone-100 py-1 pl-3 pr-1 font-semibold">
+              {g.name}
+              <button type="button" disabled={busy} aria-label={TEACHER.setupDelete(g.name)} onClick={() => void remove(g)}
+                className="flex size-7 items-center justify-center rounded-full text-stone-400 outline-none hover:bg-white hover:text-rose-600">
+                ✕
+              </button>
+            </li>
+          ))}
+        </ul>
+      ))}
+    </section>
   );
 }
