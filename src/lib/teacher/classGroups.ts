@@ -23,6 +23,11 @@ export function newClassGroupState(id: string, name: string, roomCode: string): 
   return { ...started, classGroup: true };
 }
 
+/** 모둠 이름 순서: 숫자는 크기대로 (1모둠, 2모둠, … 10모둠). 한꺼번에 만들면 만든 시각이 같아서 이름으로 정렬한다 */
+export function byGroupName<T>(name: (x: T) => string) {
+  return (a: T, b: T) => name(a).localeCompare(name(b), 'ko', { numeric: true });
+}
+
 /** 이미 쓰는 코드와 겹치지 않는 방 코드 */
 export function uniqueRoomCode(taken: Set<string>): string {
   for (;;) {

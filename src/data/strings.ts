@@ -159,8 +159,9 @@ export const PART_NAMES: Record<PartKind | 'battery' | 'switch', string> = {
 
 export const S1 = {
   title: '불빛 탐험대 출동!',
-  nameGuide: '우리 모둠 이름을 지어 주세요.',
-  namePlaceholder: '예) 반짝반짝 탐험대',
+  // 혼자 하기: 내 이름 (반디가 이 이름으로 불러 준다. 모둠으로 할 때는 선생님이 만든 모둠 이름을 쓴다)
+  nameGuide: '내 이름을 써 주세요.',
+  namePlaceholder: '예) 민수',
   safetyTitle: '안전 약속 (모두 체크해야 시작할 수 있어요)',
   safetyPromises: [
     '전기 부품을 만질 때는 절연 장갑을 끼고, 젖은 손으로 만지지 않아요.',
@@ -527,8 +528,7 @@ export const TEACHER = {
   enter: '들어가기',
   refreshNote: '10초마다 새로 불러와요. 점수나 상·중·하는 자동으로 매기지 않아요. 판단은 선생님이 해요.',
   mostMissedTitle: '많이 틀린 오개념 문항',
-  missedCount: (n: number) => `${n}번 틀림`,
-  missedNote: '혼자 한 모둠은 모둠 하나로, 모둠으로 한 곳은 학생마다 세요.',
+  missedCount: (n: number) => `틀린 수 ${n}`,
   noMissed: '아직 틀린 문항이 없어요.',
   noGroups: '오늘(최근 12시간) 기록된 모둠이 없어요.',
   setupTitle: '모둠 만들기',
@@ -541,6 +541,10 @@ export const TEACHER = {
   setupDeleteConfirm: (name: string) => `${name}을(를) 지울까요? 이 모둠의 기록도 함께 지워져요.`,
   columns: { group: '모둠', where: '지금 위치', revived: '되살린 곳', hints: '힌트/시도', selfEval: '스스로 평가', wrote: '쓴 글' },
   details: '자세히 보기',
+  progressTitle: '모둠별 진행',
+  recordsTitle: '모둠별 기록',
+  rubricLook: '보는 내용',
+  rubricEvidence: '근거',
   rubricTitle: '지도서 평가 요소 (참고)',
   rubric: [
     {

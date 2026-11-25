@@ -71,7 +71,7 @@ export default function S1Entry() {
         <label className="flex flex-col gap-2">
           <span className="text-lg font-bold">{S1.nameGuide}</span>
           <input value={name} onChange={(e) => setName(e.target.value)} placeholder={S1.namePlaceholder}
-            maxLength={20} className={input} />
+            maxLength={10} className={input} />
         </label>
       ) : (
         <section className="flex flex-col gap-4 rounded-2xl bg-white p-5">

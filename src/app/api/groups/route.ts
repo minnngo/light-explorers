@@ -1,6 +1,6 @@
 // GET /api/groups  학생 입장 화면의 모둠 목록: 선생님이 오늘 만든 모둠 (이름과 방 코드만)
 import { getServerSupabase } from '@/lib/supabase/server';
-import { CLASS_WINDOW_MS } from '@/lib/teacher/classGroups';
+import { byGroupName, CLASS_WINDOW_MS } from '@/lib/teacher/classGroups';
 
 export async function GET() {
   const supabase = getServerSupabase();
@@ -14,6 +14,8 @@ export async function GET() {
     .order('created_at', { ascending: true })
     .limit(50);
   if (error) return Response.json({ error: error.message }, { status: 500 });
-  const groups = (data ?? []).map((r) => ({ id: r.id, name: r.group_name, roomCode: r.room_code }));
+  const groups = (data ?? [])
+    .map((r) => ({ id: r.id as string, name: r.group_name as string, roomCode: r.room_code as string }))
+    .sort(byGroupName((g) => g.name));
   return Response.json({ groups }, { headers: { 'Cache-Control': 'no-store' } });
 }

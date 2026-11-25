@@ -50,93 +50,99 @@ export default function TeacherPage() {
 
   if (!activePin) {
     return (
-      <main className="m-auto flex flex-col gap-3 p-6">
+      <main className="m-auto flex w-full max-w-sm flex-col gap-4 p-6">
         <h1 className="text-2xl font-black">{TEACHER.title}</h1>
-        {error && <p className="font-bold text-rose-700">{error}</p>}
+        {error && <ErrorText>{error}</ErrorText>}
         <form className="flex flex-col gap-3" onSubmit={(e) => { e.preventDefault(); setActivePin(pin); }}>
           <input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder={TEACHER.pinPlaceholder}
-            className="min-h-11 rounded-xl border-2 px-3" />
-          <button type="submit" className="min-h-11 rounded-xl bg-amber-700 font-bold text-white outline-none">
-            {TEACHER.enter}
-          </button>
+            className={INPUT} />
+          <button type="submit" className={PRIMARY}>{TEACHER.enter}</button>
         </form>
       </main>
     );
   }
 
   return (
-    <main className="flex flex-col gap-4 p-6">
+    <main className="mx-auto flex w-full max-w-6xl flex-col gap-5 p-6">
       <header className="flex flex-col gap-1">
         <h1 className="text-2xl font-black">{TEACHER.title} · {COMMON.appTitle}</h1>
-        <p className="text-base text-slate-600">{TEACHER.refreshNote}</p>
+        <p className="text-sm text-stone-500">{TEACHER.refreshNote}</p>
       </header>
-      {error && <p className="font-bold text-rose-700">{error}</p>}
+      {error && <ErrorText>{error}</ErrorText>}
       <GroupSetup pin={activePin} />
       {data && (
         <>
-          <section className="rounded-2xl bg-white p-4 shadow">
-            <h2 className="font-bold">{TEACHER.mostMissedTitle}</h2>
-            <p className="text-sm text-slate-500">{TEACHER.missedNote}</p>
+          <Card title={TEACHER.mostMissedTitle}>
             {data.mostMissed.length === 0 ? (
-              <p className="text-slate-500">{TEACHER.noMissed}</p>
+              <Empty>{TEACHER.noMissed}</Empty>
             ) : (
-              <ul>
+              <ul className="flex flex-col gap-2">
                 {data.mostMissed.map((k) => (
-                  <li key={k}>
-                    {S5.misconception.items.find((i) => i.key === k)?.text} — <b>{TEACHER.missedCount(data.misconceptionWrong[k])}</b>
+                  <li key={k} className="flex items-center justify-between gap-3 text-sm">
+                    <span>{S5.misconception.items.find((i) => i.key === k)?.text}</span>
+                    <span className="shrink-0 rounded-full bg-rose-50 px-2.5 py-0.5 font-bold text-rose-600">
+                      {TEACHER.missedCount(data.misconceptionWrong[k])}
+                    </span>
                   </li>
                 ))}
               </ul>
             )}
-          </section>
+          </Card>
 
-          <div className="overflow-x-auto rounded-2xl bg-white shadow">
-            <table className="w-full text-base">
-              <thead className="bg-amber-100 text-left">
-                <tr>
-                  <th className="p-2">{TEACHER.columns.group}</th>
-                  <th className="p-2">{TEACHER.columns.where}</th>
-                  <th className="p-2">{TEACHER.columns.revived}</th>
-                  {MISSION_ORDER.map((id) => (
-                    <th key={id} className="p-2">{S3.places[id]} {TEACHER.columns.hints}</th>
-                  ))}
-                  <th className="p-2">{TEACHER.columns.wrote}</th>
-                  <th className="p-2">{TEACHER.columns.selfEval}</th>
-                </tr>
-              </thead>
-              <tbody>
-                {data.groups.length === 0 && (
-                  <tr><td colSpan={8} className="p-4 text-slate-500">{TEACHER.noGroups}</td></tr>
-                )}
-                {data.groups.map((g) => (
-                  <tr key={g.groupId} className="border-t align-top">
-                    <td className="p-2 font-bold">{g.groupName}</td>
-                    <td className="p-2">
-                      {SCREEN_NAMES[g.screen]}
-                      {g.currentMission && ` · ${S3.places[g.currentMission]} ${g.currentStep ? STEP_NAMES[g.currentStep] : ''}`}
-                      {g.finished && ` · ${L.finished}`}
-                    </td>
-                    <td className="p-2">{g.revived}/3</td>
-                    {MISSION_ORDER.map((id) => (
-                      <td key={id} className={`p-2 ${g.hintCount[id] >= 3 ? 'font-bold text-rose-700' : ''}`}>
-                        {g.hintCount[id]} / {g.attempts[id]}
-                      </td>
+          <Card title={TEACHER.progressTitle}>
+            {data.groups.length === 0 ? (
+              <Empty>{TEACHER.noGroups}</Empty>
+            ) : (
+              <div className="-mx-5 overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead className="border-y border-stone-200 bg-stone-50 text-left text-stone-500">
+                    <tr>
+                      <th className={TH}>{TEACHER.columns.group}</th>
+                      <th className={TH}>{TEACHER.columns.where}</th>
+                      <th className={TH}>{TEACHER.columns.revived}</th>
+                      {MISSION_ORDER.map((id) => (
+                        <th key={id} className={TH}>{S3.places[id]} {TEACHER.columns.hints}</th>
+                      ))}
+                      <th className={TH}>{TEACHER.columns.wrote}</th>
+                      <th className={TH}>{TEACHER.columns.selfEval}</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {data.groups.map((g) => (
+                      <tr key={g.groupId} className="border-b border-stone-100 align-top last:border-0">
+                        <td className={`${TD} font-bold`}>{g.groupName}</td>
+                        <td className={TD}>
+                          {SCREEN_NAMES[g.screen]}
+                          {g.currentMission && ` · ${S3.places[g.currentMission]} ${g.currentStep ? STEP_NAMES[g.currentStep] : ''}`}
+                          {g.finished && ` · ${L.finished}`}
+                        </td>
+                        <td className={TD}>{g.revived}/3</td>
+                        {MISSION_ORDER.map((id) => (
+                          <td key={id} className={`${TD} ${g.hintCount[id] >= 3 ? 'font-bold text-rose-600' : ''}`}>
+                            {g.hintCount[id]} / {g.attempts[id]}
+                          </td>
+                        ))}
+                        <td className={TD}>{g.wroteCount}/{g.writableCount}</td>
+                        <td className={`${TD} whitespace-pre-line`}>
+                          {g.students.length > 0
+                            ? g.students.map((st) => `${st.name} ${st.selfEval ? S5.selfEval.choices[st.selfEval] : V.empty}`).join('\n')
+                            : g.selfEval ? S5.selfEval.choices[g.selfEval] : V.empty}
+                        </td>
+                      </tr>
                     ))}
-                    <td className="p-2">{g.wroteCount}/{g.writableCount}</td>
-                    <td className="whitespace-pre-line p-2">
-                      {g.students.length > 0
-                        ? g.students.map((st) => `${st.name} ${st.selfEval ? S5.selfEval.choices[st.selfEval] : V.empty}`).join('\n')
-                        : g.selfEval ? S5.selfEval.choices[g.selfEval] : V.empty}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </Card>
 
-          <section className="flex flex-col gap-2">
-            {data.groups.map((g) => <GroupDetails key={g.groupId} g={g} />)}
-          </section>
+          {data.groups.length > 0 && (
+            <Card title={TEACHER.recordsTitle}>
+              <div className="-mx-5 flex flex-col">
+                {data.groups.map((g) => <GroupDetails key={g.groupId} g={g} />)}
+              </div>
+            </Card>
+          )}
         </>
       )}
       <Rubric />
@@ -144,14 +150,44 @@ export default function TeacherPage() {
   );
 }
 
+// ───── 교사용 화면 공통 모양: 카드 제목 18px 굵게, 설명·표·기록은 14px, 라벨은 회색 ─────
+const INPUT = 'min-h-10 rounded-xl border-2 border-stone-200 bg-white px-3 text-base focus:border-amber-400 focus:outline-none';
+const PRIMARY = 'min-h-10 rounded-xl bg-amber-700 px-4 text-sm font-bold text-white outline-none transition hover:bg-amber-800 disabled:opacity-50';
+const TH = 'whitespace-nowrap px-5 py-2 font-semibold';
+const TD = 'px-5 py-2.5';
+
+function Card({ title, note, children }: { title: string; note?: string; children: React.ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm">
+      <div className="flex flex-col gap-0.5">
+        <h2 className="text-lg font-bold">{title}</h2>
+        {note && <p className="text-sm text-stone-500">{note}</p>}
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Empty({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm text-stone-400">{children}</p>;
+}
+
+function ErrorText({ children }: { children: React.ReactNode }) {
+  return <p className="text-sm font-bold text-rose-600">{children}</p>;
+}
+
 /** 모둠 하나의 학습지 기록 전체 (11-1). 평가 요소별 근거를 펼쳐 본다 */
 function GroupDetails({ g }: { g: GroupSummary }) {
   const text = (t: string) => (t.trim() ? t : V.empty);
   const yn = (b: boolean) => (b ? V.yes : V.no);
   return (
-    <details className="rounded-2xl bg-white p-4 shadow">
-      <summary className="cursor-pointer font-bold">{g.groupName} — {TEACHER.details}</summary>
-      <div className="mt-3 flex flex-col gap-4 text-base">
+    <details className="group border-t border-stone-100 px-5 py-3">
+      <summary className="flex cursor-pointer items-center gap-2 text-base font-bold marker:content-none">
+        <span className="text-stone-400 transition group-open:rotate-90" aria-hidden>›</span>
+        {g.groupName}
+        <span className="text-sm font-normal text-stone-400">{TEACHER.details}</span>
+      </summary>
+      <div className="mt-3 grid gap-4 pl-4 lg:grid-cols-2">
         <Dl rows={[
           [L.recall, g.intro.recall ? V[g.intro.recall] : V.empty],
           [L.fanReason, g.intro.fanReason ? S2.fanReason.choices[g.intro.fanReason] : V.empty],
@@ -208,13 +244,13 @@ function oxLine(m: Record<'q1' | 'q2' | 'q3', 'correct' | 'wrong' | null>): stri
 
 function Dl({ title, rows }: { title: string; rows: [string, string][] }) {
   return (
-    <div>
-      <h3 className="mb-1 font-bold text-amber-800">{title}</h3>
-      <dl className="grid grid-cols-[10rem_1fr] gap-x-3 gap-y-1">
+    <div className="flex flex-col gap-1.5">
+      <h3 className="text-sm font-bold text-amber-800">{title}</h3>
+      <dl className="grid grid-cols-[8rem_1fr] gap-x-3 gap-y-1 text-sm">
         {rows.map(([k, v]) => (
           <div key={k} className="contents">
-            <dt className="text-slate-500">{k}</dt>
-            <dd className="whitespace-pre-wrap">{v}</dd>
+            <dt className="text-stone-500">{k}</dt>
+            <dd className="whitespace-pre-wrap text-stone-800">{v}</dd>
           </div>
         ))}
       </dl>
@@ -225,14 +261,17 @@ function Dl({ title, rows }: { title: string; rows: [string, string][] }) {
 /** 지도서 평가 요소와 상·중·하 기준. 참고 문구로만 보여 준다 */
 function Rubric() {
   return (
-    <details className="rounded-2xl bg-white p-4 shadow">
-      <summary className="cursor-pointer font-bold">{TEACHER.rubricTitle}</summary>
-      <div className="mt-3 flex flex-col gap-4 text-base">
+    <details className="group rounded-2xl bg-white p-5 shadow-sm">
+      <summary className="flex cursor-pointer items-center gap-2 text-lg font-bold marker:content-none">
+        <span className="text-stone-400 transition group-open:rotate-90" aria-hidden>›</span>
+        {TEACHER.rubricTitle}
+      </summary>
+      <div className="mt-3 flex flex-col text-sm">
         {TEACHER.rubric.map((r) => (
-          <div key={r.element} className="flex flex-col gap-1 border-t pt-3">
+          <div key={r.element} className="flex flex-col gap-1 border-t border-stone-100 py-3 last:pb-0">
             <p className="font-bold">{r.element}</p>
-            <p>보는 내용: {r.look}</p>
-            <p className="text-slate-600">근거: {r.evidence}</p>
+            <p><span className="text-stone-500">{TEACHER.rubricLook}</span> {r.look}</p>
+            <p><span className="text-stone-500">{TEACHER.rubricEvidence}</span> {r.evidence}</p>
             <ul className="ml-4 list-disc">
               {(['상', '중', '하'] as const).map((lv) => (
                 <li key={lv}><b>{lv}</b> {r.criteria[lv]}</li>
@@ -311,30 +350,25 @@ function GroupSetup({ pin }: { pin: string }) {
   };
 
   return (
-    <section className="flex flex-col gap-3 rounded-2xl bg-white p-4 shadow">
-      <div className="flex flex-col gap-1">
-        <h2 className="font-bold">{TEACHER.setupTitle}</h2>
-        <p className="text-sm text-slate-600">{TEACHER.setupGuide}</p>
-      </div>
+    <Card title={TEACHER.setupTitle} note={TEACHER.setupGuide}>
       <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2">
-          <span className="text-sm font-semibold">{TEACHER.setupCount}</span>
+        <label className="flex items-center gap-2 text-sm font-semibold text-stone-600">
+          {TEACHER.setupCount}
           <input type="number" min={1} max={12} value={count}
             onChange={(e) => setCount(Math.max(1, Math.min(12, Number(e.target.value) || 1)))}
-            className="min-h-10 w-20 rounded-xl border-2 px-3" />
+            className={`${INPUT} w-20`} />
         </label>
-        <button type="button" disabled={busy} onClick={() => void create()}
-          className="min-h-10 rounded-xl bg-amber-700 px-4 font-bold text-white outline-none disabled:opacity-50">
+        <button type="button" disabled={busy} onClick={() => void create()} className={PRIMARY}>
           {TEACHER.setupCreate}
         </button>
       </div>
-      {message && <p className="font-bold text-rose-700">{message}</p>}
+      {message && <ErrorText>{message}</ErrorText>}
       {groups && (groups.length === 0 ? (
-        <p className="text-slate-500">{TEACHER.setupEmpty}</p>
+        <Empty>{TEACHER.setupEmpty}</Empty>
       ) : (
         <ul className="flex flex-wrap gap-2">
           {groups.map((g) => (
-            <li key={g.id} className="flex items-center gap-1 rounded-full bg-stone-100 py-1 pl-3 pr-1 font-semibold">
+            <li key={g.id} className="flex items-center gap-1 rounded-full bg-stone-100 py-1 pl-3 pr-1 text-sm font-semibold">
               {g.name}
               <button type="button" disabled={busy} aria-label={TEACHER.setupDelete(g.name)} onClick={() => void remove(g)}
                 className="flex size-7 items-center justify-center rounded-full text-stone-400 outline-none hover:bg-white hover:text-rose-600">
@@ -344,6 +378,6 @@ function GroupSetup({ pin }: { pin: string }) {
           ))}
         </ul>
       ))}
-    </section>
+    </Card>
   );
 }

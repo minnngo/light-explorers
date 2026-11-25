@@ -3,7 +3,9 @@
 //  POST /api/teacher/groups {names}    모둠 만들기 (이름마다 하나)
 import type { NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { CLASS_WINDOW_MS, type ClassGroup, MAX_GROUPS, newClassGroupState, uniqueRoomCode } from '@/lib/teacher/classGroups';
+import {
+  byGroupName, CLASS_WINDOW_MS, type ClassGroup, MAX_GROUPS, newClassGroupState, uniqueRoomCode,
+} from '@/lib/teacher/classGroups';
 import { checkTeacher } from '@/lib/teacher/pin';
 
 async function listGroups(): Promise<ClassGroup[] | { error: string }> {
@@ -17,7 +19,9 @@ async function listGroups(): Promise<ClassGroup[] | { error: string }> {
     .order('created_at', { ascending: true })
     .limit(50);
   if (error) return { error: error.message };
-  return (data ?? []).map((r) => ({ id: r.id as string, name: r.group_name as string, roomCode: r.room_code as string }));
+  return (data ?? [])
+    .map((r) => ({ id: r.id as string, name: r.group_name as string, roomCode: r.room_code as string }))
+    .sort(byGroupName((g) => g.name));
 }
 
 export async function GET(request: NextRequest) {

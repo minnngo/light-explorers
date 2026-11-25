@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { byGroupName } from './classGroups';
 import { createInitialState } from '@/lib/store/reducer';
 import type { AppState } from '@/lib/types';
 import { summarize } from './summarize';
@@ -31,5 +32,12 @@ describe('summarize (교사용 집계)', () => {
     expect(g.missions.m1).toMatchObject({ hintCount: 2, challenge: 'none', built: { A: false, B: false } });
     expect(g.wroteCount).toBe(1);
     expect(g.writableCount).toBe(4);
+  });
+});
+
+describe('모둠 이름 순서', () => {
+  it('숫자는 크기대로 (1모둠, 2모둠, … 10모둠)', () => {
+    const names = ['4모둠', '10모둠', '1모둠', '3모둠', '2모둠'];
+    expect([...names].sort(byGroupName((n) => n))).toEqual(['1모둠', '2모둠', '3모둠', '4모둠', '10모둠']);
   });
 });
