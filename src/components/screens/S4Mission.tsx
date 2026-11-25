@@ -19,6 +19,7 @@ import { useHint } from '../circuit/useHint';
 import MissionIntro from '../mission/MissionIntro';
 import MissionWorksheet from '../mission/MissionWorksheet';
 import LiveCursors from '../LiveCursors';
+import ExitButton from '../ExitButton';
 import SoundToggle from '../SoundToggle';
 import { CloseButton, ProgressDots } from '../ui';
 import { FairyIcon } from '../village/Characters';
@@ -109,6 +110,8 @@ export default function S4Mission() {
               {TUTORIAL.replay}
             </button>
           )}
+          {/* 언제든 처음 화면으로 나갈 수 있다 (확인 창) */}
+          <ExitButton />
           {/* 언제든 마을 지도로 나갈 수 있다. 하던 것은 그대로 남아 다시 들어오면 이어서 한다 */}
           <button type="button" className={PILL} onClick={() => leaveMission()}>
             <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2}

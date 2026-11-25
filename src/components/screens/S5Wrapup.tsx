@@ -170,7 +170,7 @@ function CheckStep() {
         {(['brighter', 'darker'] as const).map((k, i) => (
           <span key={k}>
             {i > 0 && ' / '}
-            <Choice className="mx-1 inline-block" selected={check === k}
+            <Choice className="mx-1 inline-block" selected={check === k} disabled={check !== null}
               onClick={() => send({ type: 'UPDATE_FINAL', patch: { check: k } })}>
               {S5.check.choices[k]}
             </Choice>
@@ -178,8 +178,15 @@ function CheckStep() {
         ))}
         {S5.check.after}
       </p>
-      {check === 'darker' && <p className="font-bold text-rose-700">{S5.check.wrong}</p>}
-      {check === 'brighter' && <p className="pop-in font-bold text-emerald-700">{S5.correct}</p>}
+      {/* 한 번 고르면 바로 결과: 맞았으면 초록 "정답이에요.", 틀렸으면 빨강 "정답은 '밝습니다'예요." (5. 오개념 점검과 같은 모양) */}
+      {check && (
+        <p className="pop-in rounded-xl bg-slate-50 p-3">
+          <b className={check === 'brighter' ? 'text-emerald-700' : 'text-rose-600'}>
+            {check === 'brighter' ? S5.misconception.right : S5.check.answerIs(S5.check.choices.brighter)}
+          </b>{' '}
+          {S5.check.explanation}
+        </p>
+      )}
     </section>
   );
 }

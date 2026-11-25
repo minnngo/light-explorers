@@ -407,7 +407,6 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
 };
 
 export const S5 = {
-  correct: '정답입니다.',
   stepTitles: [
     '1. 결과 모아 보기',
     '2. 함께 생각을 나누기',
@@ -453,7 +452,8 @@ export const S5 = {
     before: '전지 1개를 연결한 전기 회로보다 전지 2개를 직렬연결한 전기 회로에서 전구의 밝기가 더 (',
     after: ').',
     choices: { brighter: '밝습니다', darker: '어둡습니다' },
-    wrong: '다시 한번 생각해 봐요. 미션 1의 결과를 떠올려 보세요.',
+    answerIs: (answer: string) => `정답은 '${answer}'예요.`,
+    explanation: '전지 2개를 직렬연결하면 전구에 전기가 더 많이 흘러서 더 밝아요. 미션 1에서 B 회로 전구가 더 밝았던 것을 떠올려 보세요.',
   },
   misconception: {
     guide: '○ 또는 ×를 골라 보세요.',
@@ -561,6 +561,7 @@ export const TEACHER = {
   prev: '이전',
   next: '다음',
   reason: '이유',
+  challengeShort: '도전',
   progressTitle: '모둠별 진행',
   recordsTitle: '모둠별 기록',
   rubricLook: '보는 내용',

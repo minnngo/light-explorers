@@ -28,8 +28,8 @@ export function canAdvanceWrapupRecord(f: Omit<FinalRecord, 'students'>, step: n
       return f.shareBlanks ? f.shareBlanks.every((b) => b.trim().length > 0) : f.groupThought.trim().length > 0;
     case 2: // 설명하기: 세 질문에 모두 답해야 정리가 나타난다
       return Object.values(f.explain).every((v) => v !== null);
-    case 3: // 확인해요: 맞는 답을 골라야 넘어간다
-      return f.check === 'brighter';
+    case 3: // 확인해요: 한 번 고르면 정답을 보여 주고 넘어갈 수 있다 (맞든 틀리든)
+      return f.check !== null;
     case 4: // 오개념 점검
       return Object.values(f.misconception).every((v) => v !== null);
     case 5: // 스스로 평가

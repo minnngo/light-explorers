@@ -67,7 +67,7 @@ export default function TeacherPage() {
           <div className="flex flex-col items-center gap-1 text-center">
             <FairyIcon className="bob size-16" />
             <p className="mt-1 text-sm font-bold text-amber-700">{T.loginApp}</p>
-            <h1 className="text-2xl font-black">{T.loginTitle}</h1>
+            <h1 className="text-2xl font-bold">{T.loginTitle}</h1>
           </div>
           <form className="flex w-full flex-col gap-3" onSubmit={(e) => { e.preventDefault(); if (pin) setActivePin(pin); }}>
             <input type="password" value={pin} onChange={(e) => setPin(e.target.value)} placeholder={T.pinPlaceholder}
@@ -85,7 +85,7 @@ export default function TeacherPage() {
       {/* 왼쪽 메뉴 (좁은 화면에서는 위쪽 가로 메뉴) */}
       <aside className="flex shrink-0 flex-col gap-1 border-stone-200 bg-white/80 p-3 md:sticky md:top-0 md:h-screen md:w-56 md:border-r md:p-4">
         <div className="mb-2 hidden flex-col gap-0.5 px-2 md:flex">
-          <p className="text-lg font-black">{TEACHER.title}</p>
+          <p className="text-lg font-bold">{TEACHER.title}</p>
           <p className="text-xs text-stone-500">{COMMON.appTitle}</p>
         </div>
         <nav className="flex gap-1 overflow-x-auto md:flex-col md:overflow-visible" aria-label={TEACHER.title}>
@@ -106,7 +106,7 @@ export default function TeacherPage() {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col gap-5 p-4 md:p-8">
-        <h1 className="text-2xl font-black">{T.nav[section]}</h1>
+        <h1 className="text-2xl font-bold">{T.nav[section]}</h1>
         {error && <ErrorText>{error}</ErrorText>}
         {section === 'groups' && <GroupSetup pin={activePin} />}
         {section === 'rubric' && <Rubric />}
@@ -127,8 +127,8 @@ export default function TeacherPage() {
 // ───── 공통 모양: 카드 제목 18px 굵게, 설명·표·기록은 14px, 라벨은 회색 ─────
 const INPUT = 'min-h-10 rounded-xl border-2 border-stone-200 bg-white px-3 text-base focus:border-amber-400 focus:outline-none';
 const PRIMARY = 'min-h-10 rounded-xl bg-amber-700 px-4 text-sm font-bold text-white outline-none transition hover:bg-amber-800 disabled:opacity-50';
-const TH = 'whitespace-nowrap px-4 py-2 font-semibold';
-const TD = 'px-4 py-2.5';
+const TH = 'whitespace-nowrap px-3 py-2 font-semibold first:pl-5 last:pr-5';
+const TD = 'px-3 py-2.5 first:pl-5 last:pr-5';
 /** 막대 그래프 색 (한 가지 색: 크기만 보여 준다) */
 const BAR = '#d97706';
 
@@ -169,15 +169,16 @@ function NavIcon({ section }: { section: Section }) {
   );
 }
 
-/** 맞음/틀림/아직: 색과 글자를 함께 (색만으로 알리지 않는다) */
-function Mark({ ok, children, wrap = false }: { ok: boolean | null; children?: ReactNode; wrap?: boolean }) {
-  const style = ok === null ? 'bg-stone-100 text-stone-400' : ok ? 'bg-[#e4efe7] text-[#3f6f53]' : 'bg-rose-50 text-rose-600';
+/**
+ * 맞음/틀림/아직: 상자 없이 ✓(초록)·✗(빨강)·-(회색)를 글자 앞에 (색만으로 알리지 않도록 기호를 함께).
+ * children이 없으면 "맞음/틀림"을 쓴다
+ */
+function Mark({ ok, children }: { ok: boolean | null; children?: ReactNode }) {
+  const color = ok === null ? 'text-stone-400' : ok ? 'text-[#3f7d58]' : 'text-rose-600';
   return (
-    <span className={`inline-flex items-start gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
-      wrap ? 'rounded-lg text-left leading-snug' : 'whitespace-nowrap'
-    } ${style}`}>
-      {ok === null ? V.empty : ok ? '✓' : '✗'}
-      {children ?? (ok === null ? null : ok ? V.correct : V.wrong)}
+    <span className={`inline-flex items-baseline gap-1 font-semibold ${color}`}>
+      <span aria-label={ok === null ? '아직' : ok ? V.correct : V.wrong}>{ok === null ? V.empty : ok ? '✓' : '✗'}</span>
+      {children ?? (ok === null ? null : <span>{ok ? V.correct : V.wrong}</span>)}
     </span>
   );
 }
@@ -257,7 +258,7 @@ function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-1 rounded-2xl bg-white p-4 shadow-sm">
       <p className="text-sm font-semibold text-stone-500">{label}</p>
-      <p className="text-3xl font-black tabular-nums text-stone-800">{value}</p>
+      <p className="text-3xl font-bold tabular-nums text-stone-800">{value}</p>
     </div>
   );
 }
@@ -363,7 +364,7 @@ function GroupRecords({ groups }: { groups: GroupSummary[] }) {
   );
 }
 
-/** 모둠 한 곳: 도입 답 세 개와 미션 세 개를 나란히. 예상·비교는 맞았는지 배지로 */
+/** 모둠 한 곳: 도입 답 세 개와 미션 세 개를 나란히. 맞았는지는 글자 앞 ✓·✗로 */
 function GroupRecord({ g }: { g: GroupSummary }) {
   const intro = g.intro;
   return (
@@ -372,14 +373,18 @@ function GroupRecord({ g }: { g: GroupSummary }) {
         <h2 className="text-lg font-bold">{g.groupName}</h2>
         <span className="text-sm text-stone-500">{where(g)} · {T.columns.revived} {g.revived}/3</span>
       </header>
-      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl bg-stone-50 px-4 py-3 text-sm">
-        <span className="font-bold text-amber-800">{L.intro}</span>
-        <span className="flex items-center gap-1.5">
-          <span className="text-stone-500">{L.recall}</span>
-          <Mark ok={intro.recall === null ? null : intro.recall === 'correct'} />
-        </span>
-        <span><span className="text-stone-500">{L.fanReason}</span> {(intro.fanReason && S2.fanReason.choices[intro.fanReason]) || V.empty}</span>
-        <span><span className="text-stone-500">{L.fanPredict}</span> {(intro.fanPredict && S2.fanPredict.choices[intro.fanPredict]) || V.empty}</span>
+      {/* 도입: 질문(작은 회색)과 답(굵게)을 세 칸으로 */}
+      <div className="flex flex-col gap-2">
+        <h3 className="text-sm font-bold text-amber-800">{L.intro}</h3>
+        <dl className="grid gap-3 rounded-xl bg-stone-50 p-4 text-sm sm:grid-cols-3">
+          <IntroAnswer q={L.recall}>
+            <Mark ok={intro.recall === null ? null : intro.recall === 'correct'}>
+              {intro.recall ? <span className="text-stone-800">{S2.recall.choices[intro.recall]}</span> : undefined}
+            </Mark>
+          </IntroAnswer>
+          <IntroAnswer q={L.fanReason}>{(intro.fanReason && S2.fanReason.choices[intro.fanReason]) || V.empty}</IntroAnswer>
+          <IntroAnswer q={L.fanPredict}>{(intro.fanPredict && S2.fanPredict.choices[intro.fanPredict]) || V.empty}</IntroAnswer>
+        </dl>
       </div>
       <div className="grid gap-3 lg:grid-cols-3">
         {MISSION_ORDER.map((id) => <MissionRecordCard key={id} id={id} g={g} />)}
@@ -388,53 +393,60 @@ function GroupRecord({ g }: { g: GroupSummary }) {
   );
 }
 
-function MissionRecordCard({ id, g }: { id: MissionId; g: GroupSummary }) {
-  const m = g.missions[id];
-  const s = MISSION_STRINGS[id];
-  const status = m.status === 'done' ? '완료' : m.status === 'open' ? '진행 중' : '잠김';
+function IntroAnswer({ q, children }: { q: string; children: ReactNode }) {
   return (
-    <div className="flex flex-col gap-2.5 rounded-xl border border-stone-200 p-4 text-sm">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="font-bold">{S3.places[id]}</h3>
-        <span className={`rounded-full px-2 py-0.5 text-xs font-bold ${
-          m.status === 'done' ? 'bg-[#e4efe7] text-[#3f6f53]' : m.status === 'open' ? 'bg-amber-50 text-amber-800' : 'bg-stone-100 text-stone-400'
-        }`}>{status}</span>
-      </div>
-      {/* 예상은 글이 길어서 제목 아래 줄에 (옆 칸으로 넘치지 않게) */}
-      <div className="flex flex-col items-start gap-1">
-        <span className="text-stone-500">{L.prediction}</span>
-        <Mark wrap ok={m.prediction ? m.prediction === MISSIONS[id].correctPrediction : null}>
-          {m.prediction ? s.predictChoices[m.prediction] : undefined}
-        </Mark>
-      </div>
-      <Row label={L.built}>
-        <span className="flex gap-1">
-          <Mark ok={m.built.A}>A</Mark>
-          <Mark ok={m.built.B}>B</Mark>
-        </span>
-      </Row>
-      <Row label={L.compare}>
-        <Mark ok={m.compare ? m.compare === MISSIONS[id].correctCompare : null}>{m.compare ? s.compareChoices[m.compare] : undefined}</Mark>
-      </Row>
-      <Row label={T.columns.hints}>
-        <span className={`tabular-nums ${m.hintCount >= 3 ? 'font-bold text-rose-600' : 'text-stone-700'}`}>{m.hintCount} / {m.attempts}</span>
-      </Row>
-      {id === 'm1' && <Row label={L.challenge}><span className="text-stone-700">{V.challenge[m.challenge]}</span></Row>}
-      <div className="flex flex-col gap-1">
-        <span className="text-xs font-semibold text-stone-500">{T.reason}</span>
-        <p className={`rounded-lg px-3 py-2 leading-relaxed ${m.explanation.trim() ? 'bg-amber-50 text-stone-800' : 'bg-stone-50 text-stone-400'}`}>
-          {m.explanation.trim() || V.empty}
-        </p>
-      </div>
+    <div className="flex flex-col gap-1">
+      <dt className="text-xs text-stone-500">{q}</dt>
+      <dd className="font-semibold leading-snug text-stone-800">{children}</dd>
     </div>
   );
 }
 
-function Row({ label, children }: { label: string; children: ReactNode }) {
+function MissionRecordCard({ id, g }: { id: MissionId; g: GroupSummary }) {
+  const m = g.missions[id];
+  const s = MISSION_STRINGS[id];
+  const status = m.status === 'done' ? '완료' : m.status === 'open' ? '진행 중' : '잠김';
+  const statusColor = m.status === 'done' ? 'text-[#3f7d58]' : m.status === 'open' ? 'text-amber-700' : 'text-stone-400';
   return (
-    <div className="flex items-start justify-between gap-3">
-      <span className="shrink-0 pt-0.5 text-stone-500">{label}</span>
-      <span className="text-right">{children}</span>
+    <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-stone-200 p-4 text-sm">
+      <div className="flex items-baseline justify-between gap-2">
+        <h3 className="text-base font-bold">{S3.places[id]}</h3>
+        <span className={`text-xs font-bold ${statusColor}`}>{status}</span>
+      </div>
+      {/* 왼쪽 항목 이름, 오른쪽 답 (긴 글은 칸 안에서 줄바꿈) */}
+      <dl className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 gap-y-2 leading-snug">
+        <dt className="text-stone-500">{L.prediction}</dt>
+        <dd className="break-keep">
+          <Mark ok={m.prediction ? m.prediction === MISSIONS[id].correctPrediction : null}>
+            {m.prediction ? <span className="font-normal text-stone-800">{s.predictChoices[m.prediction]}</span> : undefined}
+          </Mark>
+        </dd>
+        <dt className="text-stone-500">{L.built}</dt>
+        <dd className="flex gap-3">
+          <Mark ok={m.built.A}><span className="text-stone-800">A</span></Mark>
+          <Mark ok={m.built.B}><span className="text-stone-800">B</span></Mark>
+        </dd>
+        <dt className="text-stone-500">{L.compare}</dt>
+        <dd>
+          <Mark ok={m.compare ? m.compare === MISSIONS[id].correctCompare : null}>
+            {m.compare ? <span className="text-stone-800">{s.compareChoices[m.compare]}</span> : undefined}
+          </Mark>
+        </dd>
+        <dt className="text-stone-500">{T.columns.hints}</dt>
+        <dd className={`tabular-nums ${m.hintCount >= 3 ? 'font-bold text-rose-600' : 'text-stone-800'}`}>{m.hintCount} / {m.attempts}</dd>
+        {id === 'm1' && (
+          <>
+            <dt className="text-stone-500">{T.challengeShort}</dt>
+            <dd className="text-stone-800">{V.challenge[m.challenge]}</dd>
+          </>
+        )}
+      </dl>
+      <div className="flex flex-col gap-1">
+        <span className="text-xs text-stone-500">{L.explanation}</span>
+        <p className={`break-keep rounded-lg px-3 py-2 leading-relaxed ${m.explanation.trim() ? 'bg-amber-50 text-stone-800' : 'bg-stone-50 text-stone-400'}`}>
+          {m.explanation.trim() || V.empty}
+        </p>
+      </div>
     </div>
   );
 }
@@ -466,17 +478,15 @@ function PersonalRecords({ learners }: { learners: Learner[] }) {
                 <td className={`${TD} whitespace-nowrap text-stone-500`}>{l.group}</td>
                 <td className={`${TD} whitespace-nowrap font-bold`}>{l.name}</td>
                 <td className={`${TD} whitespace-nowrap`}>
-                  {l.finished ? <Mark ok>{L.finished}</Mark> : T.stepOf(l.wrapupStep + 1, WRAPUP_STEP_COUNT)}
+                  {l.finished ? <Mark ok><span>{L.finished}</span></Mark> : T.stepOf(l.wrapupStep + 1, WRAPUP_STEP_COUNT)}
                 </td>
-                <td className={`${TD} min-w-56 max-w-80`}>
+                <td className={`${TD} min-w-40 max-w-60`}>
                   {l.final.shareBlanks?.some((b) => b.trim())
-                    ? <span className="flex flex-wrap gap-1">{l.final.shareBlanks.map((b, i) => (
-                      <span key={i} className="rounded bg-amber-50 px-1.5 py-0.5">{b.trim() || V.empty}</span>
-                    ))}</span>
+                    ? <span className="break-keep leading-relaxed text-stone-800">{l.final.shareBlanks.map((b) => b.trim() || V.empty).join(' / ')}</span>
                     : <span className="text-stone-400">{l.final.groupThought.trim() || V.empty}</span>}
                 </td>
                 <td className={TD}>
-                  <span className="flex gap-1">
+                  <span className="flex gap-3">
                     {parts.map((p, i) => {
                       const v = l.final.explain[p];
                       return <Mark key={p} ok={v === null ? null : v === 'more'}>{i + 1}</Mark>;
@@ -485,7 +495,7 @@ function PersonalRecords({ learners }: { learners: Learner[] }) {
                 </td>
                 <td className={TD}><Mark ok={l.final.check === null ? null : l.final.check === 'brighter'} /></td>
                 <td className={TD}>
-                  <span className="flex gap-1">
+                  <span className="flex gap-3">
                     {(['q1', 'q2', 'q3'] as const).map((k, i) => {
                       const r = l.final.misconception[k];
                       return <Mark key={k} ok={r === null ? null : r === 'correct'}>{i + 1}</Mark>;

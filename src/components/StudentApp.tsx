@@ -18,6 +18,7 @@ import type { AppState } from '@/lib/types';
 import { setMusicLevel } from '@/media/music';
 import { audio, playClick, setUiSoundMuted } from '@/media/sound';
 import RoomBar from './RoomBar';
+import ExitButton from './ExitButton';
 import SoundToggle from './SoundToggle';
 import S1Entry from './screens/S1Entry';
 import S2Intro from './screens/S2Intro';
@@ -333,6 +334,8 @@ export default function StudentApp() {
       {screen === 'S5' && <S5Wrapup />}
       {/* 마을 지도는 위쪽 줄에, 미션 화면은 아래쪽 줄에 소리 버튼이 따로 있다 */}
       {screen !== 'S3' && screen !== 'S4' && <SoundToggle underBar={room !== null && screen !== 'S5'} />}
+      {/* 나가기: 지도·미션은 위쪽 줄에 있고, 도입·마무리는 왼쪽 위에 떠 있다 */}
+      {(screen === 'S2' || screen === 'S5') && <ExitButton floating underBar={room !== null && screen !== 'S5'} />}
       </LiveContext>
     </StoreContext>
   );

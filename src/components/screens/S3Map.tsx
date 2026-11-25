@@ -8,7 +8,7 @@
 //  - 세 곳 모두 되살리면 "마무리로 가기"
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
-import { CHARACTER, COMMON, RESTART, ROOM, S3, SITUATION, WORLD } from '@/data/strings';
+import { CHARACTER, COMMON, ROOM, S3, SITUATION, WORLD } from '@/data/strings';
 import { PLACES, type Vec } from '@/data/world';
 import { allMissionsDone, revivedCount } from '@/lib/flow/missionFlow';
 import { useStore } from '@/lib/store/StoreContext';
@@ -18,10 +18,11 @@ import type { Member } from '@/lib/sync/roomSync';
 import type { MissionId, StoryKey } from '@/lib/types';
 import { playOpen } from '@/media/sound';
 import { nextTarget, placeAt } from '@/lib/world/movement';
-import { Button, ConfirmDialog } from '../ui';
+import { Button } from '../ui';
 import { FairyIcon } from '../village/Characters';
 import MoveTutorial from '../village/MoveTutorial';
 import { LockMark } from '../village/Props';
+import ExitButton from '../ExitButton';
 import SoundToggle from '../SoundToggle';
 import SituationScene from '../village/SituationScene';
 import VillageWorld, { type MapPeer, type WorldView } from '../village/VillageWorld';
@@ -33,9 +34,8 @@ const ROOM_BAR_HEIGHT = 36;
 export const darknessFor = (revived: number) => [0.6, 0.42, 0.25, 0.06][revived] ?? 0.06;
 
 export default function S3Map() {
-  const { state, room, members, restart, goWrapup, enterMission } = useStore();
+  const { state, room, members, goWrapup, enterMission } = useStore();
   const { peers, publish } = useLive();
-  const [confirmRestart, setConfirmRestart] = useState(false);
   // 처음 도착 인사를 들은 뒤 움직이는 방법 튜토리얼
   const [tutorial, setTutorial] = useState(false);
   const [helpOpen, setHelpOpen] = useState(false);
@@ -45,7 +45,6 @@ export default function S3Map() {
     setTutorial(false);
     setPracticeRound((n) => n + 1);
   };
-  const closeRestart = useCallback(() => setConfirmRestart(false), []);
   const revived = revivedCount(state);
   const done = allMissionsDone(state);
   const [s1, s2, s3] = [state.missions.m1.status, state.missions.m2.status, state.missions.m3.status];
@@ -124,16 +123,7 @@ export default function S3Map() {
 
       <header className="pointer-events-none absolute inset-x-0 top-0 z-30 grid grid-cols-[1fr_auto_1fr] items-center gap-2 p-3">
         {/* 다른 모둠으로 바꾸거나 처음부터 다시 할 때 (이 기기의 기록만 지운다) */}
-        <button type="button" onClick={() => setConfirmRestart(true)}
-          className="pointer-events-auto flex min-h-11 items-center gap-1.5 justify-self-start rounded-full bg-white/60 px-4 text-sm font-bold text-stone-700 shadow-sm outline-none backdrop-blur transition hover:bg-white/80">
-          {/* 나가기 아이콘: 문과 바깥쪽 화살표 */}
-          <svg viewBox="0 0 24 24" className="size-5" fill="none" stroke="currentColor" strokeWidth={2.2}
-            strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <path d="M10 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4" />
-            <path d="M15 8l4 4-4 4M19 12H9" />
-          </svg>
-          {RESTART.short}
-        </button>
+        <ExitButton className="pointer-events-auto justify-self-start" />
         <h1 className="pointer-events-auto flex min-h-11 items-center gap-3 rounded-full bg-white/60 px-5 text-lg font-bold shadow-sm backdrop-blur">
           [{state.groupName}] {COMMON.revived(revived)}
           <span className="flex gap-0.5" aria-hidden>
@@ -152,8 +142,6 @@ export default function S3Map() {
           <SoundToggle inline />
         </div>
       </header>
-      <ConfirmDialog open={confirmRestart} title={RESTART.title} body={RESTART.body} okLabel={RESTART.ok}
-        cancelLabel={RESTART.cancel} onOk={restart} onCancel={closeRestart} />
 
       {story && (
         <StoryPanel storyKey={story} groupName={state.groupName} showWrapup={story === 'after-m3'}

@@ -279,6 +279,8 @@ export function reducer(state: AppState, action: Action): AppState {
     // ───── S5 ─────
     // ───── S5 마무리: 혼자 할 때는 모둠 기록에, 모둠으로 할 때는 그 학생(by) 기록에 ─────
     case 'UPDATE_FINAL':
+      // 확인해요는 오개념 점검처럼 처음 고른 답만 기록한다 (고르면 바로 정답을 보여 주므로)
+      if (action.patch.check !== undefined && wrapupOf(state, action.by).check !== null) return state;
       return putWrapup(state, action.by, action.patch);
     case 'SET_SHARE_BLANK': {
       // 빈칸 하나를 쓰면, 빈칸을 채운 문장도 같이 만들어 둔다 (선생님 화면용)

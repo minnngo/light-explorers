@@ -287,10 +287,10 @@ describe('S5 마무리', () => {
     expect(s.final.misconception.q1).toBe('wrong');
   });
 
-  it('확인해요에서 맞는 답을 고르기 전에는 다음으로 갈 수 없다', () => {
+  it('확인해요는 고르기 전에는 다음으로 갈 수 없고, 틀린 답을 골라도 고르면 넘어간다', () => {
     const base = { ...createInitialState(), currentScreen: 'S5' as const, wrapupStep: 3 };
-    expect(play(base, { type: 'UPDATE_FINAL', patch: { check: 'darker' } }, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(3);
-    expect(play(base, { type: 'UPDATE_FINAL', patch: { check: 'brighter' } }, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(4);
+    expect(play(base, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(3);
+    expect(play(base, { type: 'UPDATE_FINAL', patch: { check: 'darker' } }, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(4);
   });
 });
 
@@ -339,6 +339,16 @@ describe('마무리: 모둠으로 할 때는 각자 한다', () => {
     expect(blocked.final.students?.a1.wrapupStep).toBe(1); // 빈칸을 안 채워서 1에서 멈춘다
     const last = play(atWrapup(), { type: 'FINISH', by: jia });
     expect(last.final.students?.b2?.finished ?? false).toBe(false); // 마지막 단계가 아니면 마칠 수 없다
+  });
+});
+
+describe('확인해요', () => {
+  it('처음 고른 답만 기록하고, 틀려도 다음으로 갈 수 있다', () => {
+    const s = play({ ...createInitialState(), currentScreen: 'S5', wrapupStep: 3 },
+      { type: 'UPDATE_FINAL', patch: { check: 'darker' } },
+      { type: 'UPDATE_FINAL', patch: { check: 'brighter' } });
+    expect(s.final.check).toBe('darker');
+    expect(canAdvanceWrapup(s)).toBe(true);
   });
 });
 
