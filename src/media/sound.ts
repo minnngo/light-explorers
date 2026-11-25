@@ -2,7 +2,7 @@
 
 // 소리 장치는 페이지 전체에 하나만 둔다. 개발 중 코드가 바뀌어 이 파일을 다시 불러와도
 // (화면 새로고침 없이 갈아 끼우기) 새 장치를 또 만들지 않도록 전역(globalThis)에 보관한다.
-const g = globalThis as typeof globalThis & { __lightExplorersAudio?: AudioContext };
+const g = globalThis as typeof globalThis & { __lightExplorersAudio?: AudioContext; __lightExplorersLimiter?: DynamicsCompressorNode };
 
 export function audio(): AudioContext | null {
   if (typeof window === 'undefined') return null;
@@ -12,7 +12,22 @@ export function audio(): AudioContext | null {
   return ctx;
 }
 
-function tone(freq: number, volume: number, startOffset = 0, duration = 0.5, type: OscillatorType = 'sine') {
+/** 큰 종소리가 찢어지지 않게 너무 큰 순간만 눌러 주는 장치 (종소리 전용, 하나만 만들어 쓴다) */
+function limiter(ac: AudioContext): AudioNode {
+  if (g.__lightExplorersLimiter?.context !== ac) {
+    const c = ac.createDynamicsCompressor();
+    c.threshold.value = -1;
+    c.knee.value = 2;
+    c.ratio.value = 20;
+    c.attack.value = 0.002;
+    c.release.value = 0.2;
+    c.connect(ac.destination);
+    g.__lightExplorersLimiter = c;
+  }
+  return g.__lightExplorersLimiter;
+}
+
+function tone(freq: number, volume: number, startOffset = 0, duration = 0.5, type: OscillatorType = 'sine', limited = false) {
   const ac = audio();
   if (!ac) return;
   const t = ac.currentTime + startOffset;
@@ -22,25 +37,22 @@ function tone(freq: number, volume: number, startOffset = 0, duration = 0.5, typ
   osc.frequency.value = freq;
   gain.gain.setValueAtTime(volume, t);
   gain.gain.exponentialRampToValueAtTime(0.0001, t + duration);
-  osc.connect(gain).connect(ac.destination);
+  osc.connect(gain).connect(limited ? limiter(ac) : ac.destination);
   osc.start(t);
   osc.stop(t + duration);
 }
 
 /**
  * 안내 종(버저). 두 소리의 세기 차이가 확실히 느껴지도록 크게 벌려 두었다.
- *  - 레벨 1 (전지 1개): 작고 짧은 "딩…" (한 음, 아주 작게)
- *  - 레벨 2 (전지 2개): 크고 긴 "딩동!" (두 음 + 배음, 약 15배 크게)
+ *  - 레벨 1 (전지 1개): 작은 "딩~"
+ *  - 레벨 2 (전지 2개): 같은 "딩~"을 훨씬 크게 (높이·음색·길이는 같고 크기만 다르다. 찢어지지 않게 리미터가 맨 위만 눌러 준다)
  */
 export function playChime(level: 1 | 2) {
-  if (level === 1) {
-    tone(880, 0.025, 0, 0.35);
-  } else {
-    tone(880, 0.4, 0, 1.1, 'triangle');
-    tone(1760, 0.1, 0, 0.6);
-    tone(660, 0.4, 0.35, 1.3, 'triangle');
-    tone(1320, 0.1, 0.35, 0.7);
-  }
+  // 두 회로 모두 같은 종소리 "딩~" 한 번 (높이·음색이 같고 크기만 다르다). 전지 2개는 확연히 크게
+  const loud = level === 2 ? 1.6 : 0.1;
+  tone(880, loud, 0, 1.4, 'triangle', true); // 바탕음: 길게 울린다
+  tone(1760, loud * 0.3, 0, 0.9, 'sine', true); // 맑은 배음
+  tone(2640, loud * 0.1, 0, 0.5, 'sine', true); // 처음 칠 때의 쨍한 느낌
 }
 
 /** 작동하는 동안 종이 다시 울리는 간격. A와 B가 번갈아 울리도록 B는 반 박자 늦게 시작한다 */

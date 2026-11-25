@@ -79,7 +79,8 @@ export default function S3Map() {
 
   // ───── 모둠 함께하기: 친구 캐릭터, 모이기, 모두 부르기 ─────
   const onMove = useCallback((p: Vec) => {
-    publish({ map: { x: Math.round(p.x), y: Math.round(p.y) } });
+    // 반올림하지 않는다: 친구 화면이 "도착"을 판단하는 좌표와 똑같아야 한다 (경계에서 "오는 중"으로 보이지 않게)
+    publish({ map: { x: p.x, y: p.y } });
   }, [publish]);
   // 지도를 떠나면(미션에 들어가면) 내 캐릭터와 부르기를 거둔다
   useEffect(() => () => publish({ map: null, call: null }), [publish]);

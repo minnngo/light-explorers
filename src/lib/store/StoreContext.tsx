@@ -2,8 +2,16 @@
 
 import { createContext, type Dispatch, useContext } from 'react';
 import type { Member, RoomInfo } from '@/lib/sync/roomSync';
-import type { AppState, MissionId } from '@/lib/types';
+import type { AppState, BoardId, MissionId } from '@/lib/types';
 import type { Action } from './reducer';
+
+/** 친구가 회로판에서 방금 한 조작 (모둠 함께하기). 그 회로판 위에 이름과 함께 잠깐 보여 준다 */
+export interface BoardNote {
+  by: Member;
+  board: BoardId;
+  what: 'ADD_WIRE' | 'REMOVE_WIRE' | 'TOGGLE_SWITCH';
+  at: number;
+}
 
 export interface StoreValue {
   state: AppState;
@@ -18,6 +26,7 @@ export interface StoreValue {
   connection: 'connecting' | 'online' | 'offline';
   /** 방 코드로 들어와 첫 상태를 기다리는 중 */
   waitingForRoom: boolean;
+  boardNote: BoardNote | null;
   /** 선생님이 만든 모둠에 들어가기 (서버에 저장된 모둠 상태로 시작하고, 같은 모둠 친구들과 실시간으로 맞춘다) */
   joinGroup: (group: ClassGroupInfo, me: { name: string }) => Promise<void>;
   leaveRoom: () => void;

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'r
 import { clearLocal, loadLocal, loadRoom, saveLocal, saveRoom } from '@/lib/store/persistence';
 import { type Action, createInitialState, reducer } from '@/lib/store/reducer';
 import { actions } from '@/lib/store/actions';
-import { StoreContext, type StoreValue } from '@/lib/store/StoreContext';
+import { type BoardNote, StoreContext, type StoreValue } from '@/lib/store/StoreContext';
 import { createSupabaseTransport } from '@/lib/sync/realtime';
 import { scheduleRemoteSave } from '@/lib/sync/remoteSave';
 import {
@@ -52,6 +52,7 @@ export default function StudentApp() {
   const [connection, setConnection] = useState<StoreValue['connection']>('connecting');
   const [waitingForRoom, setWaitingForRoom] = useState(false);
   const syncRef = useRef<RoomSync | null>(null);
+  const [boardNote, setBoardNote] = useState<BoardNote | null>(null);
   // 실시간 존재감 (커서·끄는 전선·쓰는 중): 친구들 모습과, 내 모습을 보내는 통로
   const [peerMap, setPeerMap] = useState<Record<string, LivePeer>>({});
   const [myEditing, setMyEditing] = useState<string | null>(null);
@@ -78,6 +79,12 @@ export default function StudentApp() {
       room,
       getState: () => stateRef.current,
       apply: rawDispatch,
+      // 친구가 회로판을 조작하면 그 회로판 위에 잠깐 알린다
+      onRemoteAction: (action, by) => {
+        if (action.type === 'ADD_WIRE' || action.type === 'REMOVE_WIRE' || action.type === 'TOGGLE_SWITCH') {
+          setBoardNote({ by, board: action.board, what: action.type, at: Date.now() });
+        }
+      },
       onMembers: setMembers,
       // 한 번도 연결된 적 없으면 "연결하는 중", 연결됐다가 끊기면 "끊김"
       onStatus: (online) => setConnection((prev) => (online ? 'online' : prev === 'connecting' ? 'connecting' : 'offline')),
@@ -225,6 +232,7 @@ export default function StudentApp() {
       members,
       connection,
       waitingForRoom: joining,
+      boardNote,
       joinGroup,
       goWrapup,
       enterMission,
@@ -232,7 +240,7 @@ export default function StudentApp() {
       leaveRoom,
       restart,
     }),
-    [state, dispatch, muted, setMuted, room, members, connection, joining, joinGroup, goWrapup, enterMission, leaveMission, leaveRoom, restart],
+    [state, dispatch, muted, setMuted, room, members, connection, joining, boardNote, joinGroup, goWrapup, enterMission, leaveMission, leaveRoom, restart],
   );
 
   // 모둠으로 할 때: 마무리로 들어간 기기는 모둠 화면이 지도여도 마무리를 보여 준다

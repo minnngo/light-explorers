@@ -9,7 +9,7 @@ import { canGoCompare, currentResults, judgeBoard, type MissionFocus, missionFoc
 import { actions } from '@/lib/store/actions';
 import { loadTutorialDone, saveTutorialDone } from '@/lib/store/persistence';
 import { type Action, createInitialState, isEditable, reducer } from '@/lib/store/reducer';
-import { useStore } from '@/lib/store/StoreContext';
+import { type BoardNote, useStore } from '@/lib/store/StoreContext';
 import { isLeader, presentMembers } from '@/lib/sync/live';
 import { useLive } from '@/lib/sync/LiveContext';
 import { type BoardSnapshot, type CoachMark, coachFor, nextStep, stepDone, type TutorialStep } from '@/lib/tutorial/tutorial';
@@ -212,6 +212,8 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card, onM
   const text = MISSION_STRINGS[id];
   // 모둠 함께하기에서도 누구나 두 회로판을 함께 조작한다
   const editable = practice ? true : isEditable(state, boardId);
+  // 친구가 이 회로판에서 방금 한 조작 (연습용 회로판에는 띄우지 않는다)
+  const note = useBoardNote(boardId);
   // 이 회로판 위에 있는 친구 커서
   const boardPeers = peers.flatMap((p) => (p.board?.id === boardId
     ? [{ id: p.member.id, name: p.member.name, color: p.color, x: p.board.x, y: p.board.y, from: p.board.from }]
@@ -250,6 +252,11 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card, onM
         )}
       </div>
       <div className={`relative ${editable ? '' : 'opacity-90'}`}>
+          {note && !practice && (
+            <p role="status" className="pop-in absolute left-2 top-2 z-10 rounded-full bg-sky-900 px-3 py-1 text-sm text-white">
+              {ROOM.did(note.by.name, ROOM.boardActions[note.what])}
+            </p>
+          )}
           <CircuitBoard
             boardId={boardId}
             part={MISSIONS[id].part}
@@ -285,6 +292,20 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card, onM
       )}
     </section>
   );
+}
+
+/** 친구가 이 회로판에서 방금(3초 안) 한 조작 */
+const BOARD_NOTE_MS = 3000;
+function useBoardNote(board: BoardId): BoardNote | null {
+  const { boardNote } = useStore();
+  const [expiredAt, setExpiredAt] = useState<number | null>(null);
+  const matches = boardNote !== null && boardNote.board === board;
+  useEffect(() => {
+    if (!matches) return;
+    const timer = setTimeout(() => setExpiredAt(boardNote.at), BOARD_NOTE_MS);
+    return () => clearTimeout(timer);
+  }, [matches, boardNote]);
+  return matches && expiredAt !== boardNote.at ? boardNote : null;
 }
 
 /**

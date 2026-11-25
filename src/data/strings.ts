@@ -62,6 +62,8 @@ export const ROOM = {
   offline: '연결이 끊겼어요. 다시 연결하는 중…',
   me: '(나)',
   membersLabel: '지금 함께하는 모둠원',
+  did: (name: string, what: string) => `${name}: ${what}`,
+  boardActions: { ADD_WIRE: '전선을 이었어요', REMOVE_WIRE: '전선을 지웠어요', TOGGLE_SWITCH: '스위치를 눌렀어요' },
   writing: (name: string) => `${name} 쓰는 중…`,
   agreeNeed: (same: number, all: number) => `모둠원 모두 같은 답을 골라야 정할 수 있어요 (${same}/${all}명)`,
   gatherNeed: (here: number, all: number) => `모둠원이 모두 모이면 시작할 수 있어요 (${here}/${all}명)`,
