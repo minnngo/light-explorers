@@ -132,11 +132,23 @@ const TD = 'px-3 py-2.5 first:pl-5 last:pr-5';
 /** 막대 그래프 색 (한 가지 색: 크기만 보여 준다) */
 const BAR = '#d97706';
 
-function Card({ title, note, children, className = '' }: { title: string; note?: string; children: ReactNode; className?: string }) {
+function Card({ title, note, tag, children, className = '' }: {
+  title: string; note?: string; tag?: 'mission' | 'wrapup'; children: ReactNode; className?: string;
+}) {
   return (
     <section className={`flex flex-col gap-3 rounded-2xl bg-white p-5 shadow-sm ${className}`}>
       <div className="flex flex-col gap-0.5">
-        <h2 className="text-lg font-bold">{title}</h2>
+        <h2 className="flex items-center gap-2 text-lg font-bold">
+          {/* 어느 활동의 데이터인지: [미션] 모둠이 함께 한 것 / [마무리] 각자 한 것 */}
+          {tag && (
+            <span className={`rounded-md px-1.5 py-0.5 text-xs font-bold ${
+              tag === 'mission' ? 'bg-amber-100 text-amber-800' : 'bg-sky-100 text-sky-800'
+            }`}>
+              {tag === 'mission' ? T.chart.tagMission : T.chart.tagWrapup}
+            </span>
+          )}
+          {title}
+        </h2>
         {note && <p className="text-sm text-stone-500">{note}</p>}
       </div>
       {children}
@@ -228,29 +240,43 @@ function Overview({ data }: { data: ClassSummary }) {
         <StatTile label={T.stat.learners} value={`${st.learners}`} />
         <StatTile label={T.stat.finished} value={`${st.finishedLearners}/${st.learners}`} />
       </div>
-      <div className="grid gap-5 lg:grid-cols-2">
-        <Card title={T.chart.missionDone}><BarList rows={missionRows(st.missionDone)} /></Card>
-        <Card title={T.chart.prediction}><BarList rows={missionRows(st.predictionRight)} /></Card>
-        <Card title={T.chart.compare}><BarList rows={missionRows(st.compareRight)} /></Card>
-        <Card title={T.chart.misconception}>
-          <BarList rows={S5.misconception.items.map((item, i) => ({ label: `${i + 1}번`, title: item.text, ...st.misconception[item.key] }))} />
+      <ChartGroup title={T.chart.groupMission}>
+        <Card tag="mission" title={T.chart.missionDone}><BarList rows={missionRows(st.missionDone)} /></Card>
+        <Card tag="mission" title={T.chart.prediction}><BarList rows={missionRows(st.predictionRight)} /></Card>
+        <Card tag="mission" title={T.chart.compare}><BarList rows={missionRows(st.compareRight)} /></Card>
+        <Card tag="mission" title={T.chart.hints}>
+          <BarList count rows={st.hintsByGroup.slice(0, 6).map((h) => ({
+            label: h.group, hit: h.hints, of: Math.max(1, st.hintsByGroup[0]?.hints ?? 1), text: T.chart.hintsOf(h.hints, h.attempts),
+          }))} />
         </Card>
-        <Card title={T.chart.explain}>
-          <BarList rows={parts.map((p, i) => ({ label: `${i + 1}번`, title: S5.explain.questions[p].q, ...st.explain[p] }))} />
+      </ChartGroup>
+      <ChartGroup title={T.chart.groupWrapup}>
+        <Card tag="wrapup" title={T.chart.explain}>
+          <BarList rows={parts.map((p) => ({ label: T.chart.explainShort[p], title: S5.explain.questions[p].q, ...st.explain[p] }))} />
         </Card>
-        <Card title={T.chart.selfEval}>
+        <Card tag="wrapup" title={T.chart.selfEval}>
           <BarList count rows={[
             ...(['good', 'needHelp', 'needPractice'] as const).map((k) => ({ label: S5.selfEval.choices[k], hit: st.selfEval[k], of: st.learners })),
             { label: T.chart.noneYet, hit: st.selfEval.none, of: st.learners },
           ]} />
         </Card>
-        <Card title={T.chart.hints} className="lg:col-span-2">
-          <BarList count rows={st.hintsByGroup.slice(0, 6).map((h) => ({
-            label: h.group, hit: h.hints, of: Math.max(1, st.hintsByGroup[0]?.hints ?? 1), text: T.chart.hintsOf(h.hints, h.attempts),
+        <Card tag="wrapup" title={T.chart.misconception} className="lg:col-span-2">
+          <BarList wide rows={S5.misconception.items.map((item, i) => ({
+            label: T.chart.misconceptionShort[i], title: item.text, ...st.misconception[item.key],
           }))} />
         </Card>
-      </div>
+      </ChartGroup>
     </div>
+  );
+}
+
+/** 그래프 묶음: 미션(모둠이 함께 한 것) / 마무리(각자 한 것) */
+function ChartGroup({ title, children }: { title: string; children: ReactNode }) {
+  return (
+    <section className="flex flex-col gap-3">
+      <h2 className="text-base font-bold text-stone-600">{title}</h2>
+      <div className="grid gap-5 lg:grid-cols-2">{children}</div>
+    </section>
   );
 }
 
@@ -267,8 +293,10 @@ function StatTile({ label, value }: { label: string; value: string }) {
  * 가로 막대 목록 (한 가지 색). 비율이면 "3/5 (60%)", count면 개수만 글자로 함께 적는다.
  * 마우스를 올리면 문항 전체 내용과 숫자가 보인다
  */
-function BarList({ rows, count = false }: {
+function BarList({ rows, count = false, wide = false }: {
   rows: { label: string; title?: string; hit: number; of: number; text?: string }[]; count?: boolean;
+  /** 이름이 긴 항목 (오개념 문항 등) */
+  wide?: boolean;
 }) {
   return (
     <ul className="flex flex-col gap-2.5">
@@ -276,7 +304,8 @@ function BarList({ rows, count = false }: {
         const pct = r.of ? (r.hit / r.of) * 100 : 0;
         const text = r.text ?? (count ? T.chart.count(r.hit) : T.chart.rateOf(r.hit, r.of));
         return (
-          <li key={r.label} className="grid grid-cols-[6.5rem_1fr_auto] items-center gap-3 text-sm" title={`${r.title ?? r.label} — ${text}`}>
+          <li key={r.label} className={`grid items-center gap-3 text-sm ${wide ? 'grid-cols-[15rem_1fr_auto]' : 'grid-cols-[6.5rem_1fr_auto]'}`}
+            title={`${r.title ?? r.label} — ${text}`}>
             <span className="truncate font-semibold text-stone-700">{r.label}</span>
             <span className="h-3 overflow-hidden rounded-full bg-stone-100">
               <span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${pct}%`, background: BAR }} />
