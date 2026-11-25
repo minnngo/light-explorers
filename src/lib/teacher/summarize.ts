@@ -36,6 +36,8 @@ export interface GroupSummary {
   students: StudentFinal[];
   /** 가치·태도 근거: 모둠이 글을 쓴 칸 수 / 전체 칸 수 */
   wroteCount: number;
+  /** 혼자 한 모둠의 마무리 단계 (모둠으로 한 곳은 학생마다 students에 있다) */
+  wrapupStep: number;
   writableCount: number;
   finished: boolean;
   updatedAt: string;
@@ -85,6 +87,7 @@ export function summarize(rows: { state: AppState; updatedAt: string }[]): Class
     students: Object.entries(state.final.students ?? {}).map(([id, st]) => studentOf(state.final, { id, name: st?.name ?? '' })),
     ...writing(state),
     finished: state.finished,
+    wrapupStep: state.wrapupStep,
     updatedAt,
   }));
 

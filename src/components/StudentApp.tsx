@@ -198,6 +198,18 @@ export default function StudentApp() {
     sendLive(patch);
   }, [sendLive]);
 
+  // 모둠이 바뀌거나, 미션에 들어가고 나올 때(다시 하기 포함)는 지난번에 고른 답(모두 동의 표)을 지운다.
+  // 남겨 두면 새 판에서 지난 답끼리 "모두 같은 답"이 되어 저절로 정해져 버린다
+  const voteScope = `${room?.code ?? ''}|${room?.me.id ?? ''}|${state.currentScreen}|${state.currentMission ?? ''}`;
+  const [seenVoteScope, setSeenVoteScope] = useState(voteScope);
+  if (seenVoteScope !== voteScope) {
+    setSeenVoteScope(voteScope);
+    setMyVotes({});
+  }
+  useEffect(() => {
+    sendLive({ votes: {} });
+  }, [voteScope, sendLive]);
+
   const vote = useCallback<LiveValue['vote']>((field, value) => {
     publish({ votes: { ...liveRef.current.mine.votes, [field]: value } });
   }, [publish]);
