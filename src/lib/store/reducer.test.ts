@@ -86,7 +86,7 @@ describe('미션 단계 진행 (명세서 7-2)', () => {
     expect(s.missions.m1.built).toEqual({ A: true, B: false });
   });
 
-  it('이유를 10글자 이상 쓰기 전에는 확인하기로 넘어갈 수 없다 (POE 핵심 규칙)', () => {
+  it('생각을 적기 전에는 확인하기로 넘어갈 수 없다 (POE 핵심 규칙, 글자 수 제한은 없음)', () => {
     const s = play(
       atMap(),
       { type: 'OPEN_MISSION', mission: 'm1', at: 0 },
@@ -94,10 +94,13 @@ describe('미션 단계 진행 (명세서 7-2)', () => {
       ...BUILD_BOTH,
       { type: 'GO_COMPARE' },
       { type: 'SET_COMPARE', choice: 'more' },
-      { type: 'SET_EXPLANATION', text: '짧은 이유' },
+      { type: 'SET_EXPLANATION', text: '   ' },
       { type: 'CONFIRM' },
     );
     expect(s.missions.m1.step).toBe('compare');
+    // 짧게 적어도 확인하기를 누를 수 있다
+    const short = reducer(s, { type: 'SET_EXPLANATION', text: '밝아요' });
+    expect(reducer(short, { type: 'CONFIRM' }).missions.m1.step).not.toBe('compare');
   });
 
   it('미션 1 전체 흐름: 완료하면 미션 2가 열리고 지도로 돌아간다', () => {

@@ -6,8 +6,8 @@ import { MISSION_ORDER, MISSIONS } from '@/data/missions';
 import { judge } from '@/lib/circuit/judge';
 import type { AppState, BoardId, BoardState, JudgeResult, MissionRecord, PartKind } from '@/lib/types';
 
-/** 이유 입력 최소 글자 수 (명세서: 10글자는 임시 값) */
-export const MIN_EXPLANATION_LENGTH = 10;
+/** 이유(생각) 입력 최소 글자 수. 글자 수 제한은 두지 않고 무엇이든 한 글자 이상 적으면 된다 (검토 의견: 10글자는 6학년에게 부담) */
+export const MIN_EXPLANATION_LENGTH = 1;
 
 export function judgeBoard(part: PartKind, board: BoardId, state: BoardState): JudgeResult {
   return judge({

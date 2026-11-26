@@ -7,7 +7,7 @@ import { createPortal } from 'react-dom';
 import { MISSIONS } from '@/data/missions';
 import { CHALLENGE, CHARACTER, COMMON, MISSION_STRINGS, withoutMark } from '@/data/strings';
 import { challengeStep } from '@/lib/flow/challenge';
-import { canConfirm, canGoCompare, checklist, currentResults, MIN_EXPLANATION_LENGTH } from '@/lib/flow/missionFlow';
+import { canConfirm, canGoCompare, checklist, currentResults } from '@/lib/flow/missionFlow';
 import { actions } from '@/lib/store/actions';
 import { useStore } from '@/lib/store/StoreContext';
 import type { CompareChoice, PredictionChoice } from '@/lib/types';
@@ -120,12 +120,11 @@ function BuildPanel() {
   );
 }
 
-/** ③ 비교하기와 이유 쓰기: ○표 + 이유 10글자 이상이어야 확인하기 */
+/** ③ 비교하기와 생각 적어 보기: ○표 + 생각을 적어야(글자 수 제한 없음) 확인하기 */
 function ComparePanel() {
   const { state, dispatch, room } = useStore();
   const record = state.missions[state.currentMission!];
   const text = MISSION_STRINGS[state.currentMission!];
-  const length = record.explanation.trim().length;
   // 채점: 확인하기를 누르면 이 화면에서 먼저 답을 맞춰 보고(고칠 수 없음), "다음"으로 ④ 확인에 간다.
   // 모둠 함께하기에서도 한 명이 누르면 모두의 화면에 같이 뜬다
   const graded = record.graded ?? false;
@@ -169,11 +168,6 @@ function ComparePanel() {
           readOnly={graded}
           onChange={(e) => dispatch({ type: 'SET_EXPLANATION', text: e.target.value })}
         />
-        {!graded && (
-          <span className="text-right text-sm text-slate-500">
-            {COMMON.minChars(length, MIN_EXPLANATION_LENGTH)}
-          </span>
-        )}
       </label>
       {graded ? (
         // 모범 답안 (빨간 글씨): 우리가 쓴 이유와 견주어 본다
