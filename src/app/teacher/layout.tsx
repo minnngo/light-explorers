@@ -4,6 +4,14 @@ import type { ReactNode } from 'react';
 
 export const metadata: Metadata = {
   title: '불빛 탐험대(교사용)',
+  description: '모둠 진행, 학습 기록, 정답률을 한눈에 보는 선생님 화면',
+  openGraph: {
+    title: '불빛 탐험대(교사용)',
+    description: '모둠 진행, 학습 기록, 정답률을 한눈에 보는 선생님 화면',
+    siteName: '불빛 탐험대',
+    locale: 'ko_KR',
+    type: 'website',
+  },
 };
 
 export default function TeacherLayout({ children }: { children: ReactNode }) {
