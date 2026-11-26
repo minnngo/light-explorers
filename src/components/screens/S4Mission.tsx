@@ -253,6 +253,9 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card, onM
   let observation: string | null = null;
   if (record.step !== 'predict' && !practice) {
     if (result.level > 0 && result.level === REQUIRED_LEVEL[boardId]) observation = text.observation[boardId];
+    // 버저를 거꾸로 이어(고리는 맞게 이어짐) 스위치를 닫았는데 안 울리면 바로 알린다.
+    // 지도서 288쪽: 선 색의 뜻은 말하지 않고, 작동하지 않으면 반대로 연결해 보게 한다
+    if (result.reason === 'BUZZER_REVERSED' && board.switchClosed) observation = text.observation.reversed ?? null;
     // 전동기가 반대로 도는 것은 이 차시의 관심(빠르기)이 아니라서 따로 알리지 않는다
   }
 

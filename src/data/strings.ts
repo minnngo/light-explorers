@@ -316,7 +316,8 @@ export interface MissionStrings {
   /** ④ 확인에서 펼쳐 보는 심화 내용 (선택) */
   furtherLearning?: string;
   goCompare: string;
-  observation: { A: string; B: string };
+  /** reversed: 버저를 거꾸로 이어 울리지 않을 때 회로판 아래에 바로 띄우는 말 (버저 미션만) */
+  observation: { A: string; B: string; reversed?: string };
   compareGuide: string;
   compareBefore: string;
   compareAfter: string;
@@ -405,6 +406,7 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
     observation: {
       A: 'A 회로(전지 1개): 안내 종이 작게 울려요.',
       B: 'B 회로(전지 2개): 안내 종이 더 크게 울려요!',
+      reversed: '종이 울리지 않아요.',
     },
     compareBefore: `${COMPARE_BEFORE} 버저의 소리가 더 (`,
     compareAfter: ').',
@@ -513,7 +515,8 @@ export const S5 = {
         text: '② 전지의 개수가 늘어나면 전구는 무조건 더 밝아져요.',
         answer: 'X',
         explanation:
-          '오늘은 전지를 서로 다른 극끼리 한 줄로 연결한 직렬연결에서 밝아지는 것을 살펴봤어요. 연결하는 방법이 맞지 않으면 달라질 수 있어요.',
+          // 지도서 풀이: 여러 개의 전지를 다른 극끼리 직렬연결해야 전구의 밝기가 밝아진다
+          '전지의 개수가 늘어나도 전지를 같은 극끼리 연결하면 전구에 불이 켜지지 않아요. 여러 개의 전지는 서로 다른 극끼리 직렬연결해야 전구가 더 밝아져요.',
       },
       {
         key: 'q3',
