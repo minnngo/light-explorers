@@ -2,7 +2,7 @@
 
 // 교사용 화면: 왼쪽 메뉴(한눈에 보기 / 모둠 진행 / 기록 / 모둠 관리 / 평가 기준)로 한 화면씩 본다.
 // 판정(상·중·하)은 교사가 한다. 이 화면은 근거 자료와 지도서 평가 요소를 참고로만 보여 준다 (명세서 11-2).
-import { type ReactNode, useCallback, useEffect, useState } from 'react';
+import { Fragment, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { MISSION_ORDER, MISSIONS } from '@/data/missions';
 import { COMMON, MISSION_STRINGS, S2, S3, S5, TEACHER } from '@/data/strings';
 import { ConfirmDialog } from '@/components/ui';
@@ -189,10 +189,16 @@ function Mark({ ok, children }: { ok: boolean | null; children?: ReactNode }) {
   // 색은 앞의 기호에만. 글자는 다른 답과 같은 모양 (보통 굵기, 진한 회색)
   const color = ok === null ? 'text-stone-400' : ok ? 'text-[#3f7d58]' : 'text-rose-600';
   return (
-    <span className="inline-flex items-baseline gap-1.5 text-stone-800">
-      <span className={`shrink-0 font-bold ${color}`} aria-label={ok === null ? '아직' : ok ? V.correct : V.wrong}>
-        {ok === null ? V.empty : ok ? '✓' : '✗'}
-      </span>
+    <span className="inline-flex items-start gap-1.5 text-stone-800">
+      {ok === null ? (
+        <span className={`shrink-0 ${color}`}>{V.empty}</span>
+      ) : (
+        // 글꼴 기호(✓✗) 대신 가는 선 그림: 글자 크기에 맞추고 첫 줄 가운데에 오게
+        <svg viewBox="0 0 24 24" className={`mt-[0.2em] size-[1.1em] shrink-0 ${color}`} fill="none" stroke="currentColor"
+          strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" role="img" aria-label={ok ? V.correct : V.wrong}>
+          {ok ? <path d="M4.5 12.5l5 5L19.5 7" /> : <path d="M6.5 6.5l11 11M17.5 6.5l-11 11" />}
+        </svg>
+      )}
       {children ?? (ok === null ? null : <span>{ok ? V.correct : V.wrong}</span>)}
     </span>
   );
@@ -392,90 +398,133 @@ function GroupRecords({ groups }: { groups: GroupSummary[] }) {
   );
 }
 
-/** 모둠 한 곳: 도입 답 세 개와 미션 세 개를 나란히. 맞았는지는 글자 앞 ✓·✗로 */
+/** 모둠 한 곳: 도입 표(질문 3칸)와 미션 표(항목 × 미션 3칸). 맞았는지는 글자 앞 ✓·✗로 */
 function GroupRecord({ g }: { g: GroupSummary }) {
   const intro = g.intro;
   return (
     <section className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="text-lg font-bold">{g.groupName}</h2>
-        <span className="text-sm text-stone-500">{where(g)} · {T.columns.revived} {g.revived}/3 · {T.lastActive(timeOf(g.updatedAt))}</span>
+        <span className="text-sm text-stone-500">{T.lastActive(timeOf(g.updatedAt))}</span>
       </header>
-      {/* 도입: 질문(작은 회색)과 답(굵게)을 세 칸으로 */}
-      <div className="flex flex-col gap-2">
-        <h3 className="text-sm font-bold text-amber-800">{L.intro}</h3>
-        <dl className="grid gap-3 rounded-xl bg-stone-50 p-4 text-sm sm:grid-cols-3">
-          <IntroAnswer q={L.recall}>
-            <Mark ok={intro.recall === null ? null : intro.recall === 'correct'}>
-              {intro.recall ? <span className="text-stone-800">{S2.recall.choices[intro.recall]}</span> : undefined}
-            </Mark>
-          </IntroAnswer>
-          <IntroAnswer q={L.fanReason}>{(intro.fanReason && S2.fanReason.choices[intro.fanReason]) || V.empty}</IntroAnswer>
-          <IntroAnswer q={L.fanPredict}>{(intro.fanPredict && S2.fanPredict.choices[intro.fanPredict]) || V.empty}</IntroAnswer>
-        </dl>
-      </div>
-      <div className="grid gap-3 lg:grid-cols-3">
-        {MISSION_ORDER.map((id) => <MissionRecordCard key={id} id={id} g={g} />)}
-      </div>
+      <RecordTable head={L.intro} cols={[
+        // 열 이름은 짧게, 마우스를 올리면 실제 질문 전체
+        <span key="r" title={`${S2.recall.before} ( ) ${S2.recall.after}`}>{L.recall}</span>,
+        <span key="f" title={S2.fanReason.question}>{L.fanReason}</span>,
+        <span key="p" title={S2.fanPredict.question}>{L.fanPredict}</span>,
+      ]} rows={[{
+        label: L.answer,
+        tones: [intro.recall === null ? null : intro.recall === 'correct'],
+        cells: [
+          <Mark key="r" ok={intro.recall === null ? null : intro.recall === 'correct'}>
+            {intro.recall ? S2.recall.choices[intro.recall] : undefined}
+          </Mark>,
+          (intro.fanReason && S2.fanReason.choices[intro.fanReason]) || <Blank />,
+          (intro.fanPredict && S2.fanPredict.choices[intro.fanPredict]) || <Blank />,
+        ],
+      }]} />
+      <MissionTable g={g} />
     </section>
   );
 }
 
-function IntroAnswer({ q, children }: { q: string; children: ReactNode }) {
+/** 맞음·틀림 칸 바탕색 */
+function toneBg(tone: boolean | null | undefined) {
+  return tone === true ? 'bg-emerald-50' : tone === false ? 'bg-rose-50' : '';
+}
+
+/** 표 칸이 비었을 때 */
+function Blank() {
+  return <span className="text-stone-400">{V.empty}</span>;
+}
+
+/** 기록 표: 왼쪽 항목 이름 열 + 같은 너비의 칸들. 긴 글은 칸 안에서 줄바꿈 */
+function RecordTable({ head, cols, rows }: {
+  head: string; cols: ReactNode[];
+  /** tones: 칸 바탕색 (true 맞음 = 연한 초록, false 틀림 = 연한 빨강, null·없음 = 흰색) */
+  rows: { label: string; help?: string; cells: ReactNode[]; tones?: (boolean | null)[] }[];
+}) {
   return (
-    <div className="flex flex-col gap-1">
-      <dt className="text-xs text-stone-500">{q}</dt>
-      <dd className="leading-snug text-stone-800">{children}</dd>
+    <div className="overflow-x-auto rounded-xl border border-stone-200">
+      <table className="w-full min-w-[44rem] table-fixed text-sm">
+        <colgroup>
+          <col className="w-32" />
+          {cols.map((_, i) => <col key={i} />)}
+        </colgroup>
+        <thead className="bg-stone-50 text-left">
+          <tr>
+            <th className="px-4 py-2.5 font-bold text-amber-800">{head}</th>
+            {cols.map((c, i) => <th key={i} className="border-l border-stone-200 px-4 py-2.5 font-semibold text-stone-700">{c}</th>)}
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.label} className="border-t border-stone-200 align-top">
+              {/* 설명은 화면에 쓰지 않고 마우스를 올리면 보이게 */}
+              <th scope="row" title={r.help} className="px-4 py-2.5 text-left font-semibold text-stone-700">{r.label}</th>
+              {r.cells.map((c, i) => (
+                <td key={i} className={`border-l border-stone-200 px-4 py-2.5 leading-snug text-stone-800 [overflow-wrap:anywhere] ${toneBg(r.tones?.[i])}`}>{c}</td>
+              ))}
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   );
 }
 
-function MissionRecordCard({ id, g }: { id: MissionId; g: GroupSummary }) {
-  const m = g.missions[id];
-  const s = MISSION_STRINGS[id];
-  const status = m.status === 'done' ? '완료' : m.status === 'open' ? '진행 중' : '잠김';
-  const statusColor = m.status === 'done' ? 'text-[#3f7d58]' : m.status === 'open' ? 'text-amber-700' : 'text-stone-400';
-  return (
-    <div className="flex min-w-0 flex-col gap-3 rounded-xl border border-stone-200 p-4 text-sm">
-      <div className="flex items-baseline justify-between gap-2">
-        <h3 className="text-base font-bold">{S3.places[id]}</h3>
-        <span className={`text-xs font-bold ${statusColor}`}>{status}</span>
-      </div>
-      {/* 왼쪽 항목 이름(연한 회색), 오른쪽 답(같은 모양). 긴 글은 칸 안에서 줄바꿈 */}
-      <dl className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 gap-y-2.5 leading-snug text-stone-800">
-        <dt className="text-stone-500">{L.prediction}</dt>
-        <dd className="break-keep">
-          <Mark ok={m.prediction ? m.prediction === MISSIONS[id].correctPrediction : null}>
-            {m.prediction ? s.predictChoices[m.prediction] : undefined}
-          </Mark>
-        </dd>
-        <dt className="text-stone-500">{L.built}</dt>
-        <dd className="flex gap-4">
-          <Mark ok={m.built.A}>A</Mark>
-          <Mark ok={m.built.B}>B</Mark>
-        </dd>
-        <dt className="text-stone-500">{L.compare}</dt>
-        <dd>
-          <Mark ok={m.compare ? m.compare === MISSIONS[id].correctCompare : null}>
-            {m.compare ? s.compareChoices[m.compare] : undefined}
-          </Mark>
-        </dd>
-        <dt className="text-stone-500">{T.columns.hints}</dt>
-        {/* 힌트 3번 이상은 빨간 숫자로 (도움이 필요했던 모둠) */}
-        <dd className={`tabular-nums ${m.hintCount >= 3 ? 'text-rose-600' : ''}`}>{m.hintCount} / {m.attempts}</dd>
-        {id === 'm1' && (
-          <>
-            <dt className="text-stone-500">{T.challengeShort}</dt>
-            <dd>{V.challenge[m.challenge]}</dd>
-          </>
-        )}
-        <dt className="text-stone-500">{L.explanation}</dt>
-        <dd className={`whitespace-pre-wrap break-keep ${m.explanation.trim() ? '' : 'text-stone-400'}`}>
-          {m.explanation.trim() || V.empty}
-        </dd>
-      </dl>
-    </div>
-  );
+/** 미션 표: 줄은 항목(예상·정상 연결·○표 비교·힌트/시도·도전·모둠 이유), 칸은 미션 세 개 */
+function MissionTable({ g }: { g: GroupSummary }) {
+  const each = (f: (id: MissionId) => ReactNode) => MISSION_ORDER.map((id) => <Fragment key={id}>{f(id)}</Fragment>);
+  const cols = MISSION_ORDER.map((id) => {
+    const st = g.missions[id].status;
+    const status = st === 'done' ? '완료' : st === 'open' ? '진행 중' : '잠김';
+    const color = st === 'done' ? 'text-[#3f7d58]' : st === 'open' ? 'text-amber-700' : 'text-stone-400';
+    return (
+      <span key={id} className="flex items-baseline justify-between gap-2">
+        {S3.places[id]}<span className={`text-xs font-bold ${color}`}>{status}</span>
+      </span>
+    );
+  });
+  const R = T.missionRows;
+  const rows = [
+    { ...R.prediction, tones: MISSION_ORDER.map((id) => {
+      const p = g.missions[id].prediction;
+      return p ? p === MISSIONS[id].correctPrediction : null;
+    }), cells: each((id) => {
+      const m = g.missions[id];
+      return <Mark ok={m.prediction ? m.prediction === MISSIONS[id].correctPrediction : null}>
+        {m.prediction ? MISSION_STRINGS[id].predictChoices[m.prediction] : undefined}
+      </Mark>;
+    }) },
+    // 회로 완성: 둘 다 이었으면 초록, 미션을 마쳤는데 못 이은 게 있으면 빨강 (진행 중·잠김은 흰색)
+    { ...R.built, tones: MISSION_ORDER.map((id) => {
+      const m = g.missions[id];
+      return m.built.A && m.built.B ? true : m.status === 'done' ? false : null;
+    }), cells: each((id) => (
+      <span className="flex gap-4"><Mark ok={g.missions[id].built.A}>A</Mark><Mark ok={g.missions[id].built.B}>B</Mark></span>
+    )) },
+    { ...R.compare, tones: MISSION_ORDER.map((id) => {
+      const c = g.missions[id].compare;
+      return c ? c === MISSIONS[id].correctCompare : null;
+    }), cells: each((id) => {
+      const m = g.missions[id];
+      return <Mark ok={m.compare ? m.compare === MISSIONS[id].correctCompare : null}>
+        {m.compare ? MISSION_STRINGS[id].compareChoices[m.compare] : undefined}
+      </Mark>;
+    }) },
+    // 힌트 3번 이상은 빨간 숫자로 (도움이 필요했던 모둠)
+    { ...R.hints, cells: each((id) => {
+      const m = g.missions[id];
+      return <span className={`tabular-nums ${m.hintCount >= 3 ? 'text-rose-600' : ''}`}>{m.hintCount} / {m.attempts}</span>;
+    }) },
+    { ...R.challenge, cells: each((id) => (id === 'm1' ? V.challenge[g.missions[id].challenge] : <Blank />)) },
+    { ...R.explanation, cells: each((id) => {
+      const t = g.missions[id].explanation.trim();
+      return t ? <span className="whitespace-pre-wrap">{t}</span> : <Blank />;
+    }) },
+  ];
+  return <RecordTable head={L.mission} cols={cols} rows={rows} />;
 }
 
 /** 개인 마무리 기록: 한 사람이 한 줄 */
@@ -484,7 +533,7 @@ function PersonalRecords({ learners }: { learners: Learner[] }) {
   const C = T.personalCols;
   const parts: PartKind[] = ['bulb', 'buzzer', 'motor'];
   return (
-    <Card title={T.recordTabs.personal} note={T.personalNote}>
+    <Card title={T.recordTabs.personal}>
       <div className="-mx-5 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-y border-stone-200 bg-stone-50 text-left text-stone-500">

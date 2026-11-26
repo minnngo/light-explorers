@@ -2,12 +2,12 @@
 
 import { type ReactNode, useCallback, useState } from 'react';
 import { MISSION_ORDER } from '@/data/missions';
-import { CHARACTER, COMMON, MISSION_STRINGS, RESTART, S5, withoutMark } from '@/data/strings';
+import { COMMON, MISSION_STRINGS, RESTART, S5, withoutMark } from '@/data/strings';
 import { canAdvanceWrapupRecord, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
 import { type Action, wrapupOf } from '@/lib/store/reducer';
 import { useStore } from '@/lib/store/StoreContext';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
-import { Button, Choice, ConfirmDialog, Speech } from '../ui';
+import { Button, Choice, ConfirmDialog } from '../ui';
 import { VillagePanorama } from './Opening';
 
 /**
@@ -103,31 +103,39 @@ function ResultsStep() {
   );
 }
 
-/** 2. 확인하기: 세 질문에 먼저 답한 뒤 정리가 나타난다. "직렬연결" 용어는 여기서 처음 나온다 */
+/** 2. 확인하기: 질문마다 한 번만 고르고 바로 맞음/틀림. 세 질문에 다 답하면 정리가 나타난다. "직렬연결" 용어는 여기서 처음 나온다 */
 function ExplainStep() {
   const { f, send } = useMyWrapup();
   const answered = Object.values(f.explain).every((v) => v !== null);
   return (
-    <section className={card}>
-      <Speech speaker={CHARACTER}>{S5.explain.opener}</Speech>
-      {(Object.keys(S5.explain.questions) as PartKind[]).map((part) => {
+    <section className="flex flex-col rounded-2xl bg-white px-6 py-2 shadow">
+      {(Object.keys(S5.explain.questions) as PartKind[]).map((part, i) => {
         const q = S5.explain.questions[part];
+        const picked = f.explain[part];
         return (
-          <div key={part} className="flex flex-col gap-2">
-            <p className="font-bold">{q.q}</p>
-            <div className="flex flex-wrap gap-2">
+          <div key={part} className="flex flex-col gap-3 border-stone-100 py-5 [&+&]:border-t">
+            <p className="text-lg font-semibold text-stone-800">
+              <span className="mr-2 text-amber-700">{i + 1}.</span>{q.q}
+            </p>
+            <div className="flex flex-wrap items-center gap-2">
               {(['more', 'less', 'same'] as const).map((k) => (
-                <Choice key={k} selected={f.explain[part] === k}
+                <Choice key={k} selected={picked === k} disabled={picked !== null}
                   onClick={() => send({ type: 'ANSWER_EXPLAIN', part, choice: k })}>
                   {q.choices[k]}
                 </Choice>
               ))}
+              {/* 맞았으면 초록 "정답이에요.", 틀렸으면 빨강 "정답은 '더 밝았어요'예요." (고른 칸 옆에) */}
+              {picked && (
+                <span className={`pop-in ml-2 font-bold ${picked === 'more' ? 'text-emerald-700' : 'text-rose-600'}`}>
+                  {picked === 'more' ? S5.misconception.right : S5.check.answerIs(q.choices.more)}
+                </span>
+              )}
             </div>
           </div>
         );
       })}
       {answered && (
-        <div className="pop-in flex flex-col gap-2 rounded-xl bg-amber-50 p-4">
+        <div className="pop-in mb-4 flex flex-col gap-2 rounded-xl bg-amber-50 p-4">
           {S5.explain.summaries.map((s, i) => <p key={i}>✔ {s}</p>)}
         </div>
       )}
@@ -218,7 +226,7 @@ function MisconceptionStep() {
   );
 }
 
-/** 5. 스스로 평가 */
+/** 5. 스스로 평가 (퀴즈가 아니라서 바꿀 수 있다) */
 function SelfEvalStep() {
   const { f, send } = useMyWrapup();
   return (

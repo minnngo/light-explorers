@@ -186,14 +186,14 @@ export const S2 = {
     },
   ],
   recall: {
-    before: '전구에 불이 켜지는 전기 회로는 전지의 양 끝과 전구, 전선이',
-    after: '연결되어 있어요.',
+    before: '전구에 불이 켜지려면 전지의 양 끝과 전구, 전선이',
+    after: '연결되어 있어야 해요.',
     choices: { correct: '끊기지 않게', wrong: '끊기게' },
     feedbackCorrect: '맞아요! 끊기지 않고 이어져야 전기가 흘러요.',
     feedbackWrong: '다시 생각해 볼까요? 회로가 끊기면 불이 켜지지 않아요.',
   },
   fanReason: {
-    question: '제품마다 전지의 개수가 다른 까닭은 무엇일까요?',
+    question: '전기 제품마다 넣는 전지의 개수가 다른 까닭은 무엇일까요?',
     choices: {
       needAmount: '(가) 제품마다 필요한 전기의 양이 달라서',
       moreIsBetter: '(나) 전지가 많을수록 무조건 좋아서',
@@ -201,8 +201,8 @@ export const S2 = {
     },
   },
   fanPredict: {
-    question: '전지 1개를 넣은 손 선풍기와 전지 2개를 넣은 손 선풍기 중 바람이 더 센 것은?',
-    choices: { one: '(가) 전지 1개', two: '(나) 전지 2개', same: '(다) 차이가 없어요' },
+    question: '손 선풍기에 전지를 1개 넣을 때와 2개 넣을 때, 어느 쪽 바람이 더 셀까요?',
+    choices: { one: '(가) 전지 1개를 넣을 때', two: '(나) 전지 2개를 넣을 때', same: '(다) 바람의 세기가 같아요' },
   },
   depart: '마을로 출발',
 };
@@ -434,18 +434,17 @@ export const S5 = {
     rows: { m1: '전구 밝기', m2: '버저 소리', m3: '전동기 빠르기' } as Record<MissionId, string>,
   },
   explain: {
-    opener: '그동안 알아낸 것을 정리해 볼까요?',
     questions: {
       bulb: {
-        q: '① 전지 2개 회로의 전구는 전지 1개 회로의 전구보다 어땠나요?',
+        q: '전지 2개 회로의 전구는 전지 1개 회로의 전구보다 어땠나요?',
         choices: { more: '더 밝았어요', less: '더 어두웠어요', same: '밝기가 같았어요' },
       },
       buzzer: {
-        q: '② 전지 2개 회로의 버저 소리는 전지 1개 회로의 버저 소리보다 어땠나요?',
+        q: '전지 2개 회로의 버저 소리는 전지 1개 회로의 버저 소리보다 어땠나요?',
         choices: { more: '더 컸어요', less: '더 작았어요', same: '크기가 같았어요' },
       },
       motor: {
-        q: '③ 전지 2개 회로의 날개 달린 전동기는 전지 1개 회로의 전동기보다 어떻게 돌았나요?',
+        q: '전지 2개 회로의 날개 달린 전동기는 전지 1개 회로의 전동기보다 어떻게 돌았나요?',
         choices: { more: '더 빨리 돌았어요', less: '더 느리게 돌았어요', same: '빠르기가 같았어요' },
       },
     } as Record<PartKind, { q: string; choices: Record<'more' | 'less' | 'same', string> }>,
@@ -547,8 +546,16 @@ export const TEACHER = {
     revived: '미션을 완료한 장소 수 (가로등·안내 종·풍차)',
     hints: '힌트를 본 횟수 / 전선을 잇거나 지운 횟수',
   },
+  /** 모둠 기록 미션 표의 왼쪽 줄 이름과 짧은 설명 */
+  missionRows: {
+    prediction: { label: '예상', help: '실험 전에 고른 답 (✓ = 실제 결과와 같음)' },
+    built: { label: '회로 완성', help: 'A·B 회로를 바르게 이었는지' },
+    compare: { label: '결과 비교', help: '실험 뒤 ○표 한 말 (✓ = 맞음)' },
+    hints: { label: '힌트 / 시도', help: '힌트 본 횟수 / 전선을 잇거나 지운 횟수' },
+    challenge: { label: '도전 과제', help: '같은 극끼리 연결해 보기 (가로등만)' },
+    explanation: { label: '모둠 이유', help: '결과가 그렇게 나온 까닭을 쓴 글' },
+  },
   recordTabs: { group: '모둠 기록', personal: '개인 마무리 기록' },
-  personalNote: '마무리는 각자 해요. 혼자 한 모둠은 모둠 이름으로 한 줄이에요.',
   stat: {
     groups: '모둠',
     learners: '마무리 기록 (명)',
@@ -625,9 +632,11 @@ export const TEACHER = {
   ],
   labels: {
     intro: '도입',
-    recall: '회로 조건 떠올리기',
-    fanReason: '전지 개수가 다른 까닭',
-    fanPredict: '손 선풍기 예상',
+    answer: '고른 답',
+    mission: '미션',
+    recall: '불이 켜지는 회로',
+    fanReason: '전지 개수가 다른 이유',
+    fanPredict: '손 선풍기 바람 예상',
     prediction: '예상',
     built: '정상 연결',
     compare: '○표 비교',

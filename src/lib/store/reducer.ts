@@ -282,7 +282,9 @@ export function reducer(state: AppState, action: Action): AppState {
       if (action.patch.check !== undefined && wrapupOf(state, action.by).check !== null) return state;
       return putWrapup(state, action.by, action.patch);
     case 'ANSWER_EXPLAIN': {
+      // 마무리 문항은 모두 처음 고른 답만 기록한다 (고르면 바로 맞음/틀림을 보여 주므로)
       const f = wrapupOf(state, action.by);
+      if (f.explain[action.part] !== null) return state;
       return putWrapup(state, action.by, { explain: { ...f.explain, [action.part]: action.choice } });
     }
     case 'ANSWER_MISCONCEPTION': {
@@ -294,6 +296,7 @@ export function reducer(state: AppState, action: Action): AppState {
       return putWrapup(state, action.by, { misconception: { ...f.misconception, [action.key]: result } });
     }
     case 'ANSWER_SELF_EVAL':
+      // 스스로 평가는 퀴즈가 아니라서 바꿀 수 있다
       return putWrapup(state, action.by, { selfEval: action.choice });
     case 'NEXT_WRAPUP_STEP': {
       const f = wrapupOf(state, action.by);

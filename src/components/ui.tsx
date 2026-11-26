@@ -46,10 +46,16 @@ export function Choice({
 /** 이야기 인물의 말풍선. speaker가 null이면 해설 */
 export function Speech({ speaker, children }: { speaker: string | null; children: ReactNode }) {
   return (
-    <div className="flex items-start gap-3">
-      {speaker && <FairyIcon className="size-12 shrink-0" />}
-      <div className={`flex-1 rounded-2xl px-4 py-3 ${speaker ? 'bg-white shadow' : 'bg-white italic'}`}>
-        {speaker && <p className="text-sm font-bold text-amber-700">{speaker}</p>}
+    <div className="flex items-center gap-4">
+      {speaker && <FairyIcon className="size-14 shrink-0" />}
+      {/* 말풍선: 반디(보라색 요정)와 어울리는 연한 보라 풍선 + 반디 쪽으로 뾰족한 꼬리 (그림자 없음) */}
+      <div className={`relative flex-1 rounded-[1.75rem] bg-[#efe9fb] px-5 py-3.5 text-stone-800 ${speaker ? '' : 'italic'}`}>
+        {speaker && (
+          <svg viewBox="0 0 16 24" className="absolute -left-[18px] top-1/2 h-8 w-5 -translate-y-1/2 fill-[#efe9fb]" aria-hidden>
+            <path d="M16 3 C11 9 6 13 0 14 C6 15 11 17 16 21 Z" />
+          </svg>
+        )}
+        {speaker && <p className="text-sm font-bold text-violet-700">{speaker}</p>}
         <p className="whitespace-pre-line">{children}</p>
       </div>
     </div>

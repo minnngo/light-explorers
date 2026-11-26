@@ -340,6 +340,18 @@ describe('마무리: 모둠으로 할 때는 각자 한다', () => {
   });
 });
 
+describe('마무리 퀴즈는 모두 한 번만 고른다', () => {
+  it('확인하기도 처음 고른 답만 기록하고, 스스로 평가는 바꿀 수 있다', () => {
+    const s = play({ ...createInitialState(), currentScreen: 'S5', wrapupStep: 1 },
+      { type: 'ANSWER_EXPLAIN', part: 'bulb', choice: 'less' },
+      { type: 'ANSWER_EXPLAIN', part: 'bulb', choice: 'more' },
+      { type: 'ANSWER_SELF_EVAL', choice: 'good' },
+      { type: 'ANSWER_SELF_EVAL', choice: 'needHelp' });
+    expect(s.final.explain.bulb).toBe('less');
+    expect(s.final.selfEval).toBe('needHelp');
+  });
+});
+
 describe('적용하기', () => {
   it('처음 고른 답만 기록하고, 틀려도 다음으로 갈 수 있다', () => {
     const s = play({ ...createInitialState(), currentScreen: 'S5', wrapupStep: 2 },
