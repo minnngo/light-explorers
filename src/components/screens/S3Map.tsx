@@ -34,7 +34,7 @@ const ROOM_BAR_HEIGHT = 36;
 export const darknessFor = (revived: number) => [0.6, 0.42, 0.25, 0.06][revived] ?? 0.06;
 
 export default function S3Map() {
-  const { state, room, members, goWrapup, enterMission } = useStore();
+  const { state, room, members, goWrapup, enterMission, look } = useStore();
   const { peers, publish } = useLive();
   // 처음 도착 인사를 들은 뒤 움직이는 방법 튜토리얼
   const [tutorial, setTutorial] = useState(false);
@@ -84,7 +84,7 @@ export default function S3Map() {
   // 지도를 떠나면(미션에 들어가면) 내 캐릭터와 부르기를 거둔다
   useEffect(() => () => publish({ map: null, call: null }), [publish]);
   const others: MapPeer[] = peers.flatMap((p) => (p.map
-    ? [{ id: p.member.id, name: p.member.name, color: p.color, x: p.map.x, y: p.map.y }]
+    ? [{ id: p.member.id, name: p.member.name, color: p.color, x: p.map.x, y: p.map.y, look: p.member.look ?? 'puppy' }]
     : []));
   const [myCall, setMyCall] = useState(false);
   const closeSituation = () => {
@@ -117,6 +117,7 @@ export default function S3Map() {
           onMove={room ? onMove : undefined}
           others={room ? others : undefined}
           me={room ? { name: room.me.name, color: memberColor(room.me.id) } : undefined}
+          myLook={look}
           jumpTo={jump}
         />
       </div>

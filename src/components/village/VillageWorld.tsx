@@ -5,7 +5,7 @@
 // 위치는 기기마다 따로 움직인다. 모둠 함께하기에서는 내 위치를 친구들에게 알리고(onMove), 친구 캐릭터(others)도 함께 그린다.
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { PLACES, SPAWN, type Vec } from '@/data/world';
-import type { MissionId, MissionStatus } from '@/lib/types';
+import type { ExplorerLook, MissionId, MissionStatus } from '@/lib/types';
 import {
   angleTo,
   cameraView,
@@ -52,6 +52,8 @@ interface Props {
   others?: MapPeer[];
   /** 모둠 함께하기: 내 캐릭터 위 이름표 (내 색) */
   me?: { name: string; color: string };
+  /** 내가 고른 캐릭터 */
+  myLook?: ExplorerLook;
   /** 모둠 함께하기("함께 가기"): key가 바뀌면 이 자리로 순간 이동하고, 장소라면 도착을 알린다 */
   jumpTo?: { to: Vec; key: number } | null;
 }
@@ -62,10 +64,11 @@ export interface MapPeer {
   color: string;
   x: number;
   y: number;
+  look: ExplorerLook;
 }
 
 export default function VillageWorld({
-  status, target, paused, reviving, darkness, view, onArrive, practice = false, resetKey = 0, onMove, others, me, jumpTo = null,
+  status, target, paused, reviving, darkness, view, onArrive, practice = false, resetKey = 0, onMove, others, me, myLook = 'puppy', jumpTo = null,
 }: Props) {
   const start = useMemo(() => startPosition(status, SPAWN), []); // eslint-disable-line react-hooks/exhaustive-deps
   const [pos, setPos] = useState<Vec>(start);
@@ -284,7 +287,7 @@ export default function VillageWorld({
             <g transform={`scale(${size})`}>
               <ellipse cx={0} cy={0} rx={36} ry={10} fill={o.color} opacity={0.25} />
               <ellipse cx={0} cy={0} rx={36} ry={10} fill="none" stroke={o.color} strokeWidth={3} opacity={0.9} />
-              <Explorer />
+              <Explorer look={o.look} />
               <NameTag name={o.name} color={o.color} />
             </g>
           </g>
@@ -302,7 +305,7 @@ export default function VillageWorld({
             </g>
           </g>
           <g transform={facingLeft ? 'scale(-1 1)' : undefined}>
-            <Explorer walking={moving} />
+            <Explorer walking={moving} look={myLook} />
           </g>
           {showCompass && <CompassArrow angle={pointer} />}
           {me && <NameTag name={me.name} color={me.color} />}

@@ -14,7 +14,7 @@ import {
 import { LiveContext, type LiveValue } from '@/lib/sync/LiveContext';
 import { allMissionsDone } from '@/lib/flow/missionFlow';
 import { createRoomSync, type Member, type RoomInfo, type RoomSync } from '@/lib/sync/roomSync';
-import type { AppState } from '@/lib/types';
+import { type AppState, EXPLORER_LOOKS, type ExplorerLook } from '@/lib/types';
 import { setMusicLevel } from '@/media/music';
 import { audio, playClick, setUiSoundMuted } from '@/media/sound';
 import RoomBar from './RoomBar';
@@ -27,6 +27,7 @@ import S4Mission from './screens/S4Mission';
 import S5Wrapup from './screens/S5Wrapup';
 
 const MUTE_KEY = 'light-explorers:muted';
+const LOOK_KEY = 'light-explorers:look:v1';
 const WRAPUP_KEY = 'light-explorers:my-wrapup:v1';
 
 
@@ -44,6 +45,26 @@ export default function StudentApp() {
     setMutedState(next);
     try {
       window.localStorage.setItem(MUTE_KEY, next ? '1' : '0');
+    } catch {}
+  }, []);
+
+  // 내가 고른 탐험대 캐릭터: 이 기기에 기억한다
+  const [look, setLookState] = useState<ExplorerLook>(() => {
+    try {
+      const saved = window.localStorage.getItem(LOOK_KEY) as ExplorerLook | null;
+      return saved && EXPLORER_LOOKS.includes(saved) ? saved : 'puppy';
+    } catch {
+      return 'puppy';
+    }
+  });
+  const lookRef = useRef(look);
+  useEffect(() => {
+    lookRef.current = look;
+  }, [look]);
+  const setLook = useCallback((next: ExplorerLook) => {
+    setLookState(next);
+    try {
+      window.localStorage.setItem(LOOK_KEY, next);
     } catch {}
   }, []);
 
@@ -143,7 +164,7 @@ export default function StudentApp() {
     const res = await fetch(`/api/groups/${group.id}`, { cache: 'no-store' }).catch(() => null);
     const saved = res?.ok ? ((await res.json().catch(() => null)) as AppState | null) : null;
     rawDispatch(saved && saved.groupId === group.id ? { type: 'HYDRATE', state: saved } : { type: 'RESET' });
-    setRoom({ code: group.roomCode, host: false, me: { id: newId(), name: me.name } });
+    setRoom({ code: group.roomCode, host: false, me: { id: newId(), name: me.name, look: lookRef.current } });
   }, []);
 
   const leaveRoom = useCallback(() => setRoom(null), []);
@@ -239,6 +260,8 @@ export default function StudentApp() {
     () => ({
       state,
       dispatch,
+      look,
+      setLook,
       muted,
       setMuted,
       room,
@@ -253,7 +276,7 @@ export default function StudentApp() {
       leaveRoom,
       restart,
     }),
-    [state, dispatch, muted, setMuted, room, members, connection, joining, boardNote, joinGroup, goWrapup, enterMission, leaveMission, leaveRoom, restart],
+    [state, dispatch, look, setLook, muted, setMuted, room, members, connection, joining, boardNote, joinGroup, goWrapup, enterMission, leaveMission, leaveRoom, restart],
   );
 
   // 모둠으로 할 때: 마무리로 들어간 기기는 모둠 화면이 지도여도 마무리를 보여 준다

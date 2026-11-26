@@ -14,7 +14,7 @@ const CUT_QUESTIONS: Record<number, readonly string[]> = { 2: ['recall'], 3: ['f
 
 /** S2. 도입 장면 (컷 5장, 건너뛰기 없음) */
 export default function S2Intro() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, look } = useStore();
   const cut = S2.cuts[state.introCut];
   // 주인공은 학생 모둠(탐험대). 컷 문구에 모둠 이름이 들어간다
   const text = typeof cut.text === 'function' ? cut.text(state.groupName) : cut.text;
@@ -40,7 +40,7 @@ export default function S2Intro() {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-4 p-4">
       {/* 양옆의 꺾쇠로 앞뒤 장면을 넘긴다 (화면 세로 가운데에 고정) */}
       <div className="relative">
-        <IntroScene cut={state.introCut} />
+        <IntroScene cut={state.introCut} look={look} />
         {state.introCut > 0 && (
           <ArrowButton side="left" label={COMMON.prev} onClick={prev} />
         )}

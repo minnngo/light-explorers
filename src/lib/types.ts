@@ -142,6 +142,10 @@ export interface StudentFinal extends Omit<FinalRecord, 'students'> {
   finished: boolean;
 }
 
+/** 학생이 고르는 탐험대 캐릭터 (머리 전등 헬멧과 목도리를 쓴 동물) */
+export type ExplorerLook = 'puppy' | 'bunny' | 'cat' | 'bear' | 'chick' | 'fox';
+export const EXPLORER_LOOKS: readonly ExplorerLook[] = ['puppy', 'bunny', 'cat', 'bear', 'chick', 'fox'];
+
 export interface AppState {
   /** 저장·동기화용 모둠 id (탐험 시작 시 생성) */
   groupId: string | null;

@@ -189,28 +189,33 @@ body {
 }
 
 /* 마을 인물: 탐험대 걷기, 반디 날갯짓 */
-/* 동글이 걷기: 몸을 좌우로 뒤뚱, 발은 번갈아 콩콩 */
+/* 동글이 걷기: 한 발씩 번갈아 디딘다. 발을 드는 동안 몸은 반대쪽(디딘 발 쪽)으로 기울고 살짝 올라온다.
+   한 걸음 = 0.6초 (앞 절반: 오른발, 뒤 절반: 왼발) */
 .walker .foot,
 .walker .blob-body {
   transform-box: fill-box;
   transform-origin: 50% 100%;
 }
 .walking .blob-body {
-  animation: waddle 0.36s ease-in-out infinite alternate;
+  animation: waddle 0.6s ease-in-out infinite;
 }
 @keyframes waddle {
-  from { transform: rotate(-7deg) translateY(0); }
-  to { transform: rotate(7deg) translateY(-3px); }
-}
-.walking .foot-a {
-  animation: step 0.36s ease-in-out infinite alternate;
+  0%, 100% { transform: rotate(-4deg) translateY(0); }
+  25% { transform: rotate(0deg) translateY(-3px); }
+  50% { transform: rotate(4deg) translateY(0); }
+  75% { transform: rotate(0deg) translateY(-3px); }
 }
 .walking .foot-b {
-  animation: step 0.36s ease-in-out infinite alternate-reverse;
+  animation: step 0.6s ease-in-out infinite;
+}
+.walking .foot-a {
+  animation: step 0.6s ease-in-out infinite;
+  animation-delay: -0.3s;
 }
 @keyframes step {
-  from { transform: translateY(0); }
-  to { transform: translateY(-6px); }
+  /* 발을 살짝 앞으로 들었다가 내려놓고, 나머지 절반은 땅을 딛고 있다 */
+  0%, 50%, 100% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(2px, -6px) rotate(-10deg); }
 }
 .walker:not(.walking) .blob-body {
   animation: breathe 2.4s ease-in-out infinite;
@@ -448,4 +453,67 @@ body[data-celebrating] .spot-raised {
     animation-duration: 0s;
     animation-iteration-count: 1;
   }
+}
+
+/* ───── 캐릭터 고르기: 캐릭터마다 다른 귀여운 움직임 ───── */
+.look-move {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+@keyframes look-wag {
+  /* 강아지: 통통 튀며 좌우로 */
+  0%, 100% { transform: translateY(0) rotate(-3deg); }
+  25% { transform: translateY(-10px) rotate(0deg); }
+  50% { transform: translateY(0) rotate(3deg); }
+  75% { transform: translateY(-10px) rotate(0deg); }
+}
+@keyframes look-hop {
+  /* 토끼: 깡충 */
+  0%, 60%, 100% { transform: translateY(0) scale(1, 1); }
+  10% { transform: translateY(0) scale(1.08, 0.9); }
+  30% { transform: translateY(-34px) scale(0.95, 1.06); }
+  50% { transform: translateY(0) scale(1.06, 0.94); }
+}
+@keyframes look-sway {
+  /* 고양이: 살랑살랑 */
+  0%, 100% { transform: rotate(-6deg); }
+  50% { transform: rotate(6deg); }
+}
+@keyframes look-float {
+  /* 곰: 둥실둥실 */
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-8px) scale(1.03); }
+}
+@keyframes look-flap {
+  /* 병아리: 파닥 점프 두 번 */
+  0%, 40%, 100% { transform: translateY(0); }
+  10% { transform: translateY(-16px); }
+  20% { transform: translateY(0); }
+  30% { transform: translateY(-16px); }
+}
+@keyframes look-tilt {
+  /* 여우: 갸웃갸웃 */
+  0%, 30%, 100% { transform: rotate(0deg); }
+  40%, 55% { transform: rotate(-10deg); }
+  70%, 85% { transform: rotate(10deg); }
+}
+.look-puppy { animation: look-wag 1.1s ease-in-out infinite; }
+.look-bunny { animation: look-hop 1.4s ease-in-out infinite; }
+.look-cat { animation: look-sway 2.2s ease-in-out infinite; }
+.look-bear { animation: look-float 2.6s ease-in-out infinite; }
+.look-chick { animation: look-flap 1.6s ease-in-out infinite; }
+.look-fox { animation: look-tilt 2.6s ease-in-out infinite; }
+
+@keyframes look-from-right {
+  from { opacity: 0; transform: translateX(80px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+@keyframes look-from-left {
+  from { opacity: 0; transform: translateX(-80px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+.look-in-right { animation: look-from-right 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+.look-in-left { animation: look-from-left 0.35s cubic-bezier(0.2, 0.8, 0.2, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .look-puppy, .look-bunny, .look-cat, .look-bear, .look-chick, .look-fox, .look-in-right, .look-in-left { animation: none; }
 }

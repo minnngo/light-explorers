@@ -3,6 +3,7 @@
 // 팔다리·날개 움직임은 globals.css의 .walker / .fairy 애니메이션.
 
 import type React from 'react';
+import type { ExplorerLook } from '@/lib/types';
 
 
 /** 두 색을 섞는다 (t=0이면 a, 1이면 b) */
@@ -280,8 +281,8 @@ function LampHelmet() {
  * 탐험대(나): 머리 전등 헬멧을 쓰고, 민트색 목도리와 가방을 멘 강아지. 오른쪽을 본다 (왼쪽은 바깥에서 scale(-1 1)).
  * 마을 동물들과 크기는 같고, 헬멧의 불빛으로 한눈에 구별된다.
  */
-export function Explorer({ walking = false }: { walking?: boolean }) {
-  const dog = animalParts('puppy');
+export function Explorer({ walking = false, look = 'puppy' }: { walking?: boolean; look?: ExplorerLook }) {
+  const dog = animalParts(look);
   return (
     <g className={walking ? 'walker walking' : 'walker'}>
       <Blob base={dog.base} mouthY={dog.mouthY} top={<LampHelmet />}
@@ -292,6 +293,16 @@ export function Explorer({ walking = false }: { walking?: boolean }) {
         {dog.front}
       </Blob>
     </g>
+  );
+}
+
+/** 캐릭터 고르기 등에 쓰는 탐험대 그림 하나 (발밑이 아래쪽에 오도록 맞춘 작은 SVG) */
+export function ExplorerIcon({ look, className = 'size-20' }: { look: ExplorerLook; className?: string }) {
+  return (
+    <svg viewBox="-62 -128 124 136" className={className} aria-hidden>
+      <ellipse cx={0} cy={0} rx={36} ry={8} fill="#000" opacity={0.08} />
+      <Explorer look={look} />
+    </svg>
   );
 }
 

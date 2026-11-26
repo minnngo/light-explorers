@@ -35,7 +35,7 @@ export function createSupabaseTransport(room: RoomInfo): (RoomTransport & LiveTr
     .on('presence', { event: 'sync' }, () => {
       const members = Object.values(channel.presenceState<Member>())
         .flat()
-        .map(({ id, name }) => ({ id, name }));
+        .map(({ id, name, look }) => ({ id, name, look }));
       for (const h of memberHandlers) h(members);
     })
     .subscribe((status) => {

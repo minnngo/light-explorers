@@ -9,12 +9,14 @@
 //     보내는 기기: 방을 만든 기기(host). 선생님이 만든 모둠처럼 host가 없으면 지금 들어와 있는 기기 중 id가 가장 앞선 기기.
 //     받은 기기는 최근에 스스로 조작하지 않았을 때만 그 상태로 맞춘다 (방금 보낸 내 조작이 덮이지 않게).
 import type { Action } from '@/lib/store/reducer';
-import type { AppState } from '@/lib/types';
+import type { AppState, ExplorerLook } from '@/lib/types';
 
 export interface Member {
   /** 기기 id (기기마다 한 번 만들어 보관) */
   id: string;
   name: string;
+  /** 고른 탐험대 캐릭터 (예전 기록에는 없을 수 있다 → 강아지) */
+  look?: ExplorerLook;
 }
 
 export interface RoomInfo {

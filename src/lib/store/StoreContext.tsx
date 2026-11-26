@@ -2,7 +2,7 @@
 
 import { createContext, type Dispatch, useContext } from 'react';
 import type { Member, RoomInfo } from '@/lib/sync/roomSync';
-import type { AppState, BoardId, MissionId } from '@/lib/types';
+import type { AppState, BoardId, ExplorerLook, MissionId } from '@/lib/types';
 import type { Action } from './reducer';
 
 /** 친구가 회로판에서 방금 한 조작 (모둠 함께하기). 그 회로판 위에 이름과 함께 잠깐 보여 준다 */
@@ -16,6 +16,9 @@ export interface BoardNote {
 export interface StoreValue {
   state: AppState;
   dispatch: Dispatch<Action>;
+  /** 내가 고른 탐험대 캐릭터 (기기에 기억한다) */
+  look: ExplorerLook;
+  setLook: (look: ExplorerLook) => void;
   /** 소리 끄기는 기기마다 따로 정하는 설정이라 동기화하지 않는다 */
   muted: boolean;
   setMuted: (muted: boolean) => void;

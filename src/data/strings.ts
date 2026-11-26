@@ -1,7 +1,7 @@
 // 학생 화면에 나오는 모든 문구 (명세서 12장: 문구는 한 파일에 모아 코드와 분리).
 // 문구를 고칠 때는 이 파일만 고치면 된다.
 // 주의: 미션 화면(S4) 문구에는 "직렬"이라는 말과 원리 정리를 쓰지 않는다. 용어는 S5 설명하기에서 처음 나온다.
-import type { JudgeReason, MissionId, PartKind } from '@/lib/types';
+import type { ExplorerLook, JudgeReason, MissionId, PartKind } from '@/lib/types';
 
 // ───────────── 세계관 ─────────────
 // 디지털 미션만의 이야기 (3차시 책 이야기와 잇지 않기로 함).
@@ -141,6 +141,20 @@ export const S1 = {
   // 혼자 하기: 내 이름 (반디가 이 이름으로 불러 준다. 모둠으로 할 때는 선생님이 만든 모둠 이름을 쓴다)
   nameGuide: '내 이름을 써 주세요.',
   namePlaceholder: '예) 민수',
+  lookGuide: '내 캐릭터를 골라요',
+  lookTitle: '함께 탐험할 내 캐릭터를 골라요',
+  lookIntro: {
+    puppy: '냄새로 길을 잘 찾아요',
+    bunny: '귀가 밝아서 작은 소리도 잘 들어요',
+    cat: '어두운 곳도 잘 봐요',
+    bear: '힘이 세고 듬직해요',
+    chick: '부지런하고 씩씩해요',
+    fox: '궁금한 게 많고 꾀가 많아요',
+  } as Record<ExplorerLook, string>,
+  lookGo: '이 캐릭터로 출발!',
+  lookBack: '뒤로',
+  next: '다음',
+  looks: { puppy: '강아지', bunny: '토끼', cat: '고양이', bear: '곰', chick: '병아리', fox: '여우' } as Record<ExplorerLook, string>,
   safetyTitle: '안전 약속 (모두 체크해야 시작할 수 있어요)',
   safetyPromises: [
     '전기 부품을 만질 때는 절연 장갑을 끼고, 젖은 손으로 만지지 않아요.',

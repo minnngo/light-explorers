@@ -2,6 +2,7 @@
 
 // 화면 공통 작은 부품. 버튼은 손가락으로 누르기 쉽게 최소 높이 44px(min-h-11).
 import { useEffect, useRef, type ButtonHTMLAttributes, type ReactNode } from 'react';
+import { createPortal } from 'react-dom';
 import { FairyIcon } from '@/components/village/Characters';
 import { playOpen } from '@/media/sound';
 
@@ -112,8 +113,9 @@ export function ConfirmDialog({
     return () => window.removeEventListener('keydown', onKey);
   }, [open, onCancel]);
   if (!open) return null;
-  return (
-    <div className="modal-fade fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4" onClick={onCancel}>
+  // 화면 맨 바깥(body)에 그린다: 부모의 "누르기 통과"(pointer-events-none)나 쌓임 순서에 영향받지 않게
+  return createPortal(
+    <div className="modal-fade pointer-events-auto fixed inset-0 z-[60] flex items-center justify-center bg-slate-950/50 p-4" onClick={onCancel}>
       <div role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-body"
         className="modal-rise flex w-full max-w-sm flex-col items-center gap-3 rounded-3xl bg-white px-6 pb-6 pt-7 text-center shadow-2xl"
         onClick={(e) => e.stopPropagation()}>
@@ -132,7 +134,8 @@ export function ConfirmDialog({
           </button>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }
 

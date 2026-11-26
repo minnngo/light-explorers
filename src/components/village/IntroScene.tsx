@@ -7,6 +7,7 @@
 //  컷 4: 전지가 1개·2개 들어가는 제품들
 //  컷 5: 마을 입구에서 가로등으로 가는 길 안내
 import { PLACES, SPAWN, WORLD } from '@/data/world';
+import type { ExplorerLook } from '@/lib/types';
 import { angleTo } from '@/lib/world/movement';
 import { CompassArrow, DownArrow, Explorer, Fairy } from './Characters';
 import { Battery, Flashlight, HandFan, Remote } from './Products';
@@ -15,7 +16,7 @@ import VillageScene from './VillageScene';
 const ALL_DIM = { m1: 'dim', m2: 'dim', m3: 'dim' } as const;
 const TROUBLE = ['m1', 'm2', 'm3'] as const;
 
-export default function IntroScene({ cut }: { cut: number }) {
+export default function IntroScene({ cut, look = 'puppy' }: { cut: number; look?: ExplorerLook }) {
   if (cut === 2) return <CircuitCut />;
   if (cut === 3) return <ProductsCut />;
 
@@ -45,7 +46,7 @@ export default function IntroScene({ cut }: { cut: number }) {
               <g transform="translate(-46 -74)">
                 <g className="bob" style={{ animationDuration: '1.6s' }}><Fairy /></g>
               </g>
-              <Explorer />
+              <Explorer look={look} />
               <CompassArrow angle={angleTo(SPAWN, PLACES.m1)} />
             </g>
           </>

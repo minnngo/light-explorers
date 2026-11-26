@@ -8,6 +8,8 @@ import { type ClassGroupInfo, useStore } from '@/lib/store/StoreContext';
 import { isRealtimeAvailable } from '@/lib/sync/realtime';
 import { Button, Choice } from '../ui';
 import { FairyIcon } from '../village/Characters';
+import LookSelect from './LookSelect';
+import { EXPLORER_LOOKS } from '@/lib/types';
 import { GloveIcon } from '../village/Props';
 import Opening from './Opening';
 
@@ -23,7 +25,7 @@ const input =
  *  - 모둠으로 하기: 선생님이 미리 만든 모둠 목록에서 우리 모둠을 골라 들어간다. 같은 모둠 친구들과 실시간으로 함께한다
  */
 export default function S1Entry() {
-  const { dispatch, room, waitingForRoom, joinGroup } = useStore();
+  const { dispatch, room, waitingForRoom, joinGroup, setLook } = useStore();
   const realtime = isRealtimeAvailable();
   const [mode, setMode] = useState<'solo' | 'group'>('solo');
   const [name, setName] = useState('');
@@ -33,6 +35,8 @@ export default function S1Entry() {
   const [checks, setChecks] = useState([false, false, false]);
   // 처음 접속했을 때와 처음부터 다시 할 때는 오프닝부터 (방에 들어가는 중이면 건너뛴다)
   const [opening, setOpening] = useState(() => room === null);
+  // 캐릭터 고르기 화면 (입장 양식 다음)
+  const [picking, setPicking] = useState(false);
 
   if (opening) return <Opening onDone={() => setOpening(false)} />;
   if (room && waitingForRoom) return <JoinWaiting />;
@@ -42,6 +46,12 @@ export default function S1Entry() {
     ? safetyOk && group !== null && myName.trim().length > 0 && !joining
     : canStart(name, checks);
 
+  // 이름·모둠·안전 약속을 마치면 "다음" → 캐릭터 고르기 화면 → "이 캐릭터로 출발!"
+  const onNext = () => {
+    if (!ready) return;
+    setLook(EXPLORER_LOOKS[0]); // 캐릭터 고르기는 늘 첫 번째(강아지)부터 넘겨 본다
+    setPicking(true);
+  };
   const onStart = () => {
     if (!ready) return;
     if (mode === 'group') {
@@ -51,6 +61,10 @@ export default function S1Entry() {
       dispatch(actions.startExpedition(name, safetyOk));
     }
   };
+
+  if (picking && !(room && waitingForRoom)) {
+    return <LookSelect onBack={() => setPicking(false)} onGo={onStart} busy={joining} />;
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-2xl flex-1 flex-col justify-center gap-6 p-6">
@@ -102,8 +116,8 @@ export default function S1Entry() {
         ))}
       </fieldset>
 
-      <Button disabled={!ready} className="self-center px-10 text-2xl" onClick={onStart}>
-        {mode === 'group' ? ROOM.enterGroup : S1.start}
+      <Button disabled={!ready} className="self-center px-10 text-2xl" onClick={onNext}>
+        {S1.next} →
       </Button>
     </main>
   );
