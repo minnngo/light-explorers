@@ -116,7 +116,7 @@ function Blob({ base, mood = 'calm', children, back, top, mouthY = -40 }: {
 }
 
 /** 마을에 사는 동물들 */
-export type Animal = 'puppy' | 'bunny' | 'bear' | 'cat' | 'chick' | 'pig' | 'frog' | 'fox';
+export type Animal = 'puppy' | 'bunny' | 'bear' | 'cat' | 'chick' | 'pig' | 'frog' | 'fox' | 'dino';
 
 const NOSE = '#4a3b3b';
 
@@ -227,6 +227,33 @@ function animalParts(animal: Animal): { base: string; back: React.ReactNode; fro
         back: null,
         front: <ellipse cx={2} cy={-22} rx={19} ry={12} fill="#e2f5d6" opacity={0.85} />,
         mouthY: -40,
+      };
+    case 'dino':
+      // 공룡 (탐험대 캐릭터): 파스텔 하늘색 몸, 등의 노란 가시, 작은 꼬리, 콧구멍 있는 주둥이
+      return {
+        base: '#9fd0f2',
+        back: (
+          <>
+            <path d="M -30 -10 q -22 2 -26 -12 q 12 2 22 -4 z" fill="#8cc3ea" />
+            {[
+              { x: -33, y: -26, r: -70 },
+              { x: -31, y: -42, r: -55 },
+              { x: -22, y: -58, r: -35 },
+              { x: -6, y: -68, r: -10 },
+            ].map((p) => (
+              <path key={p.y} d="M -6 0 L 0 -12 L 6 0 Z" fill="#ffd45e" stroke="#f2b632" strokeWidth={1.5} strokeLinejoin="round"
+                transform={`translate(${p.x} ${p.y}) rotate(${p.r})`} />
+            ))}
+          </>
+        ),
+        front: (
+          <>
+            <ellipse cx={14} cy={-37} rx={13} ry={9} fill="#c4e3f7" />
+            <ellipse cx={18} cy={-40} rx={1.6} ry={1.2} fill="#4a6f8c" />
+            <ellipse cx={24} cy={-39} rx={1.6} ry={1.2} fill="#4a6f8c" />
+          </>
+        ),
+        mouthY: -30,
       };
     case 'fox':
       return {
