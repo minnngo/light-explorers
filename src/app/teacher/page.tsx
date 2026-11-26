@@ -401,6 +401,10 @@ function GroupRecords({ groups }: { groups: GroupSummary[] }) {
 /** 모둠 한 곳: 도입 표(질문 3칸)와 미션 표(항목 × 미션 3칸). 맞았는지는 글자 앞 ✓·✗로 */
 function GroupRecord({ g }: { g: GroupSummary }) {
   const intro = g.intro;
+  // 선생님 화면에서만 맞음·틀림 (학생 화면은 도입에서 정답을 보여 주지 않는다)
+  const recallOk = intro.recall === null ? null : intro.recall === 'correct';
+  const reasonOk = intro.fanReason === null || intro.fanReason === 'unsure' ? null : intro.fanReason === 'needAmount';
+  const predictOk = intro.fanPredict === null ? null : intro.fanPredict === 'two';
   return (
     <section className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -414,13 +418,13 @@ function GroupRecord({ g }: { g: GroupSummary }) {
         <span key="p" title={S2.fanPredict.question}>{L.fanPredict}</span>,
       ]} rows={[{
         label: L.answer,
-        tones: [intro.recall === null ? null : intro.recall === 'correct'],
+        tones: [recallOk, reasonOk, predictOk],
         cells: [
-          <Mark key="r" ok={intro.recall === null ? null : intro.recall === 'correct'}>
-            {intro.recall ? S2.recall.choices[intro.recall] : undefined}
-          </Mark>,
-          (intro.fanReason && S2.fanReason.choices[intro.fanReason]) || <Blank />,
-          (intro.fanPredict && S2.fanPredict.choices[intro.fanPredict]) || <Blank />,
+          <Mark key="r" ok={recallOk}>{intro.recall ? S2.recall.choices[intro.recall] : undefined}</Mark>,
+          // "잘 모르겠어요"는 맞음·틀림 없이 글만
+          intro.fanReason === null ? <Blank /> : reasonOk === null ? S2.fanReason.choices[intro.fanReason]
+            : <Mark ok={reasonOk}>{S2.fanReason.choices[intro.fanReason]}</Mark>,
+          <Mark key="p" ok={predictOk}>{intro.fanPredict ? S2.fanPredict.choices[intro.fanPredict] : undefined}</Mark>,
         ],
       }]} />
       <MissionTable g={g} />
@@ -532,47 +536,59 @@ function PersonalRecords({ learners }: { learners: Learner[] }) {
   const { rows, ...pager } = usePages(learners, 10);
   const C = T.personalCols;
   const parts: PartKind[] = ['bulb', 'buzzer', 'motor'];
+  const misKeys = ['q1', 'q2', 'q3'] as const;
+  // 모둠 기록 표와 같은 모양: 칸마다 세로선, 맞은 칸 연한 초록 / 틀린 칸 연한 빨강
+  const th = 'whitespace-nowrap border-l border-stone-200 px-2.5 py-2 text-center font-semibold text-stone-700 first:border-l-0';
+  const td = 'border-l border-stone-200 px-2.5 py-2.5 first:border-l-0';
+  const ox = (ok: boolean | null, key: string) => (
+    <td key={key} className={`${td} ${toneBg(ok)}`}>
+      <span className="flex justify-center"><Mark ok={ok}><></></Mark></span>
+    </td>
+  );
   return (
     <Card title={T.recordTabs.personal}>
-      <div className="-mx-5 overflow-x-auto">
+      <div className="overflow-x-auto rounded-xl border border-stone-200">
         <table className="w-full text-sm">
-          <thead className="border-y border-stone-200 bg-stone-50 text-left text-stone-500">
-            <tr>
-              <th className={TH}>{C.group}</th>
-              <th className={TH}>{C.name}</th>
-              <th className={TH}>{C.progress}</th>
-              <th className={TH}>{C.explain}</th>
-              <th className={TH}>{C.check}</th>
-              <th className={TH}>{C.mis}</th>
-              <th className={TH}>{C.selfEval}</th>
+          <thead className="bg-stone-50">
+            <tr className="border-b border-stone-200">
+              <th rowSpan={2} className={`${th} text-left`}>{C.group}</th>
+              <th rowSpan={2} className={`${th} text-left`}>{C.name}</th>
+              <th rowSpan={2} className={`${th} text-left`}>{C.progress}</th>
+              <th colSpan={3} className={th}>{C.explain}</th>
+              <th className={th}>{C.check}</th>
+              <th colSpan={3} className={th}>{C.mis}</th>
+              <th rowSpan={2} className={`${th} text-left`}>{C.selfEval}</th>
+            </tr>
+            <tr className="border-b border-stone-200 text-xs">
+              {parts.map((p) => (
+                <th key={p} title={S5.explain.questions[p].q} className={`${th} font-normal text-stone-500`}>{T.chart.explainShort[p]}</th>
+              ))}
+              <th title={`${S5.check.before} … ${S5.check.after}`} className={`${th} font-normal text-stone-500`}>{C.checkSub}</th>
+              {S5.misconception.items.map((item, i) => (
+                <th key={item.key} title={item.text} className={`${th} font-normal text-stone-500`}>{C.misSub(i + 1)}</th>
+              ))}
             </tr>
           </thead>
           <tbody>
             {rows.map((l) => (
-              <tr key={l.key} className="border-b border-stone-100 align-top last:border-0">
-                <td className={`${TD} whitespace-nowrap text-stone-500`}>{l.group}</td>
-                <td className={`${TD} whitespace-nowrap font-bold`}>{l.name}</td>
-                <td className={`${TD} whitespace-nowrap`}>
-                  {l.finished ? <Mark ok><span>{L.finished}</span></Mark> : T.stepOf(Math.min(l.wrapupStep + 1, WRAPUP_STEP_COUNT - 1), WRAPUP_STEP_COUNT - 1)}
+              <tr key={l.key} className="border-b border-stone-200 last:border-0">
+                <td className={`${td} whitespace-nowrap text-stone-500`}>{l.group}</td>
+                <td className={`${td} whitespace-nowrap font-semibold text-stone-800`}>{l.name}</td>
+                <td className={`${td} whitespace-nowrap text-stone-800`}>
+                  {l.finished ? L.finished : T.stepOf(Math.min(l.wrapupStep + 1, WRAPUP_STEP_COUNT - 1), WRAPUP_STEP_COUNT - 1)}
                 </td>
-                <td className={TD}>
-                  <span className="flex gap-3">
-                    {parts.map((p, i) => {
-                      const v = l.final.explain[p];
-                      return <Mark key={p} ok={v === null ? null : v === 'more'}>{i + 1}</Mark>;
-                    })}
-                  </span>
+                {parts.map((p) => {
+                  const v = l.final.explain[p];
+                  return ox(v === null ? null : v === 'more', p);
+                })}
+                {ox(l.final.check === null ? null : l.final.check === 'brighter', 'check')}
+                {misKeys.map((k) => {
+                  const r = l.final.misconception[k];
+                  return ox(r === null ? null : r === 'correct', k);
+                })}
+                <td className={`${td} whitespace-nowrap text-stone-800`}>
+                  {l.final.selfEval ? S5.selfEval.choices[l.final.selfEval] : <Blank />}
                 </td>
-                <td className={TD}><Mark ok={l.final.check === null ? null : l.final.check === 'brighter'} /></td>
-                <td className={TD}>
-                  <span className="flex gap-3">
-                    {(['q1', 'q2', 'q3'] as const).map((k, i) => {
-                      const r = l.final.misconception[k];
-                      return <Mark key={k} ok={r === null ? null : r === 'correct'}>{i + 1}</Mark>;
-                    })}
-                  </span>
-                </td>
-                <td className={`${TD} whitespace-nowrap`}>{l.final.selfEval ? S5.selfEval.choices[l.final.selfEval] : V.empty}</td>
               </tr>
             ))}
           </tbody>

@@ -321,11 +321,11 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
     safetyExtra: '전구의 유리 부분은 깨지기 쉬우니 조심해요.',
     intro: '가로등이 너무 어두워서 밤길이 무서워요. 전지의 개수를 달리해서 가로등을 밝혀 볼 수 있을까요?',
     predictQuestion:
-      '전지 1개를 연결한 회로와, 전지 2개를 서로 다른 극끼리 한 줄로 연결한 회로에서 전구의 밝기는 서로 어떻게 다를까요?',
+      '전지 2개를 서로 다른 극끼리 한 줄로 연결하면, 전지 1개일 때보다 전구의 밝기는 어떻게 될까요?',
     predictChoices: {
-      a: '(가) 전지 2개를 연결한 회로의 전구가 더 밝을 것 같아요',
-      b: '(나) 두 회로의 전구 밝기는 같을 것 같아요',
-      c: '(다) 전지 1개를 연결한 회로의 전구가 더 밝을 것 같아요',
+      a: '(가) 전지 2개일 때 더 밝을 것 같아요',
+      b: '(나) 밝기가 같을 것 같아요',
+      c: '(다) 전지 2개일 때 더 어두울 것 같아요',
     },
     checklist: [
       'A 회로: 전지 1개와 전구, 스위치를 집게 달린 전선으로 연결해 보세요.',
@@ -354,11 +354,11 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
     safetyExtra: '전선의 집게에 손이 끼지 않게 조심해요.',
     intro: '광장의 안내 종 소리가 너무 작아서 아무도 못 들어요. 방금 가로등에서 알아낸 것을 써 볼 수 있을까요?',
     predictQuestion:
-      '전지 1개를 연결한 회로와 전지 2개를 서로 다른 극끼리 한 줄로 연결한 회로에 버저를 각각 연결하면, 소리의 세기는 어떻게 다를까요?',
+      '전지 2개를 서로 다른 극끼리 한 줄로 연결하면, 전지 1개일 때보다 버저 소리는 어떻게 될까요?',
     predictChoices: {
-      a: '(가) 전지 2개 회로의 소리가 더 클 것 같아요',
-      b: '(나) 소리의 세기는 같을 것 같아요',
-      c: '(다) 전지 2개 회로의 소리가 더 작을 것 같아요',
+      a: '(가) 전지 2개일 때 소리가 더 클 것 같아요',
+      b: '(나) 소리 크기가 같을 것 같아요',
+      c: '(다) 전지 2개일 때 소리가 더 작을 것 같아요',
     },
     checklist: [
       'A 회로: 전지 1개와 버저, 스위치를 연결해 보세요.',
@@ -387,11 +387,11 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
     safetyExtra: '날개 달린 전동기에 손을 다치지 않게 조심해요.',
     intro: '마지막으로 언덕 위 풍차가 거의 멈췄어요. 풍차가 힘차게 돌게 도와줄 수 있나요?',
     predictQuestion:
-      '전지 1개를 연결한 회로와 전지 2개를 서로 다른 극끼리 한 줄로 연결한 회로에 날개 달린 전동기를 각각 연결하면, 날개가 도는 빠르기는 어떻게 다를까요?',
+      '전지 2개를 서로 다른 극끼리 한 줄로 연결하면, 전지 1개일 때보다 날개 달린 전동기는 어떻게 돌까요?',
     predictChoices: {
-      a: '(가) 전지 2개 회로의 날개가 더 빠르게 돌 것 같아요',
-      b: '(나) 도는 빠르기는 같을 것 같아요',
-      c: '(다) 전지 2개 회로의 날개가 더 느리게 돌 것 같아요',
+      a: '(가) 전지 2개일 때 더 빠르게 돌 것 같아요',
+      b: '(나) 빠르기가 같을 것 같아요',
+      c: '(다) 전지 2개일 때 더 느리게 돌 것 같아요',
     },
     checklist: [
       'A 회로: 전지 1개와 날개 달린 전동기, 스위치를 연결해 보세요.',
@@ -550,7 +550,7 @@ export const TEACHER = {
   missionRows: {
     prediction: { label: '예상', help: '실험 전에 고른 답 (✓ = 실제 결과와 같음)' },
     built: { label: '회로 완성', help: 'A·B 회로를 바르게 이었는지' },
-    compare: { label: '결과 비교', help: '실험 뒤 ○표 한 말 (✓ = 맞음)' },
+    compare: { label: '결과', help: '실험 뒤 ○표 한 말 (✓ = 맞음)' },
     hints: { label: '힌트 / 시도', help: '힌트 본 횟수 / 전선을 잇거나 지운 횟수' },
     challenge: { label: '도전 과제', help: '같은 극끼리 연결해 보기 (가로등만)' },
     explanation: { label: '모둠 이유', help: '결과가 그렇게 나온 까닭을 쓴 글' },
@@ -586,7 +586,8 @@ export const TEACHER = {
     hintsOf: (hints: number, attempts: number) => `힌트 ${hints} · 시도 ${attempts}`,
     noneYet: '아직 고르지 않음',
   },
-  personalCols: { group: '모둠', name: '이름', progress: '진행', explain: '확인하기', check: '적용하기', mis: '오개념 1·2·3', selfEval: '스스로 평가' },
+  personalCols: { group: '모둠', name: '이름', progress: '진행', explain: '확인하기', check: '적용하기', mis: '오개념 점검', selfEval: '스스로 평가',
+    checkSub: '전지 3개', misSub: (n: number) => `${n}번` },
   stepOf: (step: number, all: number) => `${step}/${all}단계`,
   page: (n: number, all: number) => `${n} / ${all}`,
   prev: '이전',
@@ -655,7 +656,7 @@ export const TEACHER = {
     empty: '-',
     yes: '예',
     no: '아니요',
-    challenge: { none: '안 함', active: '하는 중', done: '해 봄' },
+    challenge: { none: '미도전', active: '도전 중', done: '도전 완료' },
     explain: { more: '더 ~했어요', less: '덜 ~했어요', same: '같았어요' },
     check: { brighter: '밝아집니다', darker: '어두워집니다' },
   },
