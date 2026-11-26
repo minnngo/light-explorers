@@ -63,7 +63,8 @@ export default function S5Wrapup() {
   }
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-5 p-6">
+    // 화면이 좁으면 왼쪽 위 "나가기"·오른쪽 위 소리 버튼(떠 있음)이 제목을 가리지 않게 위를 비운다
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-5 p-6 pt-20 min-[1100px]:pt-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-black">{S5.stepTitles[step]}</h1>
         <span className="text-slate-500">{step + 1} / {WRAPUP_STEP_COUNT - 1}</span>

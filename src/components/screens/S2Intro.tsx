@@ -37,7 +37,8 @@ export default function S2Intro() {
   }, [state.introCut, isLast, canNext, dispatch]);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-4 p-4">
+    // 화면이 좁으면 왼쪽 위 "나가기"·오른쪽 위 소리 버튼(떠 있음)이 내용을 가리지 않게 위를 비운다
+    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col justify-center gap-4 p-4 pt-20 min-[1100px]:pt-4">
       {/* 양옆의 꺾쇠로 앞뒤 장면을 넘긴다 (화면 세로 가운데에 고정) */}
       <div className="relative">
         <IntroScene cut={state.introCut} look={look} />
