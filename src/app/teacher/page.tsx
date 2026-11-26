@@ -186,10 +186,13 @@ function NavIcon({ section }: { section: Section }) {
  * children이 없으면 "맞음/틀림"을 쓴다
  */
 function Mark({ ok, children }: { ok: boolean | null; children?: ReactNode }) {
+  // 색은 앞의 기호에만. 글자는 다른 답과 같은 모양 (보통 굵기, 진한 회색)
   const color = ok === null ? 'text-stone-400' : ok ? 'text-[#3f7d58]' : 'text-rose-600';
   return (
-    <span className={`inline-flex items-baseline gap-1 font-semibold ${color}`}>
-      <span aria-label={ok === null ? '아직' : ok ? V.correct : V.wrong}>{ok === null ? V.empty : ok ? '✓' : '✗'}</span>
+    <span className="inline-flex items-baseline gap-1.5 text-stone-800">
+      <span className={`shrink-0 font-bold ${color}`} aria-label={ok === null ? '아직' : ok ? V.correct : V.wrong}>
+        {ok === null ? V.empty : ok ? '✓' : '✗'}
+      </span>
       {children ?? (ok === null ? null : <span>{ok ? V.correct : V.wrong}</span>)}
     </span>
   );
@@ -226,65 +229,55 @@ function Pager({ page, pages, setPage }: { page: number; pages: number; setPage:
 
 // ───── 한눈에 보기 ─────
 
+/**
+ * 한눈에 보기: 꼭 필요한 세 가지만
+ *  1) 미션별 완료한 모둠, 마무리를 마친 사람 (숫자 카드)  2) 미션별 예상 정답률  3) 마무리 퀴즈 정답률
+ */
 function Overview({ data }: { data: ClassSummary }) {
   const st = classStats(data);
-  const doneMissions = MISSION_ORDER.reduce((n, id) => n + st.missionDone[id].hit, 0);
   const missionRows = (rates: Record<MissionId, Rate>) =>
     MISSION_ORDER.map((id) => ({ label: S3.places[id], ...rates[id] }));
   const parts: PartKind[] = ['bulb', 'buzzer', 'motor'];
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatTile label={T.stat.groups} value={`${st.groups}`} />
-        <StatTile label={T.stat.missions} value={`${doneMissions}/${st.groups * MISSION_ORDER.length}`} />
-        <StatTile label={T.stat.learners} value={`${st.learners}`} />
-        <StatTile label={T.stat.finished} value={`${st.finishedLearners}/${st.learners}`} />
-      </div>
-      <ChartGroup title={T.chart.groupMission}>
-        <Card tag="mission" title={T.chart.missionDone}><BarList rows={missionRows(st.missionDone)} /></Card>
-        <Card tag="mission" title={T.chart.prediction}><BarList rows={missionRows(st.predictionRight)} /></Card>
-        <Card tag="mission" title={T.chart.compare}><BarList rows={missionRows(st.compareRight)} /></Card>
-        <Card tag="mission" title={T.chart.hints}>
-          <BarList count rows={st.hintsByGroup.slice(0, 6).map((h) => ({
-            label: h.group, hit: h.hints, of: Math.max(1, st.hintsByGroup[0]?.hints ?? 1), text: T.chart.hintsOf(h.hints, h.attempts),
-          }))} />
-        </Card>
-      </ChartGroup>
-      <ChartGroup title={T.chart.groupWrapup}>
-        <Card tag="wrapup" title={T.chart.explain}>
-          <BarList rows={parts.map((p) => ({ label: T.chart.explainShort[p], title: S5.explain.questions[p].q, ...st.explain[p] }))} />
-        </Card>
-        <Card tag="wrapup" title={T.chart.selfEval}>
-          <BarList count rows={[
-            ...(['good', 'needHelp', 'needPractice'] as const).map((k) => ({ label: S5.selfEval.choices[k], hit: st.selfEval[k], of: st.learners })),
-            { label: T.chart.noneYet, hit: st.selfEval.none, of: st.learners },
-          ]} />
-        </Card>
-        <Card tag="wrapup" title={T.chart.misconception} className="lg:col-span-2">
-          <BarList wide rows={S5.misconception.items.map((item, i) => ({
+      {/* 가로로 늘어선 숫자 카드 (미션마다 완료한 모둠, 마무리를 마친 사람) */}
+      <section>
+        <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          {MISSION_ORDER.map((id) => (
+            <StatTile key={id} label={T.chart.missionDoneRow(S3.places[id])} hit={st.missionDone[id].hit} of={st.missionDone[id].of} />
+          ))}
+          <StatTile label={T.chart.finishedRow} hit={st.finishedLearners} of={st.learners} />
+        </div>
+      </section>
+      <Card title={T.chart.prediction}>
+        <BarList wide rows={missionRows(st.predictionRight)} />
+      </Card>
+      <Card title={T.chart.quiz}>
+        <BarList wide rows={[
+          ...parts.map((p) => ({ label: T.chart.quizExplain(T.chart.explainShort[p]), title: S5.explain.questions[p].q, ...st.explain[p] })),
+          { label: T.chart.quizCheck, title: `${S5.check.before}…${S5.check.after}`, ...st.check },
+          ...S5.misconception.items.map((item, i) => ({
             label: T.chart.misconceptionShort[i], title: item.text, ...st.misconception[item.key],
-          }))} />
-        </Card>
-      </ChartGroup>
+          })),
+        ]} />
+      </Card>
     </div>
   );
 }
 
-/** 그래프 묶음: 미션(모둠이 함께 한 것) / 마무리(각자 한 것) */
-function ChartGroup({ title, children }: { title: string; children: ReactNode }) {
+/** 숫자 카드: "3/5"를 크게, 아래에 비율 막대를 얇게 */
+function StatTile({ label, hit, of }: { label: string; hit: number; of: number }) {
+  const pct = of ? Math.round((hit / of) * 100) : 0;
   return (
-    <section className="flex flex-col gap-3">
-      <h2 className="text-base font-bold text-stone-600">{title}</h2>
-      <div className="grid gap-5 lg:grid-cols-2">{children}</div>
-    </section>
-  );
-}
-
-function StatTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-1 rounded-2xl bg-white p-4 shadow-sm">
+    <div className="flex flex-col gap-2 rounded-2xl bg-white p-4 shadow-sm">
       <p className="text-sm font-semibold text-stone-500">{label}</p>
-      <p className="text-3xl font-bold tabular-nums text-stone-800">{value}</p>
+      <p className="flex items-baseline gap-2">
+        <span className="text-3xl font-bold tabular-nums text-stone-800">{hit}<span className="text-xl text-stone-400">/{of}</span></span>
+        <span className="text-sm tabular-nums text-stone-500">{pct}%</span>
+      </p>
+      <span className="h-1.5 overflow-hidden rounded-full bg-stone-100" aria-hidden>
+        <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: BAR }} />
+      </span>
     </div>
   );
 }
@@ -304,7 +297,7 @@ function BarList({ rows, count = false, wide = false }: {
         const pct = r.of ? (r.hit / r.of) * 100 : 0;
         const text = r.text ?? (count ? T.chart.count(r.hit) : T.chart.rateOf(r.hit, r.of));
         return (
-          <li key={r.label} className={`grid items-center gap-3 text-sm ${wide ? 'grid-cols-[15rem_1fr_auto]' : 'grid-cols-[6.5rem_1fr_auto]'}`}
+          <li key={r.label} className={`grid items-center gap-3 text-sm ${wide ? 'grid-cols-[19rem_1fr_auto]' : 'grid-cols-[6.5rem_1fr_auto]'}`}
             title={`${r.title ?? r.label} — ${text}`}>
             <span className="truncate font-semibold text-stone-700">{r.label}</span>
             <span className="h-3 overflow-hidden rounded-full bg-stone-100">
@@ -334,7 +327,7 @@ function where(g: GroupSummary): string {
 function Progress({ groups }: { groups: GroupSummary[] }) {
   const { rows, ...pager } = usePages(groups, 8);
   return (
-    <Card title={T.progressTitle} note={T.orderNote}>
+    <Card title={T.progressTitle}>
       <div className="-mx-5 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-y border-stone-200 bg-stone-50 text-left text-stone-500">
@@ -342,9 +335,8 @@ function Progress({ groups }: { groups: GroupSummary[] }) {
               <th className={TH}>{T.columns.group}</th>
               <th className={TH}>{T.columns.lastActive}</th>
               <th className={TH}>{T.columns.where}</th>
-              <th className={TH}>{T.columns.revived}</th>
-              {MISSION_ORDER.map((id) => <th key={id} className={TH}>{S3.places[id]} {T.columns.hints}</th>)}
-              <th className={TH}>{T.columns.wrote}</th>
+              <th className={TH} title={T.columnHelp.revived}>{T.columns.revived}</th>
+              {MISSION_ORDER.map((id) => <th key={id} className={TH} title={T.columnHelp.hints}>{S3.places[id]} {T.columns.hints}</th>)}
             </tr>
           </thead>
           <tbody>
@@ -359,7 +351,6 @@ function Progress({ groups }: { groups: GroupSummary[] }) {
                     {g.hintCount[id]} / {g.attempts[id]}
                   </td>
                 ))}
-                <td className={`${TD} tabular-nums`}>{g.wroteCount}/{g.writableCount}</td>
               </tr>
             ))}
           </tbody>
@@ -395,7 +386,6 @@ function GroupRecords({ groups }: { groups: GroupSummary[] }) {
   const { rows, ...pager } = usePages(groups, 3);
   return (
     <div className="flex flex-col gap-4">
-      <p className="-mb-1 text-sm text-stone-500">{T.orderNote}</p>
       {rows.map((g) => <GroupRecord key={g.groupId} g={g} />)}
       <Pager {...pager} />
     </div>
@@ -435,7 +425,7 @@ function IntroAnswer({ q, children }: { q: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-1">
       <dt className="text-xs text-stone-500">{q}</dt>
-      <dd className="font-semibold leading-snug text-stone-800">{children}</dd>
+      <dd className="leading-snug text-stone-800">{children}</dd>
     </div>
   );
 }
@@ -451,40 +441,39 @@ function MissionRecordCard({ id, g }: { id: MissionId; g: GroupSummary }) {
         <h3 className="text-base font-bold">{S3.places[id]}</h3>
         <span className={`text-xs font-bold ${statusColor}`}>{status}</span>
       </div>
-      {/* 왼쪽 항목 이름, 오른쪽 답 (긴 글은 칸 안에서 줄바꿈) */}
-      <dl className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 gap-y-2 leading-snug">
+      {/* 왼쪽 항목 이름(연한 회색), 오른쪽 답(같은 모양). 긴 글은 칸 안에서 줄바꿈 */}
+      <dl className="grid grid-cols-[4.75rem_minmax(0,1fr)] gap-x-3 gap-y-2.5 leading-snug text-stone-800">
         <dt className="text-stone-500">{L.prediction}</dt>
         <dd className="break-keep">
           <Mark ok={m.prediction ? m.prediction === MISSIONS[id].correctPrediction : null}>
-            {m.prediction ? <span className="font-normal text-stone-800">{s.predictChoices[m.prediction]}</span> : undefined}
+            {m.prediction ? s.predictChoices[m.prediction] : undefined}
           </Mark>
         </dd>
         <dt className="text-stone-500">{L.built}</dt>
-        <dd className="flex gap-3">
-          <Mark ok={m.built.A}><span className="text-stone-800">A</span></Mark>
-          <Mark ok={m.built.B}><span className="text-stone-800">B</span></Mark>
+        <dd className="flex gap-4">
+          <Mark ok={m.built.A}>A</Mark>
+          <Mark ok={m.built.B}>B</Mark>
         </dd>
         <dt className="text-stone-500">{L.compare}</dt>
         <dd>
           <Mark ok={m.compare ? m.compare === MISSIONS[id].correctCompare : null}>
-            {m.compare ? <span className="text-stone-800">{s.compareChoices[m.compare]}</span> : undefined}
+            {m.compare ? s.compareChoices[m.compare] : undefined}
           </Mark>
         </dd>
         <dt className="text-stone-500">{T.columns.hints}</dt>
-        <dd className={`tabular-nums ${m.hintCount >= 3 ? 'font-bold text-rose-600' : 'text-stone-800'}`}>{m.hintCount} / {m.attempts}</dd>
+        {/* 힌트 3번 이상은 빨간 숫자로 (도움이 필요했던 모둠) */}
+        <dd className={`tabular-nums ${m.hintCount >= 3 ? 'text-rose-600' : ''}`}>{m.hintCount} / {m.attempts}</dd>
         {id === 'm1' && (
           <>
             <dt className="text-stone-500">{T.challengeShort}</dt>
-            <dd className="text-stone-800">{V.challenge[m.challenge]}</dd>
+            <dd>{V.challenge[m.challenge]}</dd>
           </>
         )}
-      </dl>
-      <div className="flex flex-col gap-1">
-        <span className="text-xs text-stone-500">{L.explanation}</span>
-        <p className={`break-keep rounded-lg px-3 py-2 leading-relaxed ${m.explanation.trim() ? 'bg-amber-50 text-stone-800' : 'bg-stone-50 text-stone-400'}`}>
+        <dt className="text-stone-500">{L.explanation}</dt>
+        <dd className={`whitespace-pre-wrap break-keep ${m.explanation.trim() ? '' : 'text-stone-400'}`}>
           {m.explanation.trim() || V.empty}
-        </p>
-      </div>
+        </dd>
+      </dl>
     </div>
   );
 }
@@ -503,7 +492,6 @@ function PersonalRecords({ learners }: { learners: Learner[] }) {
               <th className={TH}>{C.group}</th>
               <th className={TH}>{C.name}</th>
               <th className={TH}>{C.progress}</th>
-              <th className={TH}>{C.share}</th>
               <th className={TH}>{C.explain}</th>
               <th className={TH}>{C.check}</th>
               <th className={TH}>{C.mis}</th>
@@ -516,12 +504,7 @@ function PersonalRecords({ learners }: { learners: Learner[] }) {
                 <td className={`${TD} whitespace-nowrap text-stone-500`}>{l.group}</td>
                 <td className={`${TD} whitespace-nowrap font-bold`}>{l.name}</td>
                 <td className={`${TD} whitespace-nowrap`}>
-                  {l.finished ? <Mark ok><span>{L.finished}</span></Mark> : T.stepOf(l.wrapupStep + 1, WRAPUP_STEP_COUNT)}
-                </td>
-                <td className={`${TD} min-w-40 max-w-60`}>
-                  {l.final.shareBlanks?.some((b) => b.trim())
-                    ? <span className="break-keep leading-relaxed text-stone-800">{l.final.shareBlanks.map((b) => b.trim() || V.empty).join(' / ')}</span>
-                    : <span className="text-stone-400">{l.final.groupThought.trim() || V.empty}</span>}
+                  {l.finished ? <Mark ok><span>{L.finished}</span></Mark> : T.stepOf(Math.min(l.wrapupStep + 1, WRAPUP_STEP_COUNT - 1), WRAPUP_STEP_COUNT - 1)}
                 </td>
                 <td className={TD}>
                   <span className="flex gap-3">

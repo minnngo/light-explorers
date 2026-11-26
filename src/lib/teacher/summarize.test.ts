@@ -31,7 +31,7 @@ describe('summarize (교사용 집계)', () => {
     const [g] = summarize([{ state, updatedAt: '' }]).groups;
     expect(g.missions.m1).toMatchObject({ hintCount: 2, challenge: 'none', built: { A: false, B: false } });
     expect(g.wroteCount).toBe(1);
-    expect(g.writableCount).toBe(4);
+    expect(g.writableCount).toBe(3);
   });
 });
 

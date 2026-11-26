@@ -280,17 +280,17 @@ describe('마을 이야기 장면', () => {
 describe('S5 마무리', () => {
   it('오개념 점검은 처음 고른 답만 기록한다', () => {
     const s = play(
-      { ...createInitialState(), currentScreen: 'S5', wrapupStep: 4 },
+      { ...createInitialState(), currentScreen: 'S5', wrapupStep: 3 },
       { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'O' },
       { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'X' },
     );
     expect(s.final.misconception.q1).toBe('wrong');
   });
 
-  it('확인해요는 고르기 전에는 다음으로 갈 수 없고, 틀린 답을 골라도 고르면 넘어간다', () => {
-    const base = { ...createInitialState(), currentScreen: 'S5' as const, wrapupStep: 3 };
-    expect(play(base, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(3);
-    expect(play(base, { type: 'UPDATE_FINAL', patch: { check: 'darker' } }, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(4);
+  it('적용하기는 고르기 전에는 다음으로 갈 수 없고, 틀린 답을 골라도 고르면 넘어간다', () => {
+    const base = { ...createInitialState(), currentScreen: 'S5' as const, wrapupStep: 2 };
+    expect(play(base, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(2);
+    expect(play(base, { type: 'UPDATE_FINAL', patch: { check: 'darker' } }, { type: 'NEXT_WRAPUP_STEP' }).wrapupStep).toBe(3);
   });
 });
 
@@ -315,36 +315,34 @@ describe('마무리: 모둠으로 할 때는 각자 한다', () => {
     expect(s.wrapupStep).toBe(0);
   });
 
-  it('빈칸·고르기·O/X·스스로 평가를 학생마다 따로 기록한다 (O/X는 처음 고른 답만)', () => {
+  it('고르기·O/X·스스로 평가를 학생마다 따로 기록한다 (O/X는 처음 고른 답만)', () => {
     const s = play(
       atWrapup(1),
-      { type: 'SET_SHARE_BLANK', index: 0, text: '더 밝아요', by: minji },
       { type: 'ANSWER_EXPLAIN', part: 'bulb', choice: 'more', by: jia },
       { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'O', by: minji },
       { type: 'ANSWER_MISCONCEPTION', key: 'q1', choice: 'X', by: minji },
       { type: 'ANSWER_SELF_EVAL', choice: 'needHelp', by: jia },
     );
     const answer: string = S5.misconception.items.find((i) => i.key === 'q1')!.answer;
-    expect(s.final.students?.a1.shareBlanks?.[0]).toBe('더 밝아요');
     expect(s.final.students?.a1.misconception.q1).toBe(answer === 'O' ? 'correct' : 'wrong');
     expect(s.final.students?.b2.explain.bulb).toBe('more');
     expect(s.final.students?.b2.selfEval).toBe('needHelp');
     // 모둠 기록은 비워 둔다
-    expect(s.final.shareBlanks).toBeUndefined();
+    expect(s.final.explain.bulb).toBeNull();
     expect(s.final.misconception.q1).toBeNull();
   });
 
   it('조건을 채워야 그 학생만 다음으로 가고, 마치기도 각자 한다', () => {
     const blocked = play(atWrapup(), { type: 'NEXT_WRAPUP_STEP', by: minji }, { type: 'NEXT_WRAPUP_STEP', by: minji });
-    expect(blocked.final.students?.a1.wrapupStep).toBe(1); // 빈칸을 안 채워서 1에서 멈춘다
+    expect(blocked.final.students?.a1.wrapupStep).toBe(1); // 확인하기 질문에 답하지 않아서 1에서 멈춘다
     const last = play(atWrapup(), { type: 'FINISH', by: jia });
     expect(last.final.students?.b2?.finished ?? false).toBe(false); // 마지막 단계가 아니면 마칠 수 없다
   });
 });
 
-describe('확인해요', () => {
+describe('적용하기', () => {
   it('처음 고른 답만 기록하고, 틀려도 다음으로 갈 수 있다', () => {
-    const s = play({ ...createInitialState(), currentScreen: 'S5', wrapupStep: 3 },
+    const s = play({ ...createInitialState(), currentScreen: 'S5', wrapupStep: 2 },
       { type: 'UPDATE_FINAL', patch: { check: 'darker' } },
       { type: 'UPDATE_FINAL', patch: { check: 'brighter' } });
     expect(s.final.check).toBe('darker');
@@ -352,16 +350,3 @@ describe('확인해요', () => {
   });
 });
 
-describe('함께 생각 나누기: 빈칸 세 개', () => {
-  const atShare = (): AppState => ({ ...createInitialState(), currentScreen: 'S5', wrapupStep: 1 });
-
-  it('빈칸을 쓰면 빈칸을 채운 문장이 만들어지고, 세 칸을 다 써야 다음으로 간다', () => {
-    const two = play(atShare(), { type: 'SET_SHARE_BLANK', index: 0, text: '더 밝아요' },
-      { type: 'SET_SHARE_BLANK', index: 1, text: '소리가 커요' });
-    expect(two.final.groupThought).toContain('전구는 (더 밝아요), 버저는 (소리가 커요), 날개 달린 전동기는 ( ).');
-    expect(canAdvanceWrapup(two)).toBe(false);
-    const all = play(two, { type: 'SET_SHARE_BLANK', index: 2, text: '빨리 돌아요' });
-    expect(all.final.groupThought).toContain('전동기는 (빨리 돌아요).');
-    expect(canAdvanceWrapup(all)).toBe(true);
-  });
-});

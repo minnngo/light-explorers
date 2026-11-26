@@ -32,7 +32,7 @@ describe('교사용 한눈에 보기 통계', () => {
     const empty = createInitialState().final;
     const room = solo('3모둠', (s) => {
       s.final.students = {
-        x: { ...empty, name: '민지', wrapupStep: 6, finished: true, selfEval: 'good',
+        x: { ...empty, name: '민지', wrapupStep: 5, finished: true, selfEval: 'good',
           misconception: { q1: 'correct', q2: 'wrong', q3: null }, explain: { bulb: 'more', buzzer: 'less', motor: null }, check: 'brighter' },
         y: { ...empty, name: '지아', wrapupStep: 2, finished: false },
       };

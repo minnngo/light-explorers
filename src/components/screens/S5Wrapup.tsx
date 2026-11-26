@@ -7,7 +7,6 @@ import { canAdvanceWrapupRecord, WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow
 import { type Action, wrapupOf } from '@/lib/store/reducer';
 import { useStore } from '@/lib/store/StoreContext';
 import type { FinalRecord, OX, PartKind } from '@/lib/types';
-import { SharedBlank } from '../SharedTextArea';
 import { Button, Choice, ConfirmDialog, Speech } from '../ui';
 import { VillagePanorama } from './Opening';
 
@@ -48,10 +47,10 @@ export default function S5Wrapup() {
 
   const step = f.wrapupStep;
   const isLast = step === WRAPUP_STEP_COUNT - 1;
-  const panels = [<ResultsStep key={0} />, <ShareStep key={1} />, <ExplainStep key={2} />, <CheckStep key={3} />,
-    <MisconceptionStep key={4} />, <SelfEvalStep key={5} />];
+  const panels = [<ResultsStep key={0} />, <ExplainStep key={1} />, <CheckStep key={2} />,
+    <MisconceptionStep key={3} />, <SelfEvalStep key={4} />];
 
-  // 7. 마치기: 오프닝처럼 화면을 가득 채운 축제 장면
+  // 마지막 마치기 (번호 없음): 오프닝처럼 화면을 가득 채운 축제 장면
   if (isLast) {
     return (
       <Ending title={S5.finish.title} text={S5.finish.text}>
@@ -67,7 +66,7 @@ export default function S5Wrapup() {
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col gap-5 p-6">
       <header className="flex items-center justify-between">
         <h1 className="text-2xl font-black">{S5.stepTitles[step]}</h1>
-        <span className="text-slate-500">{step + 1} / {WRAPUP_STEP_COUNT}</span>
+        <span className="text-slate-500">{step + 1} / {WRAPUP_STEP_COUNT - 1}</span>
       </header>
       {panels[step]}
       <Button className="self-end text-xl" disabled={!canAdvanceWrapupRecord(f, step)}
@@ -104,30 +103,7 @@ function ResultsStep() {
   );
 }
 
-/** 2. 생각 나누기: 문장 틀의 빈칸 세 개(전구·버저·전동기)에 바로 쓴다 */
-function ShareStep() {
-  const { f, send } = useMyWrapup();
-  const blanks = f.shareBlanks ?? ['', '', ''];
-  const parts = S5.share.frame.split('( )');
-  return (
-    <section className={card}>
-      <p className="font-bold">{S5.share.guide}</p>
-      <p className="rounded-xl bg-stone-100/70 px-4 py-3 leading-[2.6] text-stone-700">
-        {parts.map((part, i) => (
-          <span key={i}>
-            {part}
-            {i < parts.length - 1 && (
-              <SharedBlank field={`share-${i}`} lock={false} value={blanks[i]} maxLength={20} aria-label={`빈칸 ${i + 1}`}
-                onChange={(e) => send({ type: 'SET_SHARE_BLANK', index: i as 0 | 1 | 2, text: e.target.value })} />
-            )}
-          </span>
-        ))}
-      </p>
-    </section>
-  );
-}
-
-/** 3. 설명하기: 세 질문에 먼저 답한 뒤 정리가 나타난다. "직렬연결" 용어는 여기서 처음 나온다 */
+/** 2. 확인하기: 세 질문에 먼저 답한 뒤 정리가 나타난다. "직렬연결" 용어는 여기서 처음 나온다 */
 function ExplainStep() {
   const { f, send } = useMyWrapup();
   const answered = Object.values(f.explain).every((v) => v !== null);
@@ -159,7 +135,7 @@ function ExplainStep() {
   );
 }
 
-/** 4. 확인해요 */
+/** 3. 적용하기 */
 function CheckStep() {
   const { f, send } = useMyWrapup();
   const check = f.check;
@@ -178,7 +154,7 @@ function CheckStep() {
         ))}
         {S5.check.after}
       </p>
-      {/* 한 번 고르면 바로 결과: 맞았으면 초록 "정답이에요.", 틀렸으면 빨강 "정답은 '밝습니다'예요." (5. 오개념 점검과 같은 모양) */}
+      {/* 한 번 고르면 바로 결과: 맞았으면 초록 "정답이에요.", 틀렸으면 빨강 "정답은 '밝아집니다'예요." (5. 오개념 점검과 같은 모양) */}
       {check && (
         <p className="pop-in rounded-xl bg-slate-50 p-3">
           <b className={check === 'brighter' ? 'text-emerald-700' : 'text-rose-600'}>
@@ -205,7 +181,7 @@ function OXMark({ k, className = 'size-6' }: { k: OX; className?: string }) {
   );
 }
 
-/** 5. 오개념 점검: 고른 직후 정답과 해설. 점수는 보여 주지 않고 교사용 기록에만 남긴다 */
+/** 4. 오개념 점검: 고른 직후 정답과 해설. 점수는 보여 주지 않고 교사용 기록에만 남긴다 */
 function MisconceptionStep() {
   const { f, send } = useMyWrapup();
   return (
@@ -242,7 +218,7 @@ function MisconceptionStep() {
   );
 }
 
-/** 6. 스스로 평가 */
+/** 5. 스스로 평가 */
 function SelfEvalStep() {
   const { f, send } = useMyWrapup();
   return (

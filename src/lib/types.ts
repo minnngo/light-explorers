@@ -16,7 +16,7 @@ export type MissionStep = 'predict' | 'build' | 'compare' | 'confirm';
 export type PredictionChoice = 'a' | 'b' | 'c';
 /** ③ 비교하기 ○표: 어둡다/밝다, 작다/크다, 느리게/빠르게 → less/more 로 통일 */
 export type CompareChoice = 'less' | 'more';
-/** S5 설명하기 답 */
+/** S5 확인하기 답 */
 export type ExplainChoice = 'more' | 'less' | 'same';
 
 export type Level = 0 | 1 | 2;
@@ -117,9 +117,9 @@ export type OX = 'O' | 'X';
 export type MisconceptionKey = 'q1' | 'q2' | 'q3';
 
 export interface FinalRecord {
-  /** 함께 생각 나누기: 빈칸을 채운 문장 (선생님 화면에 그대로 보인다) */
+  /** 예전 마무리 "생각 정리" 단계의 문장 (지금은 쓰지 않음, 예전 기록 호환용) */
   groupThought: string;
-  /** 함께 생각 나누기의 빈칸 세 개 (전구 / 버저 / 전동기). groupThought는 이것으로 문장을 만든다 */
+  /** 예전 마무리 "생각 정리" 단계의 빈칸 세 개 (지금은 쓰지 않음, 예전 기록 호환용) */
   shareBlanks?: [string, string, string];
   explain: Record<PartKind, ExplainChoice | null>;
   revisitFan: string;

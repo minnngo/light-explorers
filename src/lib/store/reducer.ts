@@ -61,7 +61,6 @@ export type Action =
   | { type: 'START_CHALLENGE' }
   | { type: 'SHOW_CHALLENGE_HINT' }
   // S5
-  | { type: 'SET_SHARE_BLANK'; index: 0 | 1 | 2; text: string; by?: StudentRef }
   | { type: 'UPDATE_FINAL'; patch: Partial<Pick<FinalRecord, 'groupThought' | 'revisitFan' | 'check' | 'selfEval' | 'toCharacter'>>; by?: StudentRef }
   | { type: 'ANSWER_EXPLAIN'; part: PartKind; choice: ExplainChoice; by?: StudentRef }
   | { type: 'ANSWER_MISCONCEPTION'; key: MisconceptionKey; choice: OX; by?: StudentRef }
@@ -279,15 +278,9 @@ export function reducer(state: AppState, action: Action): AppState {
     // ───── S5 ─────
     // ───── S5 마무리: 혼자 할 때는 모둠 기록에, 모둠으로 할 때는 그 학생(by) 기록에 ─────
     case 'UPDATE_FINAL':
-      // 확인해요는 오개념 점검처럼 처음 고른 답만 기록한다 (고르면 바로 정답을 보여 주므로)
+      // 적용하기는 오개념 점검처럼 처음 고른 답만 기록한다 (고르면 바로 정답을 보여 주므로)
       if (action.patch.check !== undefined && wrapupOf(state, action.by).check !== null) return state;
       return putWrapup(state, action.by, action.patch);
-    case 'SET_SHARE_BLANK': {
-      // 빈칸 하나를 쓰면, 빈칸을 채운 문장도 같이 만들어 둔다 (선생님 화면용)
-      const blanks = [...(wrapupOf(state, action.by).shareBlanks ?? ['', '', ''])] as [string, string, string];
-      blanks[action.index] = action.text;
-      return putWrapup(state, action.by, { shareBlanks: blanks, groupThought: fillShareFrame(blanks) });
-    }
     case 'ANSWER_EXPLAIN': {
       const f = wrapupOf(state, action.by);
       return putWrapup(state, action.by, { explain: { ...f.explain, [action.part]: action.choice } });
@@ -321,16 +314,6 @@ export function reducer(state: AppState, action: Action): AppState {
 
 // ───────────── 도우미 ─────────────
 
-/** 함께 생각 나누기 문장 틀의 ( )를 빈칸 글로 채운다. 하나도 안 썼으면 빈 문자열 */
-export function fillShareFrame(blanks: readonly string[]): string {
-  if (blanks.every((b) => !b.trim())) return '';
-  let i = 0;
-  return S5.share.frame.replace(/\( \)/g, () => {
-    const t = blanks[i++]?.trim();
-    return t ? `(${t})` : '( )';
-  });
-}
-
 /** 모둠으로 할 때 마무리 기록을 남기는 학생 */
 export interface StudentRef {
   id: string;
@@ -345,8 +328,9 @@ export function studentOf(final: FinalRecord, by: StudentRef): StudentFinal {
 
 /** 마무리 기록: 모둠으로 할 때는 그 학생 것, 혼자 할 때는 모둠 것(단계·마침은 AppState에 있다) */
 export function wrapupOf(state: AppState, by?: StudentRef): StudentFinal {
-  if (by) return studentOf(state.final, by);
-  return { ...state.final, name: state.groupName, wrapupStep: state.wrapupStep, finished: state.finished };
+  const f = by ? studentOf(state.final, by) : { ...state.final, name: state.groupName, wrapupStep: state.wrapupStep, finished: state.finished };
+  // 예전(7단계) 기록이 마지막 단계를 넘지 않도록
+  return { ...f, wrapupStep: Math.min(f.wrapupStep, WRAPUP_STEP_COUNT - 1) };
 }
 
 function putWrapup(state: AppState, by: StudentRef | undefined, patch: Partial<StudentFinal>): AppState {

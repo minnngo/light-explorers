@@ -33,9 +33,9 @@ export interface ClassStats {
   compareRight: Record<MissionId, Rate>;
   /** 마무리 오개념 문항별 맞힌 사람 (of = 답한 사람) */
   misconception: Record<MisconceptionKey, Rate>;
-  /** 마무리 설명하기 문항별 맞힌 사람 */
+  /** 마무리 확인하기 문항별 맞힌 사람 */
   explain: Record<PartKind, Rate>;
-  /** 마무리 확인해요 */
+  /** 마무리 적용하기 */
   check: Rate;
   /** 스스로 평가 분포 */
   selfEval: Record<'good' | 'needHelp' | 'needPractice' | 'none', number>;

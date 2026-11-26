@@ -1,6 +1,6 @@
 // 학생 화면에 나오는 모든 문구 (명세서 12장: 문구는 한 파일에 모아 코드와 분리).
 // 문구를 고칠 때는 이 파일만 고치면 된다.
-// 주의: 미션 화면(S4) 문구에는 "직렬"이라는 말과 원리 정리를 쓰지 않는다. 용어는 S5 설명하기에서 처음 나온다.
+// 주의: 미션 화면(S4) 문구에는 "직렬"이라는 말과 원리 정리를 쓰지 않는다. 용어는 S5 확인하기에서 처음 나온다.
 import type { ExplorerLook, JudgeReason, MissionId, PartKind } from '@/lib/types';
 
 // ───────────── 세계관 ─────────────
@@ -423,36 +423,30 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
 export const S5 = {
   stepTitles: [
     '1. 결과 모아 보기',
-    '2. 함께 생각을 나누기',
-    '3. 설명하기',
-    '4. 확인해요',
-    '5. 오개념 점검',
-    '6. 스스로 평가',
-    '7. 마치기',
+    '2. 확인하기',
+    '3. 적용하기',
+    '4. 오개념 점검',
+    '5. 스스로 평가',
+    '마치기',
   ],
   results: {
     headers: ['', '내 예상', '실제 결과'],
     rows: { m1: '전구 밝기', m2: '버저 소리', m3: '전동기 빠르기' } as Record<MissionId, string>,
   },
-  share: {
-    guide: '함께 생각을 나누어 봐요. 전지의 개수에 따른 전기 회로의 특징은 무엇인가요?',
-    frame:
-      '전지 1개를 연결한 회로보다 전지 2개를 서로 다른 극끼리 한 줄로 연결한 회로에서 전구는 ( ), 버저는 ( ), 날개 달린 전동기는 ( ).',
-  },
   explain: {
     opener: '그동안 알아낸 것을 정리해 볼까요?',
     questions: {
       bulb: {
-        q: '① 전지 1개 회로와 전지 2개 회로에 전구를 각각 연결했을 때 밝기는 어떻게 달랐나요?',
-        choices: { more: '더 밝았어요', less: '더 어두웠어요', same: '같았어요' },
+        q: '① 전지 2개 회로의 전구는 전지 1개 회로의 전구보다 어땠나요?',
+        choices: { more: '더 밝았어요', less: '더 어두웠어요', same: '밝기가 같았어요' },
       },
       buzzer: {
-        q: '② 버저를 각각 연결했을 때 소리는 어땠나요?',
-        choices: { more: '더 컸어요', less: '더 작았어요', same: '같았어요' },
+        q: '② 전지 2개 회로의 버저 소리는 전지 1개 회로의 버저 소리보다 어땠나요?',
+        choices: { more: '더 컸어요', less: '더 작았어요', same: '크기가 같았어요' },
       },
       motor: {
-        q: '③ 날개 달린 전동기를 각각 연결했을 때 도는 빠르기는 어땠나요?',
-        choices: { more: '더 빨랐어요', less: '더 느렸어요', same: '같았어요' },
+        q: '③ 전지 2개 회로의 날개 달린 전동기는 전지 1개 회로의 전동기보다 어떻게 돌았나요?',
+        choices: { more: '더 빨리 돌았어요', less: '더 느리게 돌았어요', same: '빠르기가 같았어요' },
       },
     } as Record<PartKind, { q: string; choices: Record<'more' | 'less' | 'same', string> }>,
     summaries: [
@@ -463,11 +457,11 @@ export const S5 = {
     ],
   },
   check: {
-    before: '전지 1개를 연결한 전기 회로보다 전지 2개를 직렬연결한 전기 회로에서 전구의 밝기가 더 (',
+    before: '직렬연결한 전지를 2개에서 3개로 늘리면 전구의 밝기는 더 (',
     after: ').',
-    choices: { brighter: '밝습니다', darker: '어둡습니다' },
+    choices: { brighter: '밝아집니다', darker: '어두워집니다' },
     answerIs: (answer: string) => `정답은 '${answer}'예요.`,
-    explanation: '전지 2개를 직렬연결하면 전구에 전기가 더 많이 흘러서 더 밝아요. 미션 1에서 B 회로 전구가 더 밝았던 것을 떠올려 보세요.',
+    explanation: '직렬연결한 전지의 개수를 늘릴수록 전기 에너지가 더 많이 공급돼서 전구가 더 밝아져요. 전지 1개보다 2개일 때 더 밝았던 것처럼, 3개면 2개일 때보다 더 밝아요.',
   },
   misconception: {
     guide: '○ 또는 ×를 골라 보세요.',
@@ -544,13 +538,16 @@ export const TEACHER = {
   setupDeleteBody: '이 모둠의 기록도 함께 지워지고,\n학생 화면의 모둠 목록에서도 사라져요.',
   setupDeleteOk: '지우기',
   setupDeleteCancel: '취소',
-  columns: { group: '모둠', lastActive: '마지막 활동', where: '지금 위치', revived: '되살린 곳', hints: '힌트/시도', selfEval: '스스로 평가', wrote: '쓴 글' },
+  columns: { group: '모둠', lastActive: '마지막 활동', where: '지금 위치', revived: '완료한 미션', hints: '힌트/시도', selfEval: '스스로 평가' },
   details: '자세히 보기',
   nav: { overview: '한눈에 보기', progress: '모둠 진행', records: '기록', groups: '모둠 관리', rubric: '평가 기준' },
   updatedAt: (time: string) => `${time}에 새로 불러옴`,
   lastActive: (time: string) => `마지막 활동 ${time}`,
-  orderNote: '최근에 게임을 한 순서',
-  recordTabs: { group: '모둠 기록 (도입·미션)', personal: '개인 마무리 기록' },
+  columnHelp: {
+    revived: '미션을 완료한 장소 수 (가로등·안내 종·풍차)',
+    hints: '힌트를 본 횟수 / 전선을 잇거나 지운 횟수',
+  },
+  recordTabs: { group: '모둠 기록', personal: '개인 마무리 기록' },
   personalNote: '마무리는 각자 해요. 혼자 한 모둠은 모둠 이름으로 한 줄이에요.',
   stat: {
     groups: '모둠',
@@ -559,16 +556,21 @@ export const TEACHER = {
     missions: '완료한 미션',
   },
   chart: {
+    missionDoneRow: (place: string) => `${place} 완료`,
+    finishedRow: '마무리 완료',
+    quiz: '마무리 퀴즈 정답률',
+    quizExplain: (what: string) => `확인하기: ${what}`,
+    quizCheck: '적용하기: 전지 3개로 늘리면',
     tagMission: '미션',
     groupMission: '미션 · 모둠',
     groupWrapup: '마무리 · 개인',
     tagWrapup: '마무리',
     missionDone: '미션별 완료한 모둠',
-    prediction: '예상이 맞은 모둠',
+    prediction: '미션별 예상 정답률',
     compare: '○표 비교를 맞힌 모둠',
     misconception: '오개념 점검을 맞힌 사람',
-    misconceptionShort: ['① 연결만 하면 켜진다 (정답 X)', '② 전지가 많으면 무조건 밝다 (정답 X)', '③ 직렬 2개면 버저가 더 크다 (정답 O)'],
-    explain: '설명하기를 맞힌 사람',
+    misconceptionShort: ['오개념 ①: 연결만 하면 켜진다 (정답 X)', '오개념 ②: 전지가 많으면 무조건 밝다 (정답 X)', '오개념 ③: 직렬 2개면 버저가 더 크다 (정답 O)'],
+    explain: '확인하기를 맞힌 사람',
     explainShort: { bulb: '전구 밝기', buzzer: '버저 소리', motor: '전동기 빠르기' },
     selfEval: '스스로 평가',
     hints: '힌트를 많이 본 모둠',
@@ -577,7 +579,7 @@ export const TEACHER = {
     hintsOf: (hints: number, attempts: number) => `힌트 ${hints} · 시도 ${attempts}`,
     noneYet: '아직 고르지 않음',
   },
-  personalCols: { group: '모둠', name: '이름', progress: '진행', share: '생각 나누기', explain: '설명하기', check: '확인해요', mis: '오개념 1·2·3', selfEval: '스스로 평가' },
+  personalCols: { group: '모둠', name: '이름', progress: '진행', explain: '확인하기', check: '적용하기', mis: '오개념 1·2·3', selfEval: '스스로 평가' },
   stepOf: (step: number, all: number) => `${step}/${all}단계`,
   page: (n: number, all: number) => `${n} / ${all}`,
   prev: '이전',
@@ -603,7 +605,7 @@ export const TEACHER = {
     {
       element: '전지의 개수에 따른 전구의 밝기 차이 말하기 (지식·이해)',
       look: '전지 개수에 따른 특징을 설명했는가 (전기 에너지의 공급과 관련지어 설명하면 높은 수준)',
-      evidence: '미션의 모둠 설명, 함께 생각 나누기 문장, 설명하기 답, 확인해요 답, 오개념 점검 결과',
+      evidence: '미션의 모둠 설명, 확인하기 답, 적용하기 답, 오개념 점검 결과',
       criteria: {
         상: '전지 2개를 직렬연결하면 전기 에너지가 더 많이 공급되어 전구가 더 밝다고 설명한다.',
         중: '전지 2개를 직렬연결한 회로의 전구가 더 밝다고 말한다.',
@@ -632,9 +634,8 @@ export const TEACHER = {
     explanation: '모둠 이유',
     challenge: '도전(같은 극끼리)',
     wrapup: '마무리',
-    groupThought: '생각 나누기',
-    explain: '설명하기 답',
-    check: '확인해요',
+    explain: '확인하기 답',
+    check: '적용하기',
     misconception: '오개념 점검',
     toCharacter: '이야기 인물에게',
     finished: '탐험 마침',
@@ -647,7 +648,7 @@ export const TEACHER = {
     no: '아니요',
     challenge: { none: '안 함', active: '하는 중', done: '해 봄' },
     explain: { more: '더 ~했어요', less: '덜 ~했어요', same: '같았어요' },
-    check: { brighter: '밝습니다', darker: '어둡습니다' },
+    check: { brighter: '밝아집니다', darker: '어두워집니다' },
   },
 };
 

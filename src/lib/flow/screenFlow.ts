@@ -2,7 +2,8 @@
 import type { AppState, FinalRecord } from '@/lib/types';
 
 export const INTRO_CUT_COUNT = 5;
-export const WRAPUP_STEP_COUNT = 7;
+/** 마무리 화면 수: 번호가 붙는 5단계 + 마지막 마치기(엔딩, 번호 없음) */
+export const WRAPUP_STEP_COUNT = 6;
 
 /** S1: 모둠 이름 1글자 이상 + 안전 약속 3칸 모두 체크 */
 export function canStart(groupName: string, safetyChecks: readonly boolean[]): boolean {
@@ -24,15 +25,13 @@ export function canAdvanceIntro(state: AppState): boolean {
 /** S5: 단계별로 "다음"을 누를 수 있는 조건 (혼자 할 때는 모둠 기록, 모둠으로 할 때는 학생 한 명의 기록) */
 export function canAdvanceWrapupRecord(f: Omit<FinalRecord, 'students'>, step: number): boolean {
   switch (step) {
-    case 1: // 함께 생각을 나누기: 빈칸 세 개를 모두 채워야 한다 (빈칸이 생기기 전의 기록은 문장이 있으면 된다)
-      return f.shareBlanks ? f.shareBlanks.every((b) => b.trim().length > 0) : f.groupThought.trim().length > 0;
-    case 2: // 설명하기: 세 질문에 모두 답해야 정리가 나타난다
+    case 1: // 확인하기: 세 질문에 모두 답해야 정리가 나타난다
       return Object.values(f.explain).every((v) => v !== null);
-    case 3: // 확인해요: 한 번 고르면 정답을 보여 주고 넘어갈 수 있다 (맞든 틀리든)
+    case 2: // 적용하기: 한 번 고르면 정답을 보여 주고 넘어갈 수 있다 (맞든 틀리든)
       return f.check !== null;
-    case 4: // 오개념 점검
+    case 3: // 오개념 점검
       return Object.values(f.misconception).every((v) => v !== null);
-    case 5: // 스스로 평가
+    case 4: // 스스로 평가
       return f.selfEval !== null;
     default:
       return true;

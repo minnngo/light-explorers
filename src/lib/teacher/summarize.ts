@@ -104,8 +104,9 @@ export function summarize(rows: { state: AppState; updatedAt: string }[]): Class
   return { groups, misconceptionWrong, mostMissed };
 }
 
-/** 모둠이 쓴 글 칸: 미션 이유 3칸 + 함께 생각 나누기 1칸 (선택 입력칸은 세지 않는다) */
+/** 모둠이 쓴 글 칸: 미션 이유 3칸 + 생각 정리 1칸 (선택 입력칸은 세지 않는다) */
 function writing(state: AppState): { wroteCount: number; writableCount: number } {
-  const texts = [...MISSION_ORDER.map((id) => state.missions[id].explanation), state.final.groupThought];
+  // 모둠이 함께 쓴 미션 이유 3칸만 센다 (마무리 생각 정리는 학생마다 따로라 개인 기록에서 본다)
+  const texts = MISSION_ORDER.map((id) => state.missions[id].explanation);
   return { wroteCount: texts.filter((t) => t.trim().length > 0).length, writableCount: texts.length };
 }
