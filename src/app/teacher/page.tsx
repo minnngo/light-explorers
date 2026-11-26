@@ -4,11 +4,11 @@
 // 판정(상·중·하)은 교사가 한다. 이 화면은 근거 자료와 지도서 평가 요소를 참고로만 보여 준다 (명세서 11-2).
 import { Fragment, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { MISSION_ORDER, MISSIONS } from '@/data/missions';
-import { COMMON, MISSION_STRINGS, S2, S3, S5, TEACHER } from '@/data/strings';
+import { COMMON, MISSION_STRINGS, S2, S3, S5, TEACHER, withoutMark } from '@/data/strings';
 import { ConfirmDialog } from '@/components/ui';
 import { FairyIcon } from '@/components/village/Characters';
 import { WRAPUP_STEP_COUNT } from '@/lib/flow/screenFlow';
-import { classStats, type Learner, learnersOf, type Rate } from '@/lib/teacher/stats';
+import { classStats, type Learner, learnersOf } from '@/lib/teacher/stats';
 import type { ClassSummary, GroupSummary } from '@/lib/teacher/summarize';
 import type { MissionId, PartKind } from '@/lib/types';
 
@@ -129,8 +129,6 @@ const INPUT = 'min-h-10 rounded-xl border-2 border-stone-200 bg-white px-3 text-
 const PRIMARY = 'min-h-10 rounded-xl bg-amber-700 px-4 text-sm font-bold text-white outline-none transition hover:bg-amber-800 disabled:opacity-50';
 const TH = 'whitespace-nowrap px-3 py-2 font-semibold first:pl-5 last:pr-5';
 const TD = 'px-3 py-2.5 first:pl-5 last:pr-5';
-/** 막대 그래프 색 (한 가지 색: 크기만 보여 준다) */
-const BAR = '#d97706';
 
 function Card({ title, note, tag, children, className = '' }: {
   title: string; note?: string; tag?: 'mission' | 'wrapup'; children: ReactNode; className?: string;
@@ -237,12 +235,10 @@ function Pager({ page, pages, setPage }: { page: number; pages: number; setPage:
 
 /**
  * 한눈에 보기: 꼭 필요한 세 가지만
- *  1) 미션별 완료한 모둠, 마무리를 마친 사람 (숫자 카드)  2) 미션별 예상 정답률  3) 마무리 퀴즈 정답률
+ *  1) 미션별 완료한 모둠, 마무리를 마친 사람 (숫자 카드)  2) 미션별 예상  3) 마무리 퀴즈 — 2·3은 고른 답 비율로 나눈 막대
  */
 function Overview({ data }: { data: ClassSummary }) {
   const st = classStats(data);
-  const missionRows = (rates: Record<MissionId, Rate>) =>
-    MISSION_ORDER.map((id) => ({ label: S3.places[id], ...rates[id] }));
   const parts: PartKind[] = ['bulb', 'buzzer', 'motor'];
   return (
     <div className="flex flex-col gap-5">
@@ -256,14 +252,35 @@ function Overview({ data }: { data: ClassSummary }) {
         </div>
       </section>
       <Card title={T.chart.prediction}>
-        <BarList wide rows={missionRows(st.predictionRight)} />
+        <PickBars unit={T.chart.unitGroup} rows={MISSION_ORDER.map((id) => {
+          const correct = MISSIONS[id].correctPrediction;
+          return {
+            label: S3.places[id], title: MISSION_STRINGS[id].predictQuestion,
+            picks: (['a', 'b', 'c'] as const).map((k) => ({
+              key: k, label: withoutMark(MISSION_STRINGS[id].predictChoices[k]), n: st.predictionPick[id][k], correct: k === correct,
+            })),
+          };
+        })} />
       </Card>
       <Card title={T.chart.quiz}>
-        <BarList wide rows={[
-          ...parts.map((p) => ({ label: T.chart.quizExplain(T.chart.explainShort[p]), title: S5.explain.questions[p].q, ...st.explain[p] })),
-          { label: T.chart.quizCheck, title: `${S5.check.before}…${S5.check.after}`, ...st.check },
+        <PickBars unit={T.chart.unitPerson} rows={[
+          ...parts.map((p) => ({
+            label: T.chart.quizExplain(T.chart.explainShort[p]), title: S5.explain.questions[p].q,
+            picks: (['more', 'less', 'same'] as const).map((k) => ({
+              key: k, label: S5.explain.questions[p].choices[k], n: st.explainPick[p][k], correct: k === 'more',
+            })),
+          })),
+          {
+            label: T.chart.quizCheck, title: `${S5.check.before} … ${S5.check.after}`,
+            picks: (['brighter', 'darker'] as const).map((k) => ({
+              key: k, label: S5.check.choices[k], n: st.checkPick[k], correct: k === 'brighter',
+            })),
+          },
           ...S5.misconception.items.map((item, i) => ({
-            label: T.chart.misconceptionShort[i], title: item.text, ...st.misconception[item.key],
+            label: T.chart.misconceptionShort[i], title: item.text,
+            picks: (['O', 'X'] as const).map((k) => ({
+              key: k, label: k === 'O' ? '○' : '×', ox: k, n: st.misconceptionPick[item.key][k], correct: k === item.answer,
+            })),
           })),
         ]} />
       </Card>
@@ -281,35 +298,68 @@ function StatTile({ label, hit, of }: { label: string; hit: number; of: number }
         <span className="text-3xl font-bold tabular-nums text-stone-800">{hit}<span className="text-xl text-stone-400">/{of}</span></span>
         <span className="text-sm tabular-nums text-stone-500">{pct}%</span>
       </p>
-      <span className="h-1.5 overflow-hidden rounded-full bg-stone-100" aria-hidden>
-        <span className="block h-full rounded-full" style={{ width: `${pct}%`, background: BAR }} />
+      {/* 아래 나눠진 막대와 같은 모양·색: 완료는 차분한 초록, 남은 부분은 연한 모래색 */}
+      <span className="h-3 overflow-hidden rounded-full" style={{ background: PICK_WRONG[1] }} aria-hidden>
+        <span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${pct}%`, background: PICK_RIGHT }} />
       </span>
     </div>
   );
 }
 
 /**
- * 가로 막대 목록 (한 가지 색). 비율이면 "3/5 (60%)", count면 개수만 글자로 함께 적는다.
- * 마우스를 올리면 문항 전체 내용과 숫자가 보인다
+ * 나눠진 막대 색: 대시보드의 따뜻한 크림·모래 색감에 맞춘다.
+ * 정답은 차분한 초록(기록 표의 ✓와 같은 계열), 오답은 진한 모래·연한 모래 (✓ 기호와 진하기로도 구분된다)
  */
-function BarList({ rows, count = false, wide = false }: {
-  rows: { label: string; title?: string; hit: number; of: number; text?: string }[]; count?: boolean;
-  /** 이름이 긴 항목 (오개념 문항 등) */
-  wide?: boolean;
+const PICK_RIGHT = '#5f9373';
+const PICK_WRONG = ['#d8bf94', '#ece0c8'];
+
+/**
+ * 나눠진 가로 막대: 문항마다 막대 한 줄을 학생들이 고른 답 비율로 나눈다.
+ * 정답 조각을 맨 앞(초록)에, 오답은 빨강 계열로. 아래에 보기별 인원, 오른쪽에 정답률
+ */
+function PickBars({ rows, unit }: {
+  rows: { label: string; title?: string; picks: { key: string; label: string; n: number; correct: boolean; ox?: 'O' | 'X' }[] }[];
+  unit: string;
 }) {
   return (
-    <ul className="flex flex-col gap-2.5">
+    <ul className="flex flex-col gap-5">
       {rows.map((r) => {
-        const pct = r.of ? (r.hit / r.of) * 100 : 0;
-        const text = r.text ?? (count ? T.chart.count(r.hit) : T.chart.rateOf(r.hit, r.of));
+        const total = r.picks.reduce((n, p) => n + p.n, 0);
+        const hit = r.picks.filter((p) => p.correct).reduce((n, p) => n + p.n, 0);
+        // 정답 먼저, 오답은 보기 순서대로 색을 정한다 (색은 보기에 붙고 순위로 바뀌지 않는다)
+        const ordered = [...r.picks.filter((p) => p.correct), ...r.picks.filter((p) => !p.correct)];
+        const colored = ordered.map((p, i) => ({
+          ...p, color: p.correct ? PICK_RIGHT : PICK_WRONG[Math.min(i - (ordered[0].correct ? 1 : 0), PICK_WRONG.length - 1)],
+        }));
         return (
-          <li key={r.label} className={`grid items-center gap-3 text-sm ${wide ? 'grid-cols-[19rem_1fr_auto]' : 'grid-cols-[6.5rem_1fr_auto]'}`}
-            title={`${r.title ?? r.label} — ${text}`}>
-            <span className="truncate font-semibold text-stone-700">{r.label}</span>
-            <span className="h-3 overflow-hidden rounded-full bg-stone-100">
-              <span className="block h-full rounded-full transition-[width] duration-500" style={{ width: `${pct}%`, background: BAR }} />
-            </span>
-            <span className="whitespace-nowrap tabular-nums text-stone-500">{text}</span>
+          <li key={r.label} className="flex flex-col gap-1.5 text-sm">
+            <div className="flex items-baseline justify-between gap-3">
+              <span className="font-semibold text-stone-700" title={r.title}>{r.label}</span>
+              <span className="whitespace-nowrap text-xs tabular-nums text-stone-400">{T.chart.pickSummary(hit, total, unit)}</span>
+            </div>
+            <div className={`flex h-3 gap-[2px] overflow-hidden rounded-full ${total > 0 ? '' : 'bg-stone-100'}`} role="img"
+              aria-label={colored.map((p) => `${p.label} ${T.chart.pickCount(p.n, unit)}`).join(', ')}>
+              {total > 0 && colored.filter((p) => p.n > 0).map((p) => (
+                <span key={p.key} className="h-full transition-[width] duration-500"
+                  style={{ width: `${(p.n / total) * 100}%`, background: p.color }}
+                  title={`${p.label} — ${T.chart.pickCount(p.n, unit)} (${Math.round((p.n / total) * 100)}%)`} />
+              ))}
+            </div>
+            {/* 보기: 색 점 + 보기 글만 (인원은 막대 조각에 마우스를 올리면 보인다) */}
+            <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-stone-500">
+              {colored.map((p) => (
+                <span key={p.key} className="inline-flex items-center gap-1.5">
+                  <span className="size-2 shrink-0 rounded-full" style={{ background: p.color }} aria-hidden />
+                  {/* ○·×는 글꼴마다 크기가 달라서 같은 크기 그림으로 */}
+                  {p.ox ? (
+                    <svg viewBox="0 0 24 24" className="size-3.5 text-stone-600" fill="none" stroke="currentColor" strokeWidth={2.4}
+                      strokeLinecap="round" role="img" aria-label={p.label}>
+                      {p.ox === 'O' ? <circle cx={12} cy={12} r={7.5} /> : <path d="M5.5 5.5l13 13M18.5 5.5l-13 13" />}
+                    </svg>
+                  ) : <span>{p.label}</span>}
+                </span>
+              ))}
+            </div>
           </li>
         );
       })}

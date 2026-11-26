@@ -1,7 +1,8 @@
 // 교사용 "한눈에 보기" 통계. 화면과 따로 두어 테스트할 수 있게 한다.
 // 점수나 상·중·하를 매기지 않고, 맞힌 수·답한 수 같은 근거 숫자만 센다.
 import { MISSION_ORDER, MISSIONS } from '@/data/missions';
-import type { FinalRecord, MisconceptionKey, MissionId, PartKind } from '@/lib/types';
+import { S5 } from '@/data/strings';
+import type { ExplainChoice, FinalRecord, MisconceptionKey, MissionId, PartKind, PredictionChoice } from '@/lib/types';
 import type { ClassSummary, GroupSummary } from './summarize';
 
 export interface Rate {
@@ -37,6 +38,12 @@ export interface ClassStats {
   explain: Record<PartKind, Rate>;
   /** 마무리 적용하기 */
   check: Rate;
+  /** 고른 답 분포 (대시보드 나눠진 막대용): 미션 예상은 모둠 수, 마무리는 사람 수 */
+  predictionPick: Record<MissionId, Record<PredictionChoice, number>>;
+  explainPick: Record<PartKind, Record<ExplainChoice, number>>;
+  checkPick: Record<'brighter' | 'darker', number>;
+  /** 오개념 문항: 기록에는 맞음/틀림만 있어서 정답으로 거꾸로 O·X를 센다 */
+  misconceptionPick: Record<MisconceptionKey, Record<'O' | 'X', number>>;
   /** 스스로 평가 분포 */
   selfEval: Record<'good' | 'needHelp' | 'needPractice' | 'none', number>;
   /** 힌트를 많이 본 모둠 (많은 순) */
@@ -68,6 +75,7 @@ export function classStats(summary: ClassSummary): ClassStats {
   const missionDone = per(MISSION_ORDER, rate) as Record<MissionId, Rate>;
   const predictionRight = per(MISSION_ORDER, rate) as Record<MissionId, Rate>;
   const compareRight = per(MISSION_ORDER, rate) as Record<MissionId, Rate>;
+  const predictionPick = per(MISSION_ORDER, () => ({ a: 0, b: 0, c: 0 })) as Record<MissionId, Record<PredictionChoice, number>>;
   for (const g of groups) {
     for (const id of MISSION_ORDER) {
       const m = g.missions[id];
@@ -75,6 +83,7 @@ export function classStats(summary: ClassSummary): ClassStats {
       if (m.status === 'done') missionDone[id].hit++;
       if (m.prediction) {
         predictionRight[id].of++;
+        predictionPick[id][m.prediction]++;
         if (m.prediction === MISSIONS[id].correctPrediction) predictionRight[id].hit++;
       }
       if (m.compare) {
@@ -87,6 +96,9 @@ export function classStats(summary: ClassSummary): ClassStats {
   const misconception = per(MIS_KEYS, rate) as Record<MisconceptionKey, Rate>;
   const explain = per(PARTS, rate) as Record<PartKind, Rate>;
   const check = rate();
+  const explainPick = per(PARTS, () => ({ more: 0, less: 0, same: 0 })) as Record<PartKind, Record<ExplainChoice, number>>;
+  const checkPick = { brighter: 0, darker: 0 };
+  const misconceptionPick = per(MIS_KEYS, () => ({ O: 0, X: 0 })) as Record<MisconceptionKey, Record<'O' | 'X', number>>;
   const selfEval = { good: 0, needHelp: 0, needPractice: 0, none: 0 };
   for (const l of learners) {
     for (const k of MIS_KEYS) {
@@ -94,6 +106,8 @@ export function classStats(summary: ClassSummary): ClassStats {
       if (r) {
         misconception[k].of++;
         if (r === 'correct') misconception[k].hit++;
+        const answer = S5.misconception.items.find((i) => i.key === k)!.answer;
+        misconceptionPick[k][r === 'correct' ? answer : answer === 'O' ? 'X' : 'O']++;
       }
     }
     for (const p of PARTS) {
@@ -101,11 +115,13 @@ export function classStats(summary: ClassSummary): ClassStats {
       if (v) {
         explain[p].of++;
         if (v === 'more') explain[p].hit++; // 세 질문 모두 "전지 2개가 더 ~했어요"가 맞다
+        explainPick[p][v]++;
       }
     }
     if (l.final.check) {
       check.of++;
       if (l.final.check === 'brighter') check.hit++;
+      checkPick[l.final.check]++;
     }
     selfEval[l.final.selfEval ?? 'none']++;
   }
@@ -122,6 +138,7 @@ export function classStats(summary: ClassSummary): ClassStats {
     groups: groups.length,
     learners: learners.length,
     finishedLearners: learners.filter((l) => l.finished).length,
-    missionDone, predictionRight, compareRight, misconception, explain, check, selfEval, hintsByGroup,
+    missionDone, predictionRight, compareRight, misconception, explain, check,
+    predictionPick, explainPick, checkPick, misconceptionPick, selfEval, hintsByGroup,
   };
 }

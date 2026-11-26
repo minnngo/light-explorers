@@ -51,5 +51,9 @@ describe('교사용 한눈에 보기 통계', () => {
     expect(st.explain.buzzer).toEqual({ hit: 0, of: 1 });
     expect(st.check).toEqual({ hit: 1, of: 1 });
     expect(st.selfEval).toEqual({ good: 1, needHelp: 0, needPractice: 0, none: 2 });
+    // 고른 답 분포: 오개념은 맞음/틀림을 정답으로 거꾸로 O·X로 센다 (q1 정답 X: 맞음 1 → X, 틀림 1 → O)
+    expect(st.misconceptionPick.q1).toEqual({ O: 1, X: 1 });
+    expect(st.explainPick.buzzer).toEqual({ more: 0, less: 1, same: 0 });
+    expect(st.checkPick).toEqual({ brighter: 1, darker: 0 });
   });
 });
