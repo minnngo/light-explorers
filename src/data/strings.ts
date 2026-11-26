@@ -544,10 +544,12 @@ export const TEACHER = {
   setupDeleteBody: '이 모둠의 기록도 함께 지워지고,\n학생 화면의 모둠 목록에서도 사라져요.',
   setupDeleteOk: '지우기',
   setupDeleteCancel: '취소',
-  columns: { group: '모둠', where: '지금 위치', revived: '되살린 곳', hints: '힌트/시도', selfEval: '스스로 평가', wrote: '쓴 글' },
+  columns: { group: '모둠', lastActive: '마지막 활동', where: '지금 위치', revived: '되살린 곳', hints: '힌트/시도', selfEval: '스스로 평가', wrote: '쓴 글' },
   details: '자세히 보기',
   nav: { overview: '한눈에 보기', progress: '모둠 진행', records: '기록', groups: '모둠 관리', rubric: '평가 기준' },
   updatedAt: (time: string) => `${time}에 새로 불러옴`,
+  lastActive: (time: string) => `마지막 활동 ${time}`,
+  orderNote: '최근에 게임을 한 순서',
   recordTabs: { group: '모둠 기록 (도입·미션)', personal: '개인 마무리 기록' },
   personalNote: '마무리는 각자 해요. 혼자 한 모둠은 모둠 이름으로 한 줄이에요.',
   stat: {

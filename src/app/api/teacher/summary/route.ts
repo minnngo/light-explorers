@@ -2,7 +2,6 @@
 // 헤더 x-teacher-pin 이 환경 변수 TEACHER_PIN 과 같아야 한다.
 import type { NextRequest } from 'next/server';
 import { getServerSupabase } from '@/lib/supabase/server';
-import { byGroupName } from '@/lib/teacher/classGroups';
 import { pinMatches } from '@/lib/teacher/pin';
 import { summarize } from '@/lib/teacher/summarize';
 import type { AppState } from '@/lib/types';
@@ -26,8 +25,6 @@ export async function GET(request: NextRequest) {
   if (error) return Response.json({ error: error.message }, { status: 500 });
 
   const rows = (data ?? []).map((r) => ({ state: r.state as AppState, updatedAt: r.updated_at as string }));
-  // 모둠 순서는 이름순(1모둠, 2모둠, …)으로 고정한다. 10초마다 새로 불러와도 줄이 뒤섞이지 않게
-  const summary = summarize(rows);
-  summary.groups.sort(byGroupName((g) => g.groupName));
-  return Response.json(summary, { headers: { 'Cache-Control': 'no-store' } });
+  // 모둠 순서: 최근에 게임을 한(마지막으로 저장된) 것부터. DB에서 updated_at 늦은 순으로 가져온 순서 그대로
+  return Response.json(summarize(rows), { headers: { 'Cache-Control': 'no-store' } });
 }

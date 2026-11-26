@@ -320,6 +320,12 @@ function BarList({ rows, count = false, wide = false }: {
 
 // ───── 모둠 진행 ─────
 
+/** 마지막으로 저장된 시각 (오늘 수업이라 시:분만) */
+function timeOf(iso: string): string {
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? '-' : d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+}
+
 function where(g: GroupSummary): string {
   return `${SCREEN_NAMES[g.screen]}${g.currentMission ? ` · ${S3.places[g.currentMission]} ${g.currentStep ? STEP_NAMES[g.currentStep] : ''}` : ''}${
     g.finished ? ` · ${L.finished}` : ''}`;
@@ -328,12 +334,13 @@ function where(g: GroupSummary): string {
 function Progress({ groups }: { groups: GroupSummary[] }) {
   const { rows, ...pager } = usePages(groups, 8);
   return (
-    <Card title={T.progressTitle}>
+    <Card title={T.progressTitle} note={T.orderNote}>
       <div className="-mx-5 overflow-x-auto">
         <table className="w-full text-sm">
           <thead className="border-y border-stone-200 bg-stone-50 text-left text-stone-500">
             <tr>
               <th className={TH}>{T.columns.group}</th>
+              <th className={TH}>{T.columns.lastActive}</th>
               <th className={TH}>{T.columns.where}</th>
               <th className={TH}>{T.columns.revived}</th>
               {MISSION_ORDER.map((id) => <th key={id} className={TH}>{S3.places[id]} {T.columns.hints}</th>)}
@@ -344,6 +351,7 @@ function Progress({ groups }: { groups: GroupSummary[] }) {
             {rows.map((g) => (
               <tr key={g.groupId} className="border-b border-stone-100 align-top last:border-0">
                 <td className={`${TD} font-bold`}>{g.groupName}</td>
+                <td className={`${TD} whitespace-nowrap tabular-nums text-stone-500`}>{timeOf(g.updatedAt)}</td>
                 <td className={TD}>{where(g)}</td>
                 <td className={TD}>{g.revived}/3</td>
                 {MISSION_ORDER.map((id) => (
@@ -387,6 +395,7 @@ function GroupRecords({ groups }: { groups: GroupSummary[] }) {
   const { rows, ...pager } = usePages(groups, 3);
   return (
     <div className="flex flex-col gap-4">
+      <p className="-mb-1 text-sm text-stone-500">{T.orderNote}</p>
       {rows.map((g) => <GroupRecord key={g.groupId} g={g} />)}
       <Pager {...pager} />
     </div>
@@ -400,7 +409,7 @@ function GroupRecord({ g }: { g: GroupSummary }) {
     <section className="flex flex-col gap-4 rounded-2xl bg-white p-5 shadow-sm">
       <header className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
         <h2 className="text-lg font-bold">{g.groupName}</h2>
-        <span className="text-sm text-stone-500">{where(g)} · {T.columns.revived} {g.revived}/3</span>
+        <span className="text-sm text-stone-500">{where(g)} · {T.columns.revived} {g.revived}/3 · {T.lastActive(timeOf(g.updatedAt))}</span>
       </header>
       {/* 도입: 질문(작은 회색)과 답(굵게)을 세 칸으로 */}
       <div className="flex flex-col gap-2">
