@@ -61,6 +61,9 @@ export type JudgeReason =
   | 'BUZZER_REVERSED' // 버저 빨간 선이 − 쪽에 이어짐
   | 'SHORT_CIRCUIT'; // 부품을 거치지 않고 전지 양 끝이 이어짐 (명세에 없음, 추가)
 
+/** 힌트 종류: 막힌 판정 이유 + 작동은 하지만 회로판이 바라는 밝기에 못 미침(B 회로판에 전지 1개만 이음) */
+export type HintKey = Exclude<JudgeReason, 'OK'> | 'ONE_BATTERY';
+
 export interface JudgeResult {
   /** 지금 실제 작동 레벨 (스위치 상태 반영) */
   level: Level;

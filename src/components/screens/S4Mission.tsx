@@ -228,7 +228,7 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card, onM
   // 힌트는 ② 만들기에서만 (8-1 도전 중에는 일부러 같은 극끼리 잇기 때문에 힌트를 주지 않는다)
   // 튜토리얼 중에는 힌트 말풍선이 겹치지 않게 멈춘다
   const { ready: hintReady, hint, demoReady, reveal: revealHint, revealDemo } =
-    useHint(board, result, record.step === 'build' && !hintsPaused, onHintShown);
+    useHint(board, result, record.step === 'build' && !hintsPaused, onHintShown, REQUIRED_LEVEL[boardId]);
   // 두 번째 힌트(시범): 한 번 켜면 회로가 작동할 때까지 끝까지 안내한다.
   // 남은 단계를 모두 글로 보여 주고, 지금 할 단계는 회로판 위에서 튜토리얼처럼 반짝임·커서로 보여 준다.
   // 학생이 한 단계를 하면 회로판이 바뀌고, 바뀐 회로판에서 남은 단계를 다시 계산한다

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from 'react';
 import { HINT_DELAY_MS, type HintKey, hintFor } from '@/lib/circuit/hints';
-import type { BoardState, JudgeResult } from '@/lib/types';
+import type { BoardState, JudgeResult, Level } from '@/lib/types';
 
 /**
  * 막혔을 때 두 단계 힌트.
@@ -17,8 +17,10 @@ export function useHint(
   result: JudgeResult,
   active: boolean,
   onShown: () => void,
+  /** 이 회로판이 바라는 작동 레벨 (B 회로판은 2) */
+  required: Level = 1,
 ): { ready: boolean; hint: HintKey | null; demoReady: boolean; reveal: () => void; revealDemo: () => void } {
-  const candidate = active ? hintFor(result, board.switchClosed) : null;
+  const candidate = active ? hintFor(result, board.switchClosed, required) : null;
   const [readyAt, setReadyAt] = useState<number | null>(null);
   const [openedAt, setOpenedAt] = useState<number | null>(null);
   const [demoAt, setDemoAt] = useState<number | null>(null);

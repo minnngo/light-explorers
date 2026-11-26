@@ -1,7 +1,7 @@
 // 학생 화면에 나오는 모든 문구 (명세서 12장: 문구는 한 파일에 모아 코드와 분리).
 // 문구를 고칠 때는 이 파일만 고치면 된다.
 // 주의: 미션 화면(S4) 문구에는 "직렬"이라는 말과 원리 정리를 쓰지 않는다. 용어는 S5 확인하기에서 처음 나온다.
-import type { ExplorerLook, JudgeReason, MissionId, PartKind } from '@/lib/types';
+import type { ExplorerLook, HintKey, MissionId, PartKind } from '@/lib/types';
 
 // ───────────── 세계관 ─────────────
 // 디지털 미션만의 이야기 (3차시 책 이야기와 잇지 않기로 함).
@@ -288,7 +288,7 @@ export function terminalName(id: string, part: PartKind, twoBatteries: boolean):
 }
 
 /** 7-3 막혔을 때 힌트. 판정 결과(reason)와 1:1로 대응한다 */
-export const HINTS: Record<Exclude<JudgeReason, 'OK'>, string> = {
+export const HINTS: Record<HintKey, string> = {
   NO_WIRES: '부품의 끝(동그란 금속 단자)을 집게 달린 전선으로 이어 보세요.',
   SWITCH_OPEN: '스위치가 열려 있어요. 눌러서 닫아 보세요.',
   BROKEN: '전지의 양 끝(+, −)과 부품이 끊기지 않게 이어져야 해요. 끊어진 곳이 없는지 살펴보세요.',
@@ -299,6 +299,8 @@ export const HINTS: Record<Exclude<JudgeReason, 'OK'>, string> = {
   // 아래 두 개는 명세서에 없는 상황이라 추가한 문구 (팀 확인 필요)
   SWITCH_MISSING: '스위치도 고리 안에 함께 이어 보세요.',
   SHORT_CIRCUIT: '부품을 거치지 않고 전지의 양 끝이 바로 이어졌어요. 금속 부분끼리 닿게, 부품을 지나도록 이어 보세요.',
+  // B 회로판에 전지 1개만 이어서 작동은 하지만 전지 2개 회로가 아닐 때
+  ONE_BATTERY: 'B 회로는 전지 2개를 모두 이어야 해요. 두 전지를 서로 다른 극끼리 한 줄로 이어 보세요.',
 };
 
 export interface MissionStrings {
