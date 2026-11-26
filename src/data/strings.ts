@@ -254,6 +254,39 @@ export const WORLD = {
   },
 };
 
+/** 막힌 채 5초가 지나면 나오는 버튼. 눌러야 아래 힌트가 보인다 */
+export const HINT_BUTTON = '힌트 보기';
+/** 글 힌트를 보고도 모르겠을 때: 회로판 위에서 다음에 할 일을 직접 보여 준다 */
+export const HINT_DEMO = {
+  button: '시범 보기',
+  title: '이렇게 해 보세요',
+  /** 단계 글. a, b는 단자 이름 (terminalName) */
+  remove: (a: string, b: string) => `${withJosa(a, '와', '과')} ${withJosa(b, '를', '을')} 잇는 전선을 눌러서 지워요.`,
+  add: (a: string, b: string) => `${withJosa(a, '와', '과')} ${withJosa(b, '를', '을')} 전선으로 이어요.`,
+  switch: '스위치를 눌러서 닫아요.',
+};
+
+/** 받침이 있으면 b, 없으면 a를 붙인다 (+, − 기호는 "플러스·마이너스"로 읽어 받침 없음) */
+function withJosa(word: string, a: string, b: string): string {
+  const last = word.charCodeAt(word.length - 1);
+  const hasFinal = last >= 0xac00 && last <= 0xd7a3 && (last - 0xac00) % 28 !== 0;
+  return word + (hasFinal ? b : a);
+}
+
+/** 시범 단계 글에 쓰는 단자 이름 (예: 전지 +, 버저 −, 전동기 빨간 선, 스위치 위쪽) */
+export function terminalName(id: string, part: PartKind, twoBatteries: boolean): string {
+  const [comp, end] = id.split('.');
+  if (comp === 'bat1' || comp === 'bat2') {
+    const which = twoBatteries ? (comp === 'bat1' ? '왼쪽 전지' : '오른쪽 전지') : '전지';
+    return `${which} ${end === 'plus' ? '+' : '−'}`;
+  }
+  if (comp === 'sw') return `스위치 ${end === 'a' ? '위쪽' : '아래쪽'}`;
+  // 버저는 단자 옆 글자대로 +, −로, 전동기는 교과서처럼 빨간 선·검은 선으로 부른다
+  if (part === 'buzzer') return `버저 ${end === 'a' ? '+' : '−'}`;
+  if (part === 'motor') return `전동기 ${end === 'a' ? '빨간 선' : '검은 선'}`;
+  return `${PART_NAMES[part]} ${end === 'a' ? '왼쪽' : '오른쪽'}`;
+}
+
 /** 7-3 막혔을 때 힌트. 판정 결과(reason)와 1:1로 대응한다 */
 export const HINTS: Record<Exclude<JudgeReason, 'OK'>, string> = {
   NO_WIRES: '부품의 끝(동그란 금속 단자)을 집게 달린 전선으로 이어 보세요.',
@@ -261,7 +294,8 @@ export const HINTS: Record<Exclude<JudgeReason, 'OK'>, string> = {
   BROKEN: '전지의 양 끝(+, −)과 부품이 끊기지 않게 이어져야 해요. 끊어진 곳이 없는지 살펴보세요.',
   SAME_POLE: '전지 2개는 서로 다른 극끼리 이어야 해요. 한 전지의 + 와 다른 전지의 − 를 이어 보세요.',
   BUZZER_REVERSED:
-    '버저가 울리지 않으면 버저 양 끝에 연결한 전선을 서로 바꾸어 이어 보세요. 빨간 선은 전지의 + 쪽에 이어요.',
+    // 지도서 288쪽: 빨간·검은 선의 뜻은 미리 알려 주지 않고, 작동하지 않으면 반대로 연결해 보게 한다 (실험관찰 45쪽 도움말과 같은 말)
+    '버저가 울리지 않으면 버저 양 끝에 연결한 전선을 서로 바꾸어 이어 보세요.',
   // 아래 두 개는 명세서에 없는 상황이라 추가한 문구 (팀 확인 필요)
   SWITCH_MISSING: '스위치도 고리 안에 함께 이어 보세요.',
   SHORT_CIRCUIT: '부품을 거치지 않고 전지의 양 끝이 바로 이어졌어요. 금속 부분끼리 닿게, 부품을 지나도록 이어 보세요.',
@@ -281,7 +315,7 @@ export interface MissionStrings {
   /** ④ 확인에서 펼쳐 보는 심화 내용 (선택) */
   furtherLearning?: string;
   goCompare: string;
-  observation: { A: string; B: string; extra?: string };
+  observation: { A: string; B: string };
   compareGuide: string;
   compareBefore: string;
   compareAfter: string;
@@ -365,11 +399,11 @@ export const MISSION_STRINGS: Record<MissionId, MissionStrings> = {
       'B 회로: 전지 2개를 서로 다른 극끼리 한 줄로 이은 뒤 버저, 스위치를 연결해 보세요.',
       '두 회로의 스위치를 닫고 소리의 세기를 비교해 보세요.',
     ],
-    checklistHelp: '버저의 빨간 선은 전지의 + 쪽에, 검은 선은 − 쪽에 이어요.',
+    // 지도서 288쪽: 선 색의 뜻은 미리 알려 주지 않는다 (실험관찰 45쪽 도움말)
+    checklistHelp: '버저가 울리지 않으면 버저 양 끝에 연결한 전선을 서로 바꾸어 이어 보세요.',
     observation: {
       A: 'A 회로(전지 1개): 안내 종이 작게 울려요.',
       B: 'B 회로(전지 2개): 안내 종이 더 크게 울려요!',
-      extra: '종이 울리지 않아요. 힌트를 확인해 보세요.',
     },
     compareBefore: `${COMPARE_BEFORE} 버저의 소리가 더 (`,
     compareAfter: ').',

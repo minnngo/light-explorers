@@ -3,14 +3,15 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react';
 import { REQUIRED_LEVEL } from '@/data/boards';
 import { MISSION_ORDER, MISSIONS } from '@/data/missions';
-import { COMMON, HINTS, MISSION_STRINGS, ROOM, TUTORIAL } from '@/data/strings';
+import { COMMON, HINT_BUTTON, HINT_DEMO, HINTS, MISSION_STRINGS, ROOM, terminalName, TUTORIAL } from '@/data/strings';
 import { challengeBoardCoach } from '@/lib/flow/challenge';
 import { canGoCompare, currentResults, judgeBoard, type MissionFocus, missionFocus } from '@/lib/flow/missionFlow';
+import { type Fix, nextFix, planFixes } from '@/lib/circuit/nextFix';
 import { actions } from '@/lib/store/actions';
 import { loadTutorialDone, saveTutorialDone } from '@/lib/store/persistence';
 import { type Action, createInitialState, isEditable, reducer } from '@/lib/store/reducer';
 import { type BoardNote, useStore } from '@/lib/store/StoreContext';
-import { isLeader, presentMembers } from '@/lib/sync/live';
+import { presentMembers } from '@/lib/sync/live';
 import { useLive } from '@/lib/sync/LiveContext';
 import { type BoardSnapshot, type CoachMark, coachFor, nextStep, stepDone, type TutorialStep } from '@/lib/tutorial/tutorial';
 import type { BoardId, BoardState, JudgeResult, MissionStep } from '@/lib/types';
@@ -205,7 +206,7 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card, onM
   /** 이 기기에서 한 회로판 조작 (튜토리얼이 내 조작으로만 넘어가게) */
   onMyAction: (board: BoardId, kind: 'add' | 'remove' | 'switch') => void;
 }) {
-  const { state, dispatch, muted, room, members } = useStore();
+  const { state, dispatch, muted, room } = useStore();
   const { peers, publish } = useLive();
   const id = state.currentMission!;
   const record = state.missions[id];
@@ -222,19 +223,36 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card, onM
     ? [{ id: p.member.id, name: p.member.name, color: p.color, x: p.board.x, y: p.board.y, from: p.board.from }]
     : []));
 
-  // 힌트 횟수는 모둠에서 한 기기만 센다 (같은 힌트를 여러 기기가 여러 번 세지 않게)
-  const countsHints = room === null || isLeader(room, members);
-  const onHintShown = useCallback(() => {
-    if (countsHints) dispatch({ type: 'HINT_SHOWN' });
-  }, [dispatch, countsHints]);
+  // 힌트 횟수: 학생이 "힌트 보기"를 눌러 힌트를 펼칠 때마다 센다 (누른 기기에서 한 번)
+  const onHintShown = useCallback(() => dispatch({ type: 'HINT_SHOWN' }), [dispatch]);
   // 힌트는 ② 만들기에서만 (8-1 도전 중에는 일부러 같은 극끼리 잇기 때문에 힌트를 주지 않는다)
   // 튜토리얼 중에는 힌트 말풍선이 겹치지 않게 멈춘다
-  const hint = useHint(board, result, record.step === 'build' && !hintsPaused, onHintShown);
+  const { ready: hintReady, hint, demoReady, reveal: revealHint, revealDemo } =
+    useHint(board, result, record.step === 'build' && !hintsPaused, onHintShown);
+  // 두 번째 힌트(시범): 한 번 켜면 회로가 작동할 때까지 끝까지 안내한다.
+  // 남은 단계를 모두 글로 보여 주고, 지금 할 단계는 회로판 위에서 튜토리얼처럼 반짝임·커서로 보여 준다.
+  // 학생이 한 단계를 하면 회로판이 바뀌고, 바뀐 회로판에서 남은 단계를 다시 계산한다
+  const part = MISSIONS[id].part;
+  const [guiding, setGuiding] = useState(false);
+  const canGuide = record.step === 'build' && !hintsPaused && !practice;
+  const plan = guiding && canGuide ? planFixes(boardId, part, board) : [];
+  // 다 고쳤거나(남은 단계 없음) 만들기 단계를 벗어나면 시범을 끈다 (다음에 또 막히면 "힌트 보기"부터)
+  if (guiding && plan.length === 0) setGuiding(false);
+  const step = plan[0];
+  const demoCoach: CoachMark | undefined = !step ? undefined
+    : step.kind === 'remove' ? { wires: true, onlyWires: [[step.from, step.to]], pressWire: [step.from, step.to] }
+      : step.kind === 'add' ? { terminals: [step.from, step.to] }
+        : { switch: true };
+  const stepText = (f: Fix) => {
+    const name = (t: string) => terminalName(t, part, boardId === 'B');
+    return f.kind === 'switch' ? HINT_DEMO.switch : HINT_DEMO[f.kind](name(f.from), name(f.to));
+  };
+  // 시범 보기 버튼은 지금 고칠 거리가 있을 때만
+  const canDemo = hint !== null && canGuide && nextFix(boardId, part, board) !== null;
 
   let observation: string | null = null;
   if (record.step !== 'predict' && !practice) {
     if (result.level > 0 && result.level === REQUIRED_LEVEL[boardId]) observation = text.observation[boardId];
-    if (result.reason === 'BUZZER_REVERSED' && board.switchClosed) observation = text.observation.extra ?? null;
     // 전동기가 반대로 도는 것은 이 차시의 관심(빠르기)이 아니라서 따로 알리지 않는다
   }
 
@@ -281,17 +299,54 @@ function BoardPanel({ boardId, result, dark, look, coach, hintsPaused, card, onM
               act(actions.toggleSwitch(boardId));
               onMyAction(boardId, 'switch');
             }}
-            coach={editable ? coach : undefined}
+            coach={editable ? (coach ?? demoCoach) : undefined}
             peers={room && !practice ? boardPeers : undefined}
             onPointerInfo={room && !practice ? (p) => publish({ board: p && { id: boardId, ...p } }) : undefined}
           />
       </div>
       <p className="min-h-7 text-center font-semibold text-amber-800">{observation}</p>
-      {/* 힌트는 회로판 아래 말풍선으로. 회로판 위에 덮으면 부품이 가려진다 */}
-      {hint && (
-        <p role="status" className="pop-in rounded-2xl border-l-4 border-amber-400 bg-white px-4 py-3 shadow-sm">
-          {HINTS[hint]}
-        </p>
+      {/* 막힌 채 5초가 지나면 "힌트 보기" 버튼이 나오고, 눌러야 힌트가 회로판 아래 말풍선으로 펼쳐진다.
+          회로판 위에 덮으면 부품이 가려진다 */}
+      {plan.length > 0 ? (
+        // 시범: 끝까지 할 일 목록. 지금 할 단계는 진하게 + 회로판 위 시범, 나머지는 흐리게
+        <div role="status" className="pop-in flex flex-col gap-2 rounded-2xl border-l-4 border-amber-400 bg-white px-4 py-3 shadow-sm">
+          <p className="font-bold text-amber-800">{HINT_DEMO.title}</p>
+          <ol className="flex flex-col gap-1.5">
+            {plan.map((f, i) => (
+              <li key={i} className={`flex gap-2 ${i === 0 ? 'font-bold text-stone-900' : 'text-stone-400'}`}>
+                <span className={`flex size-6 shrink-0 items-center justify-center rounded-full text-sm ${
+                  i === 0 ? 'bg-amber-500 text-white' : 'bg-stone-100 text-stone-400'}`}>{i + 1}</span>
+                {stepText(f)}
+              </li>
+            ))}
+          </ol>
+        </div>
+      ) : hint ? (
+        <div role="status" className="pop-in flex flex-col gap-2 rounded-2xl border-l-4 border-amber-400 bg-white px-4 py-3 shadow-sm">
+          <p>{HINTS[hint]}</p>
+          {/* 두 번째 힌트: 글 힌트를 보고 5초가 지나도 못 고쳤으면 오른쪽 아래에 "시범 보기". 누르면 끝까지 직접 보여 준다 */}
+          {canDemo && demoReady && (
+            <button type="button" onClick={() => { revealDemo(); setGuiding(true); }}
+              className="pop-in flex min-h-9 items-center gap-1 self-end text-sm font-bold text-amber-700 outline-none transition hover:text-amber-900">
+              {HINT_DEMO.button}
+              <svg viewBox="0 0 24 24" className="size-4" fill="none" stroke="currentColor" strokeWidth={2.5}
+                strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+            </button>
+          )}
+        </div>
+      ) : hintReady && (
+        <button type="button" onClick={revealHint}
+          className="pop-in flex min-h-11 items-center gap-2 self-center rounded-full border-2 border-amber-400 bg-white px-5 font-bold text-amber-800 shadow-sm outline-none transition hover:bg-amber-50">
+          {/* 전구: 둥근 유리알이 꼭지로 매끈하게 좁아지는 모양 + 꼭지 두 줄 */}
+          <svg viewBox="0 0 24 24" className="size-6" fill="none" stroke="currentColor" strokeWidth={1.8}
+            strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <path d="M12 2.5a6.5 6.5 0 0 0-3.8 11.8c.5.4.8 1 .8 1.7V17h6v-1c0-.7.3-1.3.8-1.7A6.5 6.5 0 0 0 12 2.5z" />
+            <path d="M9.5 19.5h5M10.5 21.8h3" />
+          </svg>
+          {HINT_BUTTON}
+        </button>
       )}
     </section>
   );

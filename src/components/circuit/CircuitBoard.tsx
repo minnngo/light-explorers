@@ -251,6 +251,19 @@ function Coach({ coach, layout, terminals }: {
           </g>
         </>
       )}
+      {coach.pressWire && (() => {
+        const a = terminals.get(coach.pressWire[0]);
+        const b = terminals.get(coach.pressWire[1]);
+        if (!a || !b) return null;
+        // 전선 곡선(wirePath)의 한가운데: 두 끝의 가운데에서 25만큼 위
+        return (
+          <g transform={`translate(${(a.x + b.x) / 2} ${(a.y + b.y) / 2 - 25})`}>
+            <g className="bob">
+              <CoachCursor press />
+            </g>
+          </g>
+        );
+      })()}
       {coach.switch && sw && (
         <>
           <g transform={`translate(${sw.center.x} ${sw.center.y})`}>
@@ -299,127 +312,262 @@ function PartDrawing({
 
   switch (component.type) {
     case 'battery': {
-      // 전지 끼우개에 끼운 모습. 방향은 고정 (뒤집는 버튼 없음)
+      // 교과서 준비물 사진처럼: 파란 전지 끼우개에 끼운 원통형 전지(은백색 몸통, − 쪽은 주황 띠, + 쪽은 볼록한 꼭지).
+      // 방향은 고정 (뒤집는 버튼 없음)
       const [plus, minus] = terminals;
+      const plusRight = plus.x > minus.x;
       const left = Math.min(plus.x, minus.x) + TERMINAL_RADIUS;
       const width = Math.abs(plus.x - minus.x) - TERMINAL_RADIUS * 2;
-      const nubX = plus.x > minus.x ? left + width - 6 : left - 2;
+      const cy = center.y;
+      const bodyLeft = left + (plusRight ? 4 : 10);
+      const bodyWidth = width - 14;
+      const bandWidth = Math.round(bodyWidth * 0.3);
+      const bandX = plusRight ? bodyLeft : bodyLeft + bodyWidth - bandWidth;
+      const nubX = plusRight ? bodyLeft + bodyWidth : bodyLeft - 6;
+      const id = component.id;
       return (
         <g pointerEvents="none">
-          <rect x={left - 6} y={center.y - 26} width={width + 12} height={52} rx={8} fill="#475569" />
-          <rect x={left} y={center.y - 18} width={width} height={36} rx={6} fill="#f59e0b" />
-          <rect x={nubX} y={center.y - 8} width={8} height={16} fill="#fbbf24" />
-          {label(PART_NAMES.battery, center.x, center.y + 6)}
+          <defs>
+            <linearGradient id={`cell-${id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#94a3b8" />
+              <stop offset="35%" stopColor="#f8fafc" />
+              <stop offset="100%" stopColor="#94a3b8" />
+            </linearGradient>
+            <linearGradient id={`band-${id}`} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#c2410c" />
+              <stop offset="35%" stopColor="#fb923c" />
+              <stop offset="100%" stopColor="#c2410c" />
+            </linearGradient>
+          </defs>
+          {/* 파란 전지 끼우개 (양 끝은 금속 판) */}
+          <rect x={left - 6} y={cy - 26} width={width + 12} height={52} rx={6} fill="#2563eb" stroke="#1e3a8a" strokeWidth={2} />
+          <rect x={left - 2} y={cy - 20} width={4} height={40} rx={1} fill="#cbd5e1" />
+          <rect x={left + width - 2} y={cy - 20} width={4} height={40} rx={1} fill="#cbd5e1" />
+          {/* 전지 몸통, − 쪽 주황 띠, + 쪽 꼭지 */}
+          <rect x={bodyLeft} y={cy - 17} width={bodyWidth} height={34} rx={5} fill={`url(#cell-${id})`} stroke="#64748b" strokeWidth={1} />
+          <rect x={bandX} y={cy - 17} width={bandWidth} height={34} rx={5} fill={`url(#band-${id})`} />
+          <rect x={nubX} y={cy - 7} width={6} height={14} rx={2} fill={`url(#cell-${id})`} stroke="#64748b" strokeWidth={1} />
+          <text x={plusRight ? bandX + bandWidth + (bodyWidth - bandWidth) / 2 : bodyLeft + (bodyWidth - bandWidth) / 2} y={cy + 6}
+            textAnchor="middle" fontSize={18} fontWeight={700} fill="#1e293b">
+            {PART_NAMES.battery}
+          </text>
         </g>
       );
     }
     case 'switch': {
+      // 교과서 준비물 사진처럼: 노란 받침 위의 금속 손잡이(칼 스위치). 아래 경첩을 축으로
+      // 닫히면 손잡이가 위 금속 집게에 끼워지고, 열리면 비스듬히 들린다. 양 끝에서 회색 전선이 단자로 나간다
       const [a, b] = terminals;
-      const top = a.y + TERMINAL_RADIUS;
-      const bottom = b.y - TERMINAL_RADIUS;
+      const x = a.x;
+      const baseTop = a.y + TERMINAL_RADIUS + 10;
+      const baseBottom = b.y - TERMINAL_RADIUS - 10;
+      const clipY = baseTop + 10;
+      const hingeY = baseBottom - 12;
+      const leadPath = (from: number, to: number) => `M ${x} ${from} L ${x} ${to}`;
       return (
         <g onClick={onToggleSwitch} style={{ cursor: onToggleSwitch ? 'pointer' : 'default' }}>
-          <rect x={a.x - 34} y={top} width={68} height={bottom - top} fill="transparent" pointerEvents="all" />
-          <line x1={a.x} y1={top} x2={a.x} y2={top + 12} stroke={ink} strokeWidth={6} />
-          <line x1={a.x} y1={bottom} x2={switchClosed ? a.x : a.x + 34} y2={switchClosed ? top + 12 : top + 24}
-            stroke={switchClosed ? '#16a34a' : '#dc2626'} strokeWidth={8} strokeLinecap="round"
-            style={{ transition: 'all 0.2s' }} />
-          {label(`${PART_NAMES.switch} ${switchClosed ? '닫힘' : '열림'}`, a.x - 10, a.y - TERMINAL_RADIUS - 14)}
+          <rect x={x - 34} y={a.y + TERMINAL_RADIUS} width={68} height={b.y - a.y - TERMINAL_RADIUS * 2} fill="transparent" pointerEvents="all" />
+          {[leadPath(a.y, baseTop + 4), leadPath(baseBottom - 4, b.y)].map((d) => (
+            <g key={d} pointerEvents="none">
+              <path d={d} stroke={GRAY_LEAD.edge} strokeWidth={8} strokeLinecap="round" />
+              <path d={d} stroke={GRAY_LEAD.fill} strokeWidth={4.5} strokeLinecap="round" />
+            </g>
+          ))}
+          <defs>
+            <linearGradient id="switch-base" x1="0" x2="1">
+              <stop offset="0%" stopColor="#facc15" />
+              <stop offset="45%" stopColor="#fef08a" />
+              <stop offset="100%" stopColor="#eab308" />
+            </linearGradient>
+          </defs>
+          {/* 받침 */}
+          <rect x={x - 20} y={baseTop} width={40} height={baseBottom - baseTop} rx={6} fill="url(#switch-base)"
+            stroke="#a16207" strokeWidth={1.5} pointerEvents="none" />
+          {/* 위 금속 집게와 아래 경첩 */}
+          <rect x={x - 9} y={clipY - 6} width={18} height={12} rx={2} fill="#94a3b8" stroke="#475569" strokeWidth={1.2} pointerEvents="none" />
+          <rect x={x - 9} y={hingeY - 6} width={18} height={12} rx={2} fill="#94a3b8" stroke="#475569" strokeWidth={1.2} pointerEvents="none" />
+          {/* 손잡이: 경첩을 축으로 돈다 */}
+          <g pointerEvents="none"
+            style={{ transform: `rotate(${switchClosed ? 0 : 38}deg)`, transformOrigin: `${x}px ${hingeY}px`, transition: 'transform 0.2s' }}>
+            <line x1={x} y1={hingeY} x2={x} y2={clipY - 2} stroke="#475569" strokeWidth={7} strokeLinecap="round" />
+            <line x1={x} y1={hingeY} x2={x} y2={clipY - 2} stroke="#e2e8f0" strokeWidth={3.5} strokeLinecap="round" />
+            <rect x={x - 6} y={clipY - 20} width={12} height={16} rx={4} fill="#1f2937" stroke="#94a3b8" strokeWidth={1.2} />
+          </g>
+          <circle cx={x} cy={hingeY} r={3.5} fill="#475569" pointerEvents="none" />
+          {label(`${PART_NAMES.switch} ${switchClosed ? '닫힘' : '열림'}`, x - 10, a.y - TERMINAL_RADIUS - 14)}
         </g>
       );
     }
     case 'bulb':
       return <Bulb layout={layout} level={result.level} label={label} />;
     case 'buzzer':
-      return <Buzzer layout={layout} level={result.level} label={label} />;
+      return <Buzzer layout={layout} level={result.level} dark={dark} label={label} />;
     case 'motor':
-      return <Motor layout={layout} result={result} ink={ink} label={label} />;
+      return <Motor layout={layout} result={result} ink={ink} dark={dark} label={label} />;
   }
 }
 
 type LabelFn = (text: string, x: number, y: number) => React.ReactNode;
 
-/** 부품과 두 단자를 잇는 다리(끼우개 선) */
-function Leads({ layout, colors }: { layout: ComponentLayout; colors: [string, string] }) {
-  const { center, terminals } = layout;
+/**
+ * 부품에서 나온 피복 전선 두 가닥. 부품 아래(from)에서 나와 살짝 휘어 단자(금속 집게 자리)로 들어간다.
+ * 겉은 진한 테두리, 속은 피복 색이라 "고무로 싼 전선"처럼 보인다
+ */
+function Leads({ layout, from, colors }: {
+  layout: ComponentLayout;
+  /** 부품에서 전선이 나오는 두 점 */
+  from: [{ x: number; y: number }, { x: number; y: number }];
+  colors: [{ fill: string; edge: string }, { fill: string; edge: string }];
+}) {
   return (
     <>
-      {terminals.map((t, i) => (
-        <line key={t.id} x1={center.x + (i === 0 ? -14 : 14)} y1={center.y + 30} x2={t.x} y2={t.y}
-          stroke={colors[i]} strokeWidth={5} pointerEvents="none" />
-      ))}
+      {layout.terminals.map((t, i) => {
+        const s = from[i];
+        const dir = t.x < s.x ? 1 : -1;
+        const d = `M ${s.x} ${s.y} C ${s.x} ${s.y + 18} ${t.x + dir * 34} ${t.y} ${t.x} ${t.y}`;
+        return (
+          <g key={t.id} pointerEvents="none">
+            <path d={d} stroke={colors[i].edge} strokeWidth={8} fill="none" strokeLinecap="round" />
+            <path d={d} stroke={colors[i].fill} strokeWidth={4.5} fill="none" strokeLinecap="round" />
+          </g>
+        );
+      })}
     </>
   );
 }
 
+/** 전구·스위치처럼 +, −가 정해지지 않은 부품의 회색 전선 */
+const GRAY_LEAD = { fill: '#94a3b8', edge: '#475569' };
+/** 버저·전동기에 달린 빨간 선·검은 선 (교과서 준비물 사진처럼) */
+const RED_LEAD = { fill: '#dc2626', edge: '#7f1d1d' };
+const blackLead = (dark: boolean) => ({ fill: dark ? '#4b5563' : '#1f2937', edge: dark ? '#9ca3af' : '#000000' });
+
 function Bulb({ layout, level, label }: { layout: ComponentLayout; level: number; label: LabelFn }) {
   const { center } = layout;
-  // 밝기 3단계: 꺼짐(검은 전구) / 약함(흐릿한 연노랑) / 밝음(진한 노랑 + 빛줄기).
+  const cx = center.x;
+  const gy = center.y - 14; // 유리알 가운데 (빛과 빛줄기의 중심)
+  const neck = center.y + 10; // 유리알이 꼭지쇠로 들어가는 곳
+  // 교과서 준비물 사진처럼: 꼬마전구(둥근 유리알 + 나사 꼭지쇠)를 금색 전구 끼우개에 끼운 모습.
+  // 밝기 3단계: 꺼짐(맑은 유리 + 회색 필라멘트) / 약함(흐릿한 연노랑) / 밝음(진한 노랑 + 빛줄기).
   // 아이들은 "더 노란 것 = 더 밝은 것"으로 읽으므로 밝을수록 노랑이 진하게 (흰빛으로 가면 덜 밝아 보인다)
-  const fill = ['#374151', '#eee2b8', 'url(#bulb-bright)'][level];
+  const glass = ['#e2e8f0', '#eee2b8', 'url(#bulb-bright)'][level];
+  const filament = ['#57534e', '#ea580c', '#c2410c'][level];
+  const glassPath = `M ${cx - 11} ${neck} C ${cx - 30} ${neck - 14} ${cx - 30} ${gy - 30} ${cx} ${gy - 30} `
+    + `C ${cx + 30} ${gy - 30} ${cx + 30} ${neck - 14} ${cx + 11} ${neck} Z`;
   return (
     <g pointerEvents="none">
-      <Leads layout={layout} colors={['#64748b', '#64748b']} />
+      <Leads layout={layout} colors={[GRAY_LEAD, GRAY_LEAD]}
+        from={[{ x: cx - 10, y: center.y + 36 }, { x: cx + 10, y: center.y + 36 }]} />
       {level === 2 &&
         Array.from({ length: 8 }, (_, i) => {
           const angle = (i * Math.PI) / 4;
           return (
-            <line key={i} x1={center.x + Math.cos(angle) * 44} y1={center.y - 8 + Math.sin(angle) * 44}
-              x2={center.x + Math.cos(angle) * 66} y2={center.y - 8 + Math.sin(angle) * 66}
+            <line key={i} x1={cx + Math.cos(angle) * 44} y1={gy + Math.sin(angle) * 44}
+              x2={cx + Math.cos(angle) * 66} y2={gy + Math.sin(angle) * 66}
               stroke="#facc15" strokeWidth={5} strokeLinecap="round" />
           );
         })}
-      {level > 0 && <circle cx={center.x} cy={center.y - 8} r={level === 2 ? 62 : 42} fill="#fde047" opacity={level === 2 ? 0.5 : 0.12} />}
-      {level === 2 && (
-        <defs>
+      {level > 0 && <circle cx={cx} cy={gy} r={level === 2 ? 62 : 42} fill="#fde047" opacity={level === 2 ? 0.5 : 0.12} />}
+      <defs>
+        {level === 2 && (
           <radialGradient id="bulb-bright" cx="45%" cy="40%" r="65%">
             <stop offset="0%" stopColor="#fff6b0" />
             <stop offset="55%" stopColor="#ffd93b" />
             <stop offset="100%" stopColor="#ffc21a" />
           </radialGradient>
-        </defs>
-      )}
-      <circle cx={center.x} cy={center.y - 8} r={34} fill={fill} stroke="#94a3b8" strokeWidth={3} />
-      <rect x={center.x - 20} y={center.y + 22} width={40} height={16} rx={3} fill="#94a3b8" />
-      {label(PART_NAMES.bulb, center.x, center.y + 92)}
+        )}
+        <linearGradient id="bulb-brass" x1="0" x2="1">
+          <stop offset="0%" stopColor="#a16207" />
+          <stop offset="45%" stopColor="#fde68a" />
+          <stop offset="100%" stopColor="#a16207" />
+        </linearGradient>
+      </defs>
+      {/* 유리알 */}
+      <path d={glassPath} fill={glass} fillOpacity={level === 0 ? 0.75 : 1} stroke="#94a3b8" strokeWidth={2.5} />
+      {level === 0 && <ellipse cx={cx - 10} cy={gy - 14} rx={4} ry={8} fill="#ffffff" opacity={0.8} />}
+      {/* 필라멘트: 두 지지선 끝을 잇는 꼬불꼬불한 선 */}
+      <path d={`M ${cx - 6} ${neck} L ${cx - 8} ${gy} M ${cx + 6} ${neck} L ${cx + 8} ${gy}`} stroke="#78716c" strokeWidth={1.5} fill="none" />
+      <path d={`M ${cx - 8} ${gy} q 2 -6 4 0 q 2 6 4 0 q 2 -6 4 0 q 2 6 4 0`} stroke={filament} strokeWidth={level > 0 ? 2.5 : 1.8} fill="none" />
+      {/* 꼭지쇠(나사)와 전구 끼우개 */}
+      <rect x={cx - 12} y={neck - 1} width={24} height={12} rx={2} fill="url(#bulb-brass)" />
+      {[3, 7].map((dy) => (
+        <line key={dy} x1={cx - 12} y1={neck + dy} x2={cx + 12} y2={neck + dy + 1.5} stroke="#92400e" strokeWidth={1.2} />
+      ))}
+      <rect x={cx - 17} y={neck + 10} width={34} height={16} rx={3} fill="url(#bulb-brass)" stroke="#92400e" strokeWidth={1.2} />
+      {[15, 20].map((dy) => (
+        <line key={dy} x1={cx - 17} y1={neck + dy} x2={cx + 17} y2={neck + dy} stroke="#92400e" strokeWidth={1} opacity={0.7} />
+      ))}
+      {label(PART_NAMES.bulb, cx, center.y + 92)}
     </g>
   );
 }
 
-function Buzzer({ layout, level, label }: { layout: ComponentLayout; level: number; label: LabelFn }) {
+function Buzzer({ layout, level, dark, label }: { layout: ComponentLayout; level: number; dark: boolean; label: LabelFn }) {
   const { center } = layout;
+  const cx = center.x;
+  const top = center.y - 4; // 윗면(타원) 중심
+  const bottom = center.y + 12;
   return (
     <g pointerEvents="none">
-      {/* 빨간 선(+)과 검은 선(−). 색깔만으로 구분하지 않도록 단자 옆에 + − 글자도 표시된다 */}
-      <Leads layout={layout} colors={['#dc2626', '#111827']} />
+      {/* 교과서 준비물 사진의 버저: 납작한 연회색 원판 + 윗면 가운데 소리 구멍, 아래로 빨간 선과 검은 선이 나온다.
+          단자 옆에 + − 글자도 표시된다 */}
+      <Leads layout={layout}
+        colors={[RED_LEAD, blackLead(dark)]}
+        from={[{ x: cx - 8, y: bottom + 4 }, { x: cx + 8, y: bottom + 4 }]} />
       {Array.from({ length: level }, (_, i) => (
-        <circle key={i} className="sound-wave" cx={center.x} cy={center.y - 6} r={44 + i * 18} fill="none"
+        <circle key={i} className="sound-wave" cx={cx} cy={center.y - 6} r={52 + i * 18} fill="none"
           stroke="#f59e0b" strokeWidth={level === 2 ? 5 : 3} style={{ animationDelay: `${i * 0.3}s` }} />
       ))}
-      <text x={center.x} y={center.y + 16} textAnchor="middle" fontSize={level === 2 ? 64 : 52}>🔔</text>
+      <defs>
+        <linearGradient id="buzzer-side" x1="0" x2="1">
+          <stop offset="0%" stopColor="#a8a29e" />
+          <stop offset="40%" stopColor="#e7e5e4" />
+          <stop offset="100%" stopColor="#a8a29e" />
+        </linearGradient>
+      </defs>
+      {/* 몸통 옆면 (납작한 원판) */}
+      <path d={`M ${cx - 40} ${top} L ${cx - 40} ${bottom} A 40 12 0 0 0 ${cx + 40} ${bottom} L ${cx + 40} ${top} Z`}
+        fill="url(#buzzer-side)" stroke="#78716c" strokeWidth={1.5} />
+      {/* 윗면, 안쪽 둥근 홈, 소리 구멍 */}
+      <ellipse cx={cx} cy={top} rx={40} ry={12} fill="#e7e5e4" stroke="#78716c" strokeWidth={1.5} />
+      <ellipse cx={cx} cy={top} rx={20} ry={6} fill="none" stroke="#a8a29e" strokeWidth={1.5} />
+      <ellipse cx={cx} cy={top} rx={5} ry={2} fill="#44403c" />
       {level > 0 && (
-        <text x={center.x + 70} y={center.y - 30} fontSize={level === 2 ? 26 : 18} fontWeight={800} fill="#b45309">
+        <text x={cx + 74} y={center.y - 30} fontSize={level === 2 ? 26 : 18} fontWeight={800} fill="#b45309">
           {level === 2 ? '딩동!' : '딩…'}
         </text>
       )}
-      {label(PART_NAMES.buzzer, center.x, center.y + 92)}
+      {/* 이름은 원판 바로 위에 (아래에 두면 단자·전선과 멀어 어느 그림의 이름인지 헷갈린다) */}
+      {label(PART_NAMES.buzzer, cx, top - 20)}
     </g>
   );
 }
 
-function Motor({ layout, result, ink, label }: { layout: ComponentLayout; result: JudgeResult; ink: string; label: LabelFn }) {
+function Motor({ layout, result, ink, dark, label }: { layout: ComponentLayout; result: JudgeResult; ink: string; dark: boolean; label: LabelFn }) {
   const { center } = layout;
   const speed = result.level === 2 ? 'fan-fast' : result.level === 1 ? 'fan-slow' : '';
   const reverse = result.motorDirection === 'ccw' ? 'fan-ccw' : '';
   return (
     <g pointerEvents="none">
-      <Leads layout={layout} colors={['#64748b', '#64748b']} />
-      <rect x={center.x - 22} y={center.y + 8} width={44} height={30} rx={6} fill="#64748b" />
+      <Leads layout={layout} colors={[RED_LEAD, blackLead(dark)]}
+        from={[{ x: center.x - 10, y: center.y + 40 }, { x: center.x + 10, y: center.y + 40 }]} />
+      {/* 은색 금속 통(전동기 몸통)과 아래쪽 갈색 뚜껑, 전선이 붙는 구리 단자 두 개. 날개는 그 앞에서 돈다 */}
+      <defs>
+        <linearGradient id="motor-can" x1="0" x2="1">
+          <stop offset="0%" stopColor="#64748b" />
+          <stop offset="40%" stopColor="#e2e8f0" />
+          <stop offset="100%" stopColor="#64748b" />
+        </linearGradient>
+      </defs>
+      <rect x={center.x - 26} y={center.y - 4} width={52} height={34} rx={5} fill="url(#motor-can)" stroke="#475569" strokeWidth={1.5} />
+      <rect x={center.x - 24} y={center.y + 28} width={48} height={8} rx={2} fill="#92400e" />
+      <rect x={center.x - 13} y={center.y + 34} width={6} height={7} fill="#d97706" />
+      <rect x={center.x + 7} y={center.y + 34} width={6} height={7} fill="#d97706" />
       <g className={`fan ${speed} ${reverse}`}>
         {/* 보이지 않는 원: 날개 묶음의 테두리 상자 중심을 축에 맞춰, 축을 중심으로 돌게 한다 */}
         <circle cx={center.x} cy={center.y - 4} r={62} fill="none" />
         {[0, 120, 240].map((deg) => (
-          <ellipse key={deg} cx={center.x} cy={center.y - 34} rx={11} ry={30} fill="#38bdf8" stroke="#0369a1" strokeWidth={2}
+          <ellipse key={deg} cx={center.x} cy={center.y - 34} rx={11} ry={30} fill="#4ade80" stroke="#15803d" strokeWidth={2}
             transform={`rotate(${deg} ${center.x} ${center.y - 4})`} />
         ))}
         <circle cx={center.x} cy={center.y - 4} r={8} fill="#0f172a" />

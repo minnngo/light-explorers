@@ -37,6 +37,8 @@ export interface CoachMark {
   /** wires일 때 이 단자 쌍을 잇는 전선만 반짝이게 (없으면 전선 전부) */
   onlyWires?: readonly (readonly [string, string])[];
   switch?: boolean;
+  /** 시범: 이 두 단자를 잇는 전선 가운데를 누르는 손가락 (전선 지우기) */
+  pressWire?: readonly [string, string];
 }
 
 /** 전지의 + 단자와 부품의 한쪽 단자. A·B 회로판 모두에 있는 단자라 어느 회로판에서도 쓸 수 있다 */

@@ -41,7 +41,8 @@ function battery(id: string, minusX: number, plusX: number, y: number): Componen
 function load(part: PartKind): ComponentLayout {
   const a = 'load.a';
   const b = 'load.b';
-  // 버저는 빨간 선(a)이 +, 검은 선(b)이 − (명세서 10장 접근성 규칙: 글자도 같이 단다)
+  // 버저·전동기는 빨간 선(a)·검은 선(b). 버저는 극이 있어서 단자 옆에 +, − 글자를 단다
+  // (색깔만으로 구분하지 않도록. 전동기는 반대로 이어도 돌기만 하므로 달지 않는다)
   const signs: [TerminalLayout['sign'], TerminalLayout['sign']] =
     part === 'buzzer' ? ['+', '−'] : [null, null];
   return {
