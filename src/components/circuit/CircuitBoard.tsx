@@ -52,13 +52,17 @@ export interface BoardPeer {
 const wirePath = (a: { x: number; y: number }, b: { x: number; y: number }) =>
   `M ${a.x} ${a.y} Q ${(a.x + b.x) / 2} ${(a.y + b.y) / 2 - 50} ${b.x} ${b.y}`;
 
-// 버저의 빨간/검은 선과 헷갈리지 않도록 전선 색에는 빨강·검정을 쓰지 않는다
-const WIRE_COLORS = ['#2563eb', '#16a34a', '#9333ea', '#ea580c', '#0891b2', '#ca8a04'];
+// 교과서처럼 전선은 빨강·검정 두 색만 쓴다. 전지의 + 단자에 닿은 전선은 빨강, 나머지는 검정.
+// (버저 다리도 빨강 = +, 검정 = − 이라서 "빨간 선은 + 쪽에" 힌트와 맞는다)
+// 어두운 바탕(꺼진 마을)에서는 검정이 묻히므로 진한 회색으로 조금 밝힌다
+const WIRE_RED = '#dc2626';
+const WIRE_BLACK = { light: '#1f2937', dark: '#6b7280' };
 
 export default function CircuitBoard(props: Props) {
   const { boardId, part, board, result, editable, dark, muted, keepRinging = false } = props;
   const layout = boardLayout(boardId, part);
   const terminals = new Map(layout.flatMap((c) => c.terminals).map((t) => [t.id, t]));
+  const batteryPlus = new Set(layout.filter((c) => c.component.type === 'battery').map((c) => c.component.terminals[0]));
   const svgRef = useRef<SVGSVGElement>(null);
   const [pending, setPending] = useState<TerminalId | null>(null);
   const [cursor, setCursor] = useState<{ x: number; y: number } | null>(null);
@@ -149,12 +153,12 @@ export default function CircuitBoard(props: Props) {
       ))}
 
       {/* 집게 달린 전선 */}
-      {board.wires.map((w, i) => {
+      {board.wires.map((w) => {
         const a = terminals.get(w.from);
         const b = terminals.get(w.to);
         if (!a || !b) return null;
         const d = wirePath(a, b);
-        const color = WIRE_COLORS[i % WIRE_COLORS.length];
+        const color = batteryPlus.has(w.from) || batteryPlus.has(w.to) ? WIRE_RED : dark ? WIRE_BLACK.dark : WIRE_BLACK.light;
         return (
           <g key={w.id}>
             {props.coach?.wires && (!props.coach.onlyWires
