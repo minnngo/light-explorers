@@ -328,8 +328,8 @@ export default function StudentApp() {
       channel.close();
     };
   }, []);
-  // 미션 화면에서도 다른 화면과 같은 크기로 음악이 나온다
-  const musicLevel = muted || !audioReady || !musicOwner ? 0 : 1;
+  // 회로를 만드는 미션 화면(S4)에서는 음악을 끈다: 버저 종소리·전동기 소리·불 켜지는 소리를 잘 듣고 비교하도록
+  const musicLevel = muted || !audioReady || !musicOwner || screen === 'S4' ? 0 : 1;
   useEffect(() => {
     setMusicLevel(musicLevel);
   }, [musicLevel]);

@@ -59,6 +59,78 @@ export function playChime(level: 1 | 2) {
 export const CHIME_PERIOD_MS = 2000;
 export const CHIME_OFFSET_MS: Record<'A' | 'B', number> = { A: 0, B: CHIME_PERIOD_MS / 2 };
 
+/**
+ * 날개 달린 전동기가 도는 소리: 모터의 "위잉" 소리 + 날개가 바람을 가르는 "휘휘" 소리.
+ * 빠르게 돌수록(전지 2개) 더 높고 크게, 날개 소리도 더 잦게 난다. 화면의 날개 빠르기와 맞춘다
+ * (날개 3장, 느림 2.4초·빠름 0.5초에 한 바퀴 → 날개가 지나가는 횟수 1.25번·6번/초).
+ * 돌려준 함수를 부르면 부드럽게 멈춘다.
+ */
+export function startMotorSound(level: 1 | 2, once = false): () => void {
+  const ac = audio();
+  if (!ac) return () => {};
+  const fast = level === 2;
+  const t = ac.currentTime;
+  const out = ac.createGain();
+  out.gain.setValueAtTime(0.0001, t);
+  out.gain.exponentialRampToValueAtTime(fast ? 0.5 : 0.16, t + 0.3); // 빨리 돌면 확연히 크게
+  out.connect(ac.destination);
+
+  // 모터 "위잉": 낮은 톱니파를 부드럽게 깎는다
+  const hum = ac.createOscillator();
+  hum.type = 'sawtooth';
+  hum.frequency.value = fast ? 150 : 85;
+  const humFilter = ac.createBiquadFilter();
+  humFilter.type = 'lowpass';
+  humFilter.frequency.value = fast ? 900 : 500;
+  const humGain = ac.createGain();
+  humGain.gain.value = 0.18;
+  hum.connect(humFilter).connect(humGain).connect(out);
+
+  // 날개 "휘휘": 바람 소리(잡음)를 날개가 지나가는 빠르기로 크게·작게
+  const noise = ac.createBufferSource();
+  noise.buffer = noiseBuffer(ac);
+  noise.loop = true;
+  const band = ac.createBiquadFilter();
+  band.type = 'bandpass';
+  band.frequency.value = fast ? 1400 : 800;
+  band.Q.value = 0.8;
+  const whoosh = ac.createGain();
+  whoosh.gain.value = 0.25;
+  const lfo = ac.createOscillator();
+  lfo.frequency.value = fast ? 6 : 1.25;
+  const lfoDepth = ac.createGain();
+  lfoDepth.gain.value = 0.22;
+  lfo.connect(lfoDepth).connect(whoosh.gain);
+  noise.connect(band).connect(whoosh).connect(out);
+
+  const sources = [hum, noise, lfo];
+  sources.forEach((n) => n.start(t));
+  let stopped = false;
+  const stop = () => {
+    if (stopped) return;
+    stopped = true;
+    const now = ac.currentTime;
+    out.gain.cancelScheduledValues(now);
+    out.gain.setTargetAtTime(0.0001, now, 0.12);
+    sources.forEach((n) => n.stop(now + 0.6));
+    setTimeout(() => out.disconnect(), 800);
+  };
+  // 계속 돌리지 않는 단계에서는 잠깐(1.5초)만 들려준다
+  if (once) setTimeout(stop, 1500);
+  return stop;
+}
+
+/** 바람 소리용 잡음 (2초 길이, 한 번 만들어 돌려 쓴다) */
+let noiseCache: AudioBuffer | null = null;
+function noiseBuffer(ac: AudioContext): AudioBuffer {
+  if (noiseCache && noiseCache.sampleRate === ac.sampleRate) return noiseCache;
+  const buf = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate);
+  const data = buf.getChannelData(0);
+  for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+  noiseCache = buf;
+  return buf;
+}
+
 /** 불이 켜지는 소리. 밝을수록 높고 크게 */
 export function playLightOn(level: 1 | 2) {
   tone(level === 2 ? 1320 : 990, level === 2 ? 0.15 : 0.05, 0, 0.18);

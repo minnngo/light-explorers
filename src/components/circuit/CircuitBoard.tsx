@@ -16,7 +16,7 @@ import {
 import { PART_NAMES } from '@/data/strings';
 import type { BoardId, BoardState, JudgeResult, PartKind, TerminalId } from '@/lib/types';
 import type { CoachMark } from '@/lib/tutorial/tutorial';
-import { CHIME_OFFSET_MS, CHIME_PERIOD_MS, playChime, playLightOn } from '@/media/sound';
+import { CHIME_OFFSET_MS, CHIME_PERIOD_MS, playChime, playLightOn, startMotorSound } from '@/media/sound';
 
 interface Props {
   boardId: BoardId;
@@ -92,6 +92,13 @@ export default function CircuitBoard(props: Props) {
       clearInterval(interval);
     };
   }, [part, result.level, muted, keepRinging, boardId]);
+
+  // 날개 달린 전동기: 도는 동안 "위잉" 소리. 빨리 돌수록(전지 2개) 더 높고 크게.
+  // 계속 돌리는 단계(② 만들기·도전)에서는 도는 내내, 그 밖에는 바뀌는 순간 잠깐만 들려준다
+  useEffect(() => {
+    if (part !== 'motor' || result.level === 0 || muted) return;
+    return startMotorSound(result.level as 1 | 2, !keepRinging);
+  }, [part, result.level, muted, keepRinging]);
 
   const toSvg = (e: { clientX: number; clientY: number }) => {
     const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(svgRef.current!.getScreenCTM()!.inverse());

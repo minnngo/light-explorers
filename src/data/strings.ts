@@ -273,7 +273,7 @@ function withJosa(word: string, a: string, b: string): string {
   return word + (hasFinal ? b : a);
 }
 
-/** 시범 단계 글에 쓰는 단자 이름 (예: 전지 +, 버저 −, 전동기 빨간 선, 스위치 위쪽) */
+/** 시범 단계 글에 쓰는 단자 이름 (예: 전지 +, 버저 −, 전동기 +, 스위치 위쪽) */
 export function terminalName(id: string, part: PartKind, twoBatteries: boolean): string {
   const [comp, end] = id.split('.');
   if (comp === 'bat1' || comp === 'bat2') {
@@ -281,9 +281,9 @@ export function terminalName(id: string, part: PartKind, twoBatteries: boolean):
     return `${which} ${end === 'plus' ? '+' : '−'}`;
   }
   if (comp === 'sw') return `스위치 ${end === 'a' ? '위쪽' : '아래쪽'}`;
-  // 버저는 단자 옆 글자대로 +, −로, 전동기는 교과서처럼 빨간 선·검은 선으로 부른다
+  // 버저·전동기는 단자 옆 글자대로 +, −로 부른다
   if (part === 'buzzer') return `버저 ${end === 'a' ? '+' : '−'}`;
-  if (part === 'motor') return `전동기 ${end === 'a' ? '빨간 선' : '검은 선'}`;
+  if (part === 'motor') return `전동기 ${end === 'a' ? '+' : '−'}`;
   return `${PART_NAMES[part]} ${end === 'a' ? '왼쪽' : '오른쪽'}`;
 }
 
