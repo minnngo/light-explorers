@@ -6,7 +6,7 @@
 
 - Service: https://light-explorers.vercel.app
 - Teacher: https://light-explorers.vercel.app/teacher
-- Guide: [docs/GAME_GUIDE.md](docs/GAME_GUIDE.md) — 게임 전체 설명서
+- Guide: [docs/GAME_GUIDE.md](docs/GAME_GUIDE.md)
 
 ## 📖 프로젝트 소개
 
